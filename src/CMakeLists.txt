@@ -1,6 +1,9 @@
 rock_library(global_path_planner
-    SOURCES Dummy.cpp
-    HEADERS Dummy.hpp)
+    SOURCES GlobalPathPlanner.cpp validators/TravMapValidator.cpp
+    HEADERS GlobalPathPlanner.hpp validators/TravMapValidator.hpp
+    DEPS_PKGCONFIG ompl
+    DEPS_PKGCONFIG envire
+)
 
 rock_executable(global_path_planner_bin Main.cpp
     DEPS global_path_planner)
