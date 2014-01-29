@@ -2,6 +2,7 @@
 #define _GLOBAL_PATH_PLANNER_HPP_
 
 #include <base/samples/RigidBodyState.hpp>
+#include <base/Trajectory.hpp>
 
 #include <ompl/geometric/PathGeometric.h>
 
@@ -37,7 +38,8 @@ class GlobalPathPlanner
     bool setGoalWorld(base::samples::RigidBodyState& goal_world);
     base::samples::RigidBodyState getGoalGrid() const;
     
-    void getTrajectorie();
+    std::vector<base::Vector3d> getPath();
+    base::Trajectory getTrajectory(double speed);
     
  private:
     envire::TraversabilityGrid* requestTravGrid(envire::Environment* env, 

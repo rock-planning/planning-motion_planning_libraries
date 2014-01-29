@@ -54,6 +54,7 @@ bool GlobalPathPlanner::init(envire::Environment* env, std::string trav_map_id) 
     
     ob::ScopedState<> start(space);
     start.random();
+    
     ob::ScopedState<> goal(space);
     goal.random();
 
@@ -108,8 +109,15 @@ base::samples::RigidBodyState GlobalPathPlanner::getGoalGrid() const {
     return mGoalGrid;
 } 
 
-void GlobalPathPlanner::getTrajectorie() {
+std::vector<base::Vector3d> GlobalPathPlanner::getPath() {
+    return mPath;
+}
 
+base::Trajectory GlobalPathPlanner::getTrajectory(double speed) {
+    base::Trajectory trajectory;
+    trajectory.speed = speed;
+    trajectory.spline.interpolate(mPath);
+    return trajectory;
 }
 
 // PRIVATE
