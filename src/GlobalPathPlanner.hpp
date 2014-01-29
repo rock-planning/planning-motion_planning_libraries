@@ -4,7 +4,9 @@
 #include <base/samples/RigidBodyState.hpp>
 #include <base/Trajectory.hpp>
 
-#include <ompl/geometric/PathGeometric.h>
+#include <ompl/base/spaces/SE2StateSpace.h>
+#include <ompl/base/ProblemDefinition.h>
+#include <ompl/base/Planner.h>
 
 #include <global_path_planner/validators/TravMapValidator.hpp>
 
@@ -26,23 +28,32 @@ class GlobalPathPlanner
     TravMapValidator* mpTravMapValidator;
     bool mInitialized;
     std::vector<base::Vector3d> mPath;
+    ompl::base::StateSpacePtr mpStateSpace;
+    ompl::base::SpaceInformationPtr mpSpaceInformation;
+    ompl::base::ProblemDefinitionPtr mpProblemDefinition;
+    ompl::base::PlannerPtr mpOptimizingPlanner;
+    bool mOMPLObjectsCreated;
     
  public: 
     GlobalPathPlanner();
     ~GlobalPathPlanner();
-
-    bool init(envire::Environment* env, std::string trav_map_id);
  
+    bool setTravGrid(envire::Environment* env, std::string trav_map_id);
     bool setStartWorld(base::samples::RigidBodyState& start_world);
-    base::samples::RigidBodyState getStartGrid() const;
     bool setGoalWorld(base::samples::RigidBodyState& goal_world);
-    base::samples::RigidBodyState getGoalGrid() const;
-    
+    bool plan(double max_time=1.0);
     std::vector<base::Vector3d> getPath();
     base::Trajectory getTrajectory(double speed);
+                
+    base::samples::RigidBodyState getStartGrid() const;
+    base::samples::RigidBodyState getGoalGrid() const;
     
  private:
-    envire::TraversabilityGrid* requestTravGrid(envire::Environment* env, 
+    /**
+     * Extracts the traversability map \a trav_map_id from the passed environment.
+     * If the id is not available, the first traversability map will be used.
+     */
+    envire::TraversabilityGrid* extractTravGrid(envire::Environment* env, 
             std::string trav_map_id);
     
     /**
@@ -50,6 +61,11 @@ class GlobalPathPlanner
      */        
     bool world2grid(base::samples::RigidBodyState const& rbs_world, 
         base::samples::RigidBodyState& rbs_grid);
+
+    /**
+     * Creates all OMPL objects for planning.
+     */        
+    bool createOMPLObjects();
 };
 
 } // end namespace global_path_planner

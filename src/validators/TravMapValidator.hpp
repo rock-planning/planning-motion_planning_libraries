@@ -32,8 +32,10 @@ class TravMapValidator :  public ompl::base::StateValidityChecker {
         }
     
         // Check borders.
-        if(state_se2->getX() >= mpTravGrid->getCellSizeX() ||
-             state_se2->getY() >= mpTravGrid->getCellSizeY()) {
+        if(state_se2->getX() < 0 ||
+                state_se2->getX() >= mpTravGrid->getCellSizeX() ||
+                state_se2->getY() >= 0 ||
+                state_se2->getY() >= mpTravGrid->getCellSizeY()) {
             return false;
         }   
         
