@@ -26,7 +26,6 @@ class GlobalPathPlanner
     // Contains the grid coordinates and the orientation.
     base::samples::RigidBodyState mStartGrid, mGoalGrid;
     TravMapValidator* mpTravMapValidator;
-    bool mInitialized;
     std::vector<base::Vector3d> mPath;
     ompl::base::StateSpacePtr mpStateSpace;
     ompl::base::SpaceInformationPtr mpSpaceInformation;

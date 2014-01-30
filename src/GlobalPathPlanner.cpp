@@ -12,8 +12,12 @@ namespace global_path_planner
 {
 
 // PUBLIC
-GlobalPathPlanner::GlobalPathPlanner() : mpTravGrid(NULL), mStartGrid(), mGoalGrid(), 
-        mpTravMapValidator(NULL), mOMPLObjectsCreated(false) {
+GlobalPathPlanner::GlobalPathPlanner() : mpTravGrid(NULL), 
+        mStartGrid(), 
+        mGoalGrid(), 
+        mpTravMapValidator(NULL), 
+        mPath(),
+        mOMPLObjectsCreated(false) {
         
     mStartGrid.invalidatePosition();
     mStartGrid.invalidateOrientation();        
