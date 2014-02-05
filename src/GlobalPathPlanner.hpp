@@ -47,6 +47,20 @@ class GlobalPathPlanner
     base::samples::RigidBodyState getStartGrid() const;
     base::samples::RigidBodyState getGoalGrid() const;
     
+    /**
+     * Converts the world pose to grid coordinates including the transformed orientation.
+     */        
+    static bool world2grid(envire::TraversabilityGrid const* trav, 
+        base::samples::RigidBodyState const& world_pose, 
+        base::samples::RigidBodyState& grid_pose);
+
+    /**
+     * Transforms the grid pose to a world pose.
+     */
+    static void grid2world(envire::TraversabilityGrid const* trav,
+            base::samples::RigidBodyState const& grid_pose, 
+            base::samples::RigidBodyState& world_pose);
+    
  private:
     /**
      * Extracts the traversability map \a trav_map_id from the passed environment.
@@ -54,13 +68,7 @@ class GlobalPathPlanner
      */
     envire::TraversabilityGrid* extractTravGrid(envire::Environment* env, 
             std::string trav_map_id);
-    
-    /**
-     * Converts the world pose to grid coordinates including the transformed orientation.
-     */        
-    bool world2grid(base::samples::RigidBodyState const& rbs_world, 
-        base::samples::RigidBodyState& rbs_grid);
-
+   
     /**
      * Creates all OMPL objects for planning.
      */        

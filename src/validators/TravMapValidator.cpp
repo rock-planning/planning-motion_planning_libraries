@@ -16,8 +16,10 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
     // Check borders.
     if(state_se2->getX() < 0 ||
             state_se2->getX() >= mpTravGrid->getCellSizeX() ||
-            state_se2->getY() >= 0 ||
+            state_se2->getY() < 0 ||
             state_se2->getY() >= mpTravGrid->getCellSizeY()) {
+        LOG_INFO("State (%4.2f,%4.2f) is invalid (not within the grid)",  
+                state_se2->getX(), state_se2->getY());
         return false;
     }   
     
@@ -26,6 +28,8 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
             mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY));
     if(trav_data[state_se2->getY()][state_se2->getX()] == 
             envire::SimpleTraversability::CLASS_OBSTACLE) {
+        LOG_INFO("State (%4.2f,%4.2f) is invalid (lies on an obstacle)", 
+                state_se2->getX(), state_se2->getY());
         return false;
     }
     

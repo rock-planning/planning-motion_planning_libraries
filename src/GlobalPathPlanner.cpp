@@ -35,12 +35,14 @@ bool GlobalPathPlanner::setTravGrid(envire::Environment* env, std::string trav_m
         return false;
     } else {
         mpTravGrid = trav_grid;
+        mOMPLObjectsCreated = false;
         return true;
     }
 }
 
 bool GlobalPathPlanner::setStartWorld(base::samples::RigidBodyState& start_world) {
-    return world2grid(start_world, mStartGrid);
+    mOMPLObjectsCreated = false;
+    return world2grid(mpTravGrid, start_world, mStartGrid);
 }
 
 base::samples::RigidBodyState GlobalPathPlanner::getStartGrid() const {
@@ -48,7 +50,8 @@ base::samples::RigidBodyState GlobalPathPlanner::getStartGrid() const {
 }
 
 bool GlobalPathPlanner::setGoalWorld(base::samples::RigidBodyState& goal_world) {
-    return world2grid(goal_world, mGoalGrid);
+    mOMPLObjectsCreated = false;
+    return world2grid(mpTravGrid, goal_world, mGoalGrid);
 }
 
 base::samples::RigidBodyState GlobalPathPlanner::getGoalGrid() const {
@@ -57,6 +60,7 @@ base::samples::RigidBodyState GlobalPathPlanner::getGoalGrid() const {
 
 
 bool GlobalPathPlanner::plan(double max_time) {
+
     if(mpTravGrid == NULL) {
         LOG_WARN("No traversability map available, planning cannot be executed");
         return false;
@@ -90,11 +94,15 @@ bool GlobalPathPlanner::plan(double max_time) {
     goal->as<ob::SE2StateSpace::StateType>()->setY(mGoalGrid.position.y());
     goal->as<ob::SE2StateSpace::StateType>()->setYaw(mGoalGrid.getYaw());
     
+    LOG_INFO("Planning from (x,y,yaw) (%4.2f, %4.2f, %4.2f) to (%4.2f, %4.2f, %4.2f)", 
+            mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(),
+            mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw());
+    
     mpProblemDefinition->setStartAndGoalStates(start, goal);
+    mpOptimizingPlanner->setup();
  
     // Start planning.
     // Setup: Once during creation or each time because of the changed start/goal?
-    mpOptimizingPlanner->setup();
     ob::PlannerStatus solved = mpOptimizingPlanner->solve(1.0);
     
     if (solved)
@@ -107,15 +115,32 @@ bool GlobalPathPlanner::plan(double max_time) {
         path->print(std::cout);
         
         // Convert state-path to vector3d-path and store it to mPath.
-        // Valid downcast from Path to PathGeometric.
+        // Downcast from Path to PathGeometric is valid.
         std::vector<ompl::base::State*> path_states = 
                 boost::static_pointer_cast<og::PathGeometric>(path)->getStates();
         std::vector<ompl::base::State*>::iterator it = path_states.begin();
+        // Clear current path.
+        mPath.clear();
+        int counter = 0;
         for(;it != path_states.end(); ++it) {
             const ompl::base::SE2StateSpace::StateType* state = 
                 (*it)->as<ompl::base::SE2StateSpace::StateType>();
-            mPath.push_back(base::Vector3d(state->getX(), state->getY(), 0.0));
+                
+            // Convert back to world coordinates.
+            base::samples::RigidBodyState grid_pose;
+            grid_pose.position[0] = state->getX();
+            grid_pose.position[1] = state->getY();
+            grid_pose.position[2] = 0;
+            grid_pose.orientation = Eigen::AngleAxis<double>(state->getYaw(), 
+                    base::Vector3d(0,0,1));
+            base::samples::RigidBodyState world_pose;
+            grid2world(mpTravGrid, grid_pose, world_pose);
+            
+            // Add positions to path. TODO: orientation?
+            mPath.push_back(world_pose.position);
+            counter++;
         }
+        LOG_INFO("Trajectory contains %d states", counter);
     }
     
     return true;
@@ -130,6 +155,55 @@ base::Trajectory GlobalPathPlanner::getTrajectory(double speed) {
     trajectory.speed = speed;
     trajectory.spline.interpolate(mPath);
     return trajectory;
+}
+
+bool GlobalPathPlanner::world2grid(envire::TraversabilityGrid const* trav,
+        base::samples::RigidBodyState const& world_pose, 
+        base::samples::RigidBodyState& grid_pose) {
+
+    // Transforms from world to local.
+    base::samples::RigidBodyState local_pose;
+    Eigen::Affine3d world2local = trav->getEnvironment()->relativeTransform(
+            trav->getEnvironment()->getRootNode(),
+            trav->getFrameNode());
+    local_pose.setTransform(world2local * world_pose.getTransform());
+    
+    // Calculate and set grid coordinates (and orientation).
+    size_t x_grid = 0, y_grid = 0;
+    if(!trav->toGrid(local_pose.position.x(), local_pose.position.y(), 
+            x_grid, y_grid)) 
+    {
+        LOG_WARN("Position (%4.2f,%4.2f) / cell (%d,%d) is out of grid", 
+                local_pose.position.x(), local_pose.position.y(), x_grid, y_grid);
+        return false;
+    }
+    grid_pose = local_pose; 
+    grid_pose.position.x() = x_grid;
+    grid_pose.position.y() = y_grid;
+    grid_pose.position.z() = 0;
+    
+    return true;
+}
+
+void GlobalPathPlanner::grid2world(envire::TraversabilityGrid const* trav,
+        base::samples::RigidBodyState const& grid_pose,
+        base::samples::RigidBodyState& world_pose) {
+        
+    double x_grid = grid_pose.position[0], y_grid = grid_pose.position[1]; 
+    double x_local = 0, y_local = 0; 
+    
+    // Transformation GRID2LOCAL       
+    trav->fromGrid(x_grid, y_grid, x_local, y_local);
+    base::samples::RigidBodyState local_pose = grid_pose;
+    local_pose.position[0] = x_local;
+    local_pose.position[1] = y_local;
+    local_pose.position[2] = 0.0;
+    
+    // Transformation LOCAL2WOLRD
+    Eigen::Affine3d local2world = trav->getEnvironment()->relativeTransform(
+        trav->getFrameNode(),
+        trav->getEnvironment()->getRootNode());
+    world_pose.setTransform(local2world * local_pose.getTransform() );
 }
 
 // PRIVATE
@@ -157,32 +231,6 @@ envire::TraversabilityGrid* GlobalPathPlanner::extractTravGrid(envire::Environme
     }
 }
 
-bool GlobalPathPlanner::world2grid(base::samples::RigidBodyState const& rbs_world, 
-        base::samples::RigidBodyState& rbs_grid) {
-
-    // Transforms from world to traversability map frame / local.
-    base::samples::RigidBodyState rbs_local;
-    Eigen::Affine3d t = mpTravGrid->getEnvironment()->relativeTransform(
-            mpTravGrid->getEnvironment()->getRootNode(),
-            mpTravGrid->getFrameNode());
-    rbs_local.setTransform((rbs_world.getTransform() * t));
-    
-    // Calculate and set grid coordinates (and orientation).
-    size_t grid_x = 0, grid_y = 0;
-    if(!mpTravGrid->toGrid(rbs_local.position.x(), rbs_local.position.y(), 
-            grid_x, grid_y))
-    {
-        LOG_WARN("Position (%d,%d) is out of grid", grid_x, grid_y);
-        return false;
-    }
-    rbs_grid.position.x() = grid_x;
-    rbs_grid.position.y() = grid_y;
-    rbs_grid.position.z() = 0;
-    rbs_grid.orientation = rbs_local.orientation;
-        
-    return true;
-}
-
 bool GlobalPathPlanner::createOMPLObjects() {
     if(mpTravGrid == NULL) {
         LOG_WARN("No traversability map available, OMPL objects cannot be constructed");
@@ -197,10 +245,11 @@ bool GlobalPathPlanner::createOMPLObjects() {
     bounds.setHigh(std::max(mpTravGrid->getCellSizeX(), mpTravGrid->getCellSizeY()));
     mpStateSpace->as<ob::SE2StateSpace>()->setBounds(bounds);
     
-    // Create a space information object and the validator using the traversability map.
+    // Create a space information object using the traversability map validator.
     mpSpaceInformation = ob::SpaceInformationPtr(new ob::SpaceInformation(mpStateSpace));
     mpSpaceInformation->setStateValidityChecker(ompl::base::StateValidityCheckerPtr(
             new TravMapValidator(mpSpaceInformation, mpTravGrid)));
+    mpSpaceInformation->setup();
             
     // Create problem definition.        
     mpProblemDefinition = ob::ProblemDefinitionPtr(
