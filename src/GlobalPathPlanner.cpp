@@ -1,9 +1,15 @@
 #include "GlobalPathPlanner.hpp"
 
+#include <envire/maps/TraversabilityGrid.hpp>
+#include <envire/core/Environment.hpp>
+
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/spaces/SE2StateSpace.h>
+#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/config.h>
+
+#include <global_path_planner/validators/TravMapValidator.hpp>
 
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
@@ -17,7 +23,7 @@ GlobalPathPlanner::GlobalPathPlanner() : mpTravGrid(NULL),
         mGoalGrid(), 
         mpTravMapValidator(NULL), 
         mPath(),
-        mOMPLObjectsCreated(false) {
+        mReplanningRequired(true) {
         
     mStartGrid.invalidatePosition();
     mStartGrid.invalidateOrientation();        
@@ -35,14 +41,33 @@ bool GlobalPathPlanner::setTravGrid(envire::Environment* env, std::string trav_m
         return false;
     } else {
         mpTravGrid = trav_grid;
-        mOMPLObjectsCreated = false;
+        mReplanningRequired = true;
         return true;
     }
 }
 
 bool GlobalPathPlanner::setStartWorld(base::samples::RigidBodyState& start_world) {
-    mOMPLObjectsCreated = false;
-    return world2grid(mpTravGrid, start_world, mStartGrid);
+    base::samples::RigidBodyState start_grid_new;
+    if(!world2grid(mpTravGrid, start_world, start_grid_new)) {
+        LOG_WARN("Start pose could not be set");
+        return false;
+    }
+
+    if(mStartWorld.hasValidPosition() && mStartWorld.hasValidOrientation()) {
+        // Replan if there is a difference between the old and the new start pose.
+        double dist = (mStartWorld.position - start_world.position).norm();
+        double turn = fabs(mStartWorld.getYaw() - start_world.getYaw());
+        if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
+            mReplanningRequired = true;
+        }
+    } else {
+        mReplanningRequired = true;
+    }
+    
+    mStartGrid = start_grid_new;
+    mStartWorld = start_world;    
+    
+    return true;
 }
 
 base::samples::RigidBodyState GlobalPathPlanner::getStartGrid() const {
@@ -50,8 +75,27 @@ base::samples::RigidBodyState GlobalPathPlanner::getStartGrid() const {
 }
 
 bool GlobalPathPlanner::setGoalWorld(base::samples::RigidBodyState& goal_world) {
-    mOMPLObjectsCreated = false;
-    return world2grid(mpTravGrid, goal_world, mGoalGrid);
+    base::samples::RigidBodyState goal_grid_new;
+    if(!world2grid(mpTravGrid, goal_world, goal_grid_new)) {
+        LOG_WARN("Goal pose could not be set");
+        return false;
+    }
+
+    if(mGoalWorld.hasValidPosition() && mGoalWorld.hasValidOrientation()) {
+        // Replan if there is a difference between the old and the new goal pose.
+        double dist = (mGoalWorld.position - goal_world.position).norm();
+        double turn = fabs(mGoalWorld.getYaw() - goal_world.getYaw());
+        if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
+            mReplanningRequired = true;
+        }
+    } else {
+        mReplanningRequired = true;
+    }
+    
+    mGoalGrid = goal_grid_new;
+    mGoalWorld = goal_world;    
+    
+    return true;
 }
 
 base::samples::RigidBodyState GlobalPathPlanner::getGoalGrid() const {
@@ -72,38 +116,24 @@ bool GlobalPathPlanner::plan(double max_time) {
         return false;
     }
     
-    if(!mOMPLObjectsCreated) {
+    if(mReplanningRequired) {
+        LOG_INFO("Replanning initiated");
         bool ret = createOMPLObjects();
         if(!ret) {
             LOG_WARN("OMPL objects could not be created, planning can not be executed"); 
             return false;
-        } else {
-            mOMPLObjectsCreated = true;
         }
+    } else {
+        LOG_INFO("Try to improve the current trajectory");
     }
     
-    // Set start and goal in OMPL.
-    ob::ScopedState<> start(mpStateSpace);
-    // start[0] = 1; ?
-    start->as<ob::SE2StateSpace::StateType>()->setX(mStartGrid.position.x());
-    start->as<ob::SE2StateSpace::StateType>()->setY(mStartGrid.position.y());
-    start->as<ob::SE2StateSpace::StateType>()->setYaw(mStartGrid.getYaw());
+    setStartGoalOMPL(mStartGrid, mGoalGrid);
     
-    ob::ScopedState<> goal(mpStateSpace);
-    goal->as<ob::SE2StateSpace::StateType>()->setX(mGoalGrid.position.x());
-    goal->as<ob::SE2StateSpace::StateType>()->setY(mGoalGrid.position.y());
-    goal->as<ob::SE2StateSpace::StateType>()->setYaw(mGoalGrid.getYaw());
-    
-    LOG_INFO("Planning from (x,y,yaw) (%4.2f, %4.2f, %4.2f) to (%4.2f, %4.2f, %4.2f)", 
-            mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(),
-            mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw());
-    
-    mpProblemDefinition->setStartAndGoalStates(start, goal);
     mpOptimizingPlanner->setup();
  
     // Start planning.
     // Setup: Once during creation or each time because of the changed start/goal?
-    ob::PlannerStatus solved = mpOptimizingPlanner->solve(1.0);
+    ob::PlannerStatus solved = mpOptimizingPlanner->solve(max_time);
     
     if (solved)
     {
@@ -114,52 +144,51 @@ bool GlobalPathPlanner::plan(double max_time) {
         // print the path to screen
         path->print(std::cout);
         
-        // Convert state-path to vector3d-path and store it to mPath.
-        // Downcast from Path to PathGeometric is valid.
-        std::vector<ompl::base::State*> path_states = 
-                boost::static_pointer_cast<og::PathGeometric>(path)->getStates();
-        std::vector<ompl::base::State*>::iterator it = path_states.begin();
-        // Clear current path.
         mPath.clear();
-        int counter = 0;
-        for(;it != path_states.end(); ++it) {
-            const ompl::base::SE2StateSpace::StateType* state = 
-                (*it)->as<ompl::base::SE2StateSpace::StateType>();
-                
-            // Convert back to world coordinates.
-            base::samples::RigidBodyState grid_pose;
-            grid_pose.position[0] = state->getX();
-            grid_pose.position[1] = state->getY();
-            grid_pose.position[2] = 0;
-            grid_pose.orientation = Eigen::AngleAxis<double>(state->getYaw(), 
-                    base::Vector3d(0,0,1));
-            base::samples::RigidBodyState world_pose;
-            grid2world(mpTravGrid, grid_pose, world_pose);
-            
-            // Add positions to path. TODO: orientation?
-            mPath.push_back(world_pose.position);
-            counter++;
-        }
-        LOG_INFO("Trajectory contains %d states", counter);
+        mPath = convertPath(path);
+        mReplanningRequired = false;
     }
     
     return true;
 }
 
-std::vector<base::Vector3d> GlobalPathPlanner::getPath() {
-    return mPath;
+std::vector<base::Waypoint> GlobalPathPlanner::getPath() {
+    std::vector<base::Waypoint> path;
+    std::vector<base::samples::RigidBodyState>::iterator it = mPath.begin();
+    for(;it != mPath.end(); it++) {
+        base::Waypoint waypoint;
+        waypoint.position = it->position;
+        waypoint.heading = it->getYaw();
+        path.push_back(waypoint);
+    }
+    return path;
 }
 
 base::Trajectory GlobalPathPlanner::getTrajectory(double speed) {
     base::Trajectory trajectory;
     trajectory.speed = speed;
-    trajectory.spline.interpolate(mPath);
+    
+    std::vector<base::Vector3d> path;
+    std::vector<double> parameters;
+    std::vector<base::geometry::SplineBase::CoordinateType> coord_types;
+    std::vector<base::samples::RigidBodyState>::iterator it = mPath.begin();
+    for(;it != mPath.end(); it++) {
+        path.push_back(it->position);
+        //parameters.push_back(it->getYaw()); // TODO: What are the parameters for?
+        coord_types.push_back(base::geometry::SplineBase::ORDINARY_POINT);
+    }
+    trajectory.spline.interpolate(path, parameters, coord_types);
     return trajectory;
 }
 
 bool GlobalPathPlanner::world2grid(envire::TraversabilityGrid const* trav,
         base::samples::RigidBodyState const& world_pose, 
         base::samples::RigidBodyState& grid_pose) {
+        
+    if(trav == NULL) {
+        LOG_WARN("world2grid transformation requires a traversability map");
+        return false;
+    }
 
     // Transforms from world to local.
     base::samples::RigidBodyState local_pose;
@@ -185,9 +214,14 @@ bool GlobalPathPlanner::world2grid(envire::TraversabilityGrid const* trav,
     return true;
 }
 
-void GlobalPathPlanner::grid2world(envire::TraversabilityGrid const* trav,
+bool GlobalPathPlanner::grid2world(envire::TraversabilityGrid const* trav,
         base::samples::RigidBodyState const& grid_pose,
         base::samples::RigidBodyState& world_pose) {
+        
+    if(trav == NULL) {
+        LOG_WARN("grid2world transformation requires a traversability map");
+        return false;
+    }
         
     double x_grid = grid_pose.position[0], y_grid = grid_pose.position[1]; 
     double x_local = 0, y_local = 0; 
@@ -204,6 +238,8 @@ void GlobalPathPlanner::grid2world(envire::TraversabilityGrid const* trav,
         trav->getFrameNode(),
         trav->getEnvironment()->getRootNode());
     world_pose.setTransform(local2world * local_pose.getTransform() );
+    
+    return true;
 }
 
 // PRIVATE
@@ -254,6 +290,9 @@ bool GlobalPathPlanner::createOMPLObjects() {
     // Create problem definition.        
     mpProblemDefinition = ob::ProblemDefinitionPtr(
             new ob::ProblemDefinition(mpSpaceInformation));
+    mpOptimization = ompl::base::OptimizationObjectivePtr(
+            new ob::PathLengthOptimizationObjective(mpSpaceInformation));
+    mpProblemDefinition->setOptimizationObjective(mpOptimization);
         
     // Construct our optimizing planner using the RRTstar algorithm.
     // TODO: RTTstar will be deleted by the planner object?
@@ -262,6 +301,64 @@ bool GlobalPathPlanner::createOMPLObjects() {
     mpOptimizingPlanner->setProblemDefinition(mpProblemDefinition);
     
     return true;
+}
+
+std::vector<base::samples::RigidBodyState> GlobalPathPlanner::convertPath(
+        ob::PathPtr path_ompl) {
+    std::vector<base::samples::RigidBodyState> path_rbs;
+
+    // Downcast from Path to PathGeometric is valid.
+    std::vector<ompl::base::State*> path_states = 
+            boost::static_pointer_cast<og::PathGeometric>(path_ompl)->getStates();
+    std::vector<ompl::base::State*>::iterator it = path_states.begin();
+
+    int counter = 0;
+    for(;it != path_states.end(); ++it) {
+        const ompl::base::SE2StateSpace::StateType* state = 
+            (*it)->as<ompl::base::SE2StateSpace::StateType>();
+            
+        // Convert back to world coordinates.
+        base::samples::RigidBodyState grid_pose;
+        grid_pose.position[0] = state->getX();
+        grid_pose.position[1] = state->getY();
+        grid_pose.position[2] = 0;
+        grid_pose.orientation = Eigen::AngleAxis<double>(state->getYaw(), 
+                base::Vector3d(0,0,1));
+        base::samples::RigidBodyState world_pose;
+        grid2world(mpTravGrid, grid_pose, world_pose);
+        
+        // Add positions to path. TODO: orientation?
+        path_rbs.push_back(world_pose);
+        counter++;
+    }
+    LOG_INFO("Trajectory contains %d states", counter); 
+    return path_rbs;  
+}
+
+void GlobalPathPlanner::setStartGoalOMPL(base::samples::RigidBodyState const& start,
+        base::samples::RigidBodyState const& goal) {
+        
+    // Set start and goal in OMPL.
+    ob::ScopedState<> start_ompl(mpStateSpace);
+    // start[0] = 1; ?
+    start_ompl->as<ob::SE2StateSpace::StateType>()->setX(start.position.x());
+    start_ompl->as<ob::SE2StateSpace::StateType>()->setY(start.position.y());
+    start_ompl->as<ob::SE2StateSpace::StateType>()->setYaw(start.getYaw());
+    
+    ob::ScopedState<> goal_ompl(mpStateSpace);
+    goal_ompl->as<ob::SE2StateSpace::StateType>()->setX(goal.position.x());
+    goal_ompl->as<ob::SE2StateSpace::StateType>()->setY(goal.position.y());
+    goal_ompl->as<ob::SE2StateSpace::StateType>()->setYaw(goal.getYaw());
+    
+    LOG_INFO("Planning from (x,y,yaw) (%4.2f, %4.2f, %4.2f) to (%4.2f, %4.2f, %4.2f)", 
+            start.position.x(), start.position.y(), start.getYaw(),
+            goal.position.x(), goal.position.y(), goal.getYaw());
+    
+    mpProblemDefinition->setStartAndGoalStates(start_ompl, goal_ompl);
+    // Stop if the found solution is nearly a straight line.
+    double dist_start_goal = (start.position - goal.position).norm() * 1.1;
+    LOG_INFO("Set cost threshold to %4.2f", dist_start_goal);
+    mpOptimization->setCostThreshold(ob::Cost(dist_start_goal));
 }
 
 } // namespace global_path_planner

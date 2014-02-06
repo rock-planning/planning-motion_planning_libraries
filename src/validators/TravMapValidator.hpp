@@ -1,11 +1,12 @@
 #ifndef _TRAV_MAP_VALIDATOR_HPP_
 #define _TRAV_MAP_VALIDATOR_HPP_
 
-#include <envire/maps/TraversabilityGrid.hpp>
-#include <envire/operators/SimpleTraversability.hpp>
-
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/spaces/SE2StateSpace.h>
+
+namespace envire {
+class TraversabilityGrid;
+}
 
 namespace global_path_planner
 {

@@ -1,5 +1,8 @@
 #include "TravMapValidator.hpp"
 
+#include <envire/maps/TraversabilityGrid.hpp>
+#include <envire/operators/SimpleTraversability.hpp>
+
 namespace global_path_planner
 {
 
