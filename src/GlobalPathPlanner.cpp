@@ -10,6 +10,7 @@
 #include <ompl/config.h>
 
 #include <global_path_planner/validators/TravMapValidator.hpp>
+#include <global_path_planner/objectives/PathClearance.hpp>
 
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
@@ -118,18 +119,19 @@ bool GlobalPathPlanner::plan(double max_time) {
     
     if(mReplanningRequired) {
         LOG_INFO("Replanning initiated");
+        mPath.clear();
+        
         bool ret = createOMPLObjects();
         if(!ret) {
             LOG_WARN("OMPL objects could not be created, planning can not be executed"); 
             return false;
         }
+        // mpOptimizingPlanner->clear() + mpOptimizingPlanner->setup() seems to work not so well
     } else {
         LOG_INFO("Try to improve the current trajectory");
     }
     
     setStartGoalOMPL(mStartGrid, mGoalGrid);
-    
-    mpOptimizingPlanner->setup();
  
     // Start planning.
     // Setup: Once during creation or each time because of the changed start/goal?
@@ -275,11 +277,21 @@ bool GlobalPathPlanner::createOMPLObjects() {
 
     mpStateSpace = ompl::base::StateSpacePtr(new ob::SE2StateSpace());
     
-    // Set bounds. Cannot be set for x,y independently?
+    // Set the bounds for the RealVectorStateSpace (x,y), 
+    // not required/possible for orientation (default bound?)
     ob::RealVectorBounds bounds(2);
-    bounds.setLow(0);
-    bounds.setHigh(std::max(mpTravGrid->getCellSizeX(), mpTravGrid->getCellSizeY()));
+    bounds.setLow(0); // for all dimensions.
+    bounds.setHigh(0,mpTravGrid->getCellSizeX());
+    bounds.setHigh(1,mpTravGrid->getCellSizeY());
     mpStateSpace->as<ob::SE2StateSpace>()->setBounds(bounds);
+    mpStateSpace->setLongestValidSegmentFraction(0.1); // TODO What does LongestValidSegmentFraction mean? Optiml value here?
+    std::cout << "GET LONGEST VALID SEGMENT FRACTION: " << mpStateSpace->getLongestValidSegmentFraction() << std::endl;
+
+      
+    // Create the control  space.
+//    mpControlSpace = ompl::control::ControlSpacePtr(
+//            new ompl::control::RealVectorControlSpace(mpStateSpace));
+    
     
     // Create a space information object using the traversability map validator.
     mpSpaceInformation = ob::SpaceInformationPtr(new ob::SpaceInformation(mpStateSpace));
@@ -290,15 +302,16 @@ bool GlobalPathPlanner::createOMPLObjects() {
     // Create problem definition.        
     mpProblemDefinition = ob::ProblemDefinitionPtr(
             new ob::ProblemDefinition(mpSpaceInformation));
-    mpOptimization = ompl::base::OptimizationObjectivePtr(
-            new ob::PathLengthOptimizationObjective(mpSpaceInformation));
-    mpProblemDefinition->setOptimizationObjective(mpOptimization);
+    //mpPathLengthOptimization = ompl::base::OptimizationObjectivePtr(
+    //        new ob::PathLengthOptimizationObjective(mpSpaceInformation));
+    mpProblemDefinition->setOptimizationObjective(getBalancedObjective(mpSpaceInformation));
         
     // Construct our optimizing planner using the RRTstar algorithm.
     // TODO: RTTstar will be deleted by the planner object?
     mpOptimizingPlanner = ob::PlannerPtr(new og::RRTstar(mpSpaceInformation));
     // Set the problem instance for our planner to solve
     mpOptimizingPlanner->setProblemDefinition(mpProblemDefinition);
+    mpOptimizingPlanner->setup();
     
     return true;
 }
@@ -358,7 +371,15 @@ void GlobalPathPlanner::setStartGoalOMPL(base::samples::RigidBodyState const& st
     // Stop if the found solution is nearly a straight line.
     double dist_start_goal = (start.position - goal.position).norm() * 1.1;
     LOG_INFO("Set cost threshold to %4.2f", dist_start_goal);
-    mpOptimization->setCostThreshold(ob::Cost(dist_start_goal));
+    mpPathLengthOptimization->setCostThreshold(ob::Cost(dist_start_goal));
+}
+
+ompl::base::OptimizationObjectivePtr GlobalPathPlanner::getBalancedObjective(
+        const ompl::base::SpaceInformationPtr& si) {
+    // Objectives are not deleted because the space information integrates them?
+    mpPathLengthOptimization = ob::OptimizationObjectivePtr(new ob::PathLengthOptimizationObjective(si));
+    mpPathClearanceOptimization = ob::OptimizationObjectivePtr(new PathClearance(si));
+    return 10* mpPathLengthOptimization + mpPathClearanceOptimization;
 }
 
 } // namespace global_path_planner

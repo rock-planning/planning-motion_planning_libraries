@@ -36,6 +36,14 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
         return false;
     }
     
+    /* method is const...
+    base::samples::RigidBodyState rbs;
+    rbs.position = base::Vector3d(state_se2->getX(), state_se2->getY(), 0);
+    rbs.orientation = Eigen::AngleAxis<double>(state_se2->getYaw(), base::Vector3d(0,0,1));
+    rbs.time = base::Time::now();
+    mSamples.push_back(rbs);
+    */
+    
     return true;
 }
 

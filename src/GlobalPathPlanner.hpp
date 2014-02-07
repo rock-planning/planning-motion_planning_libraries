@@ -9,6 +9,8 @@
 #include <ompl/base/ProblemDefinition.h>
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/Planner.h>
+#include <ompl/control/ControlSpace.h>
+#include <ompl/base/OptimizationObjective.h>
 
 namespace envire {
 class TraversabilityGrid;
@@ -43,7 +45,9 @@ class GlobalPathPlanner
     ompl::base::SpaceInformationPtr mpSpaceInformation;
     ompl::base::ProblemDefinitionPtr mpProblemDefinition;
     ompl::base::PlannerPtr mpOptimizingPlanner;
-    ompl::base::OptimizationObjectivePtr mpOptimization;
+    ompl::base::OptimizationObjectivePtr mpPathLengthOptimization;
+    ompl::base::OptimizationObjectivePtr mpPathClearanceOptimization;
+    ompl::control::ControlSpacePtr mpControlSpace;
     
     bool mReplanningRequired;
     
@@ -106,6 +110,11 @@ class GlobalPathPlanner
      */
     void setStartGoalOMPL(base::samples::RigidBodyState const& start,
         base::samples::RigidBodyState const& goal);
+        
+    /**
+     * Combines several objectives like path clearance and path length.
+     */
+    ompl::base::OptimizationObjectivePtr getBalancedObjective(const ompl::base::SpaceInformationPtr& si);
 };
 
 } // end namespace global_path_planner
