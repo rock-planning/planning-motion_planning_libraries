@@ -8,6 +8,9 @@
 
 #include <base/samples/RigidBodyState.hpp>
 
+#include <envire/maps/TraversabilityGrid.hpp>
+#include <envire/operators/SimpleTraversability.hpp>
+
 namespace envire {
 class TraversabilityGrid;
 }
@@ -22,15 +25,39 @@ class TravMapValidator :  public ompl::base::StateValidityChecker {
  
  private:
     envire::TraversabilityGrid* mpTravGrid;
+    ompl::base::SpaceInformationPtr mpSpaceInformation;
+    envire::TraversabilityGrid::ArrayType* mpTravData;
     
  public:
     TravMapValidator(const ompl::base::SpaceInformationPtr& si,
             envire::TraversabilityGrid* trav_grid) : 
             ompl::base::StateValidityChecker(si),
-            mpTravGrid(trav_grid) {
+            mpTravGrid(trav_grid),
+            mpSpaceInformation(si){
+        mpTravData = new envire::TraversabilityGrid::ArrayType(mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY));
+    }
+    
+    ~TravMapValidator() {
+        delete mpTravData;
     }
     
     bool isValid(const ompl::base::State* state) const;
+    
+    // TODO Implement clearance methods. 
+    
+    /** 
+     * Report the distance to the nearest invalid state when starting from \e state. If the distance is
+     * negative, the value of clearance is the penetration depth.
+     */
+    double clearance(const ompl::base::State* state) const;
+
+    /** 
+     * Report the distance to the nearest invalid state when starting from \e state, and if possible,
+     * also specify a valid state \e validState in the direction that moves away from the colliding
+     * state. The \e validStateAvailable flag is set to true if \e validState is updated. 
+     */
+    double clearance(const ompl::base::State *state, ompl::base::State* validState, bool &validStateAvailable) const;
+
 };
 
 } // end namespace global_path_planner

@@ -7,10 +7,12 @@
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
+#include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/config.h>
 
 #include <global_path_planner/validators/TravMapValidator.hpp>
 #include <global_path_planner/objectives/PathClearance.hpp>
+#include <global_path_planner/objectives/TravGridObjective.hpp>
 
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
@@ -132,6 +134,8 @@ bool GlobalPathPlanner::plan(double max_time) {
     }
     
     setStartGoalOMPL(mStartGrid, mGoalGrid);
+    
+    mpProblemDefinition->print();
  
     // Start planning.
     // Setup: Once during creation or each time because of the changed start/goal?
@@ -284,8 +288,9 @@ bool GlobalPathPlanner::createOMPLObjects() {
     bounds.setHigh(0,mpTravGrid->getCellSizeX());
     bounds.setHigh(1,mpTravGrid->getCellSizeY());
     mpStateSpace->as<ob::SE2StateSpace>()->setBounds(bounds);
-    mpStateSpace->setLongestValidSegmentFraction(0.1); // TODO What does LongestValidSegmentFraction mean? Optiml value here?
+    mpStateSpace->setLongestValidSegmentFraction(1/(double)mpTravGrid->getCellSizeX()); // TODO What does LongestValidSegmentFraction mean? Optimal value here?
     std::cout << "GET LONGEST VALID SEGMENT FRACTION: " << mpStateSpace->getLongestValidSegmentFraction() << std::endl;
+     std::cout << "GET MAX EXTENT: " << mpStateSpace->getMaximumExtent() << std::endl;   
 
       
     // Create the control  space.
@@ -308,7 +313,7 @@ bool GlobalPathPlanner::createOMPLObjects() {
         
     // Construct our optimizing planner using the RRTstar algorithm.
     // TODO: RTTstar will be deleted by the planner object?
-    mpOptimizingPlanner = ob::PlannerPtr(new og::RRTstar(mpSpaceInformation));
+    mpOptimizingPlanner = ob::PlannerPtr(new og::PRMstar(mpSpaceInformation));
     // Set the problem instance for our planner to solve
     mpOptimizingPlanner->setProblemDefinition(mpProblemDefinition);
     mpOptimizingPlanner->setup();
@@ -376,10 +381,27 @@ void GlobalPathPlanner::setStartGoalOMPL(base::samples::RigidBodyState const& st
 
 ompl::base::OptimizationObjectivePtr GlobalPathPlanner::getBalancedObjective(
         const ompl::base::SpaceInformationPtr& si) {
-    // Objectives are not deleted because the space information integrates them?
+    /*    
     mpPathLengthOptimization = ob::OptimizationObjectivePtr(new ob::PathLengthOptimizationObjective(si));
     mpPathClearanceOptimization = ob::OptimizationObjectivePtr(new PathClearance(si));
-    return 10* mpPathLengthOptimization + mpPathClearanceOptimization;
+    return mpPathLengthOptimization + mpPathClearanceOptimization;
+    */
+    
+    mpPathLengthOptimization = ob::OptimizationObjectivePtr(new ob::PathLengthOptimizationObjective(si));
+    mpPathClearanceOptimization = ob::OptimizationObjectivePtr(new PathClearance(si));
+    mpMaxMinClearance = ob::OptimizationObjectivePtr(new ob::MaximizeMinClearanceObjective(si));
+    mpTravGridOjective = ob::OptimizationObjectivePtr(new TravGridObjective(si, mpTravGrid));
+    
+    //ob::OptimizationObjectivePtr lengthObj(new ob::PathLengthOptimizationObjective(si));
+    //ob::OptimizationObjectivePtr clearObj(new PathClearance(si));
+    ob::MultiOptimizationObjective* opt = new ob::MultiOptimizationObjective(si);
+    opt->addObjective(mpPathLengthOptimization, 1.0);
+    //opt->addObjective(mpPathClearanceOptimization, 1.0);
+    //opt->addObjective(mpMaxMinClearance, 0.0);
+    opt->addObjective(mpTravGridOjective, 1.0);
+    mpMultiOptimization = ompl::base::OptimizationObjectivePtr(opt);
+
+    return mpMultiOptimization;
 }
 
 } // namespace global_path_planner

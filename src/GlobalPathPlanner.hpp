@@ -10,7 +10,7 @@
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/Planner.h>
 #include <ompl/control/ControlSpace.h>
-#include <ompl/base/OptimizationObjective.h>
+#include <ompl/base/objectives/MaximizeMinClearanceObjective.h>
 
 namespace envire {
 class TraversabilityGrid;
@@ -47,6 +47,9 @@ class GlobalPathPlanner
     ompl::base::PlannerPtr mpOptimizingPlanner;
     ompl::base::OptimizationObjectivePtr mpPathLengthOptimization;
     ompl::base::OptimizationObjectivePtr mpPathClearanceOptimization;
+    ompl::base::OptimizationObjectivePtr mpMultiOptimization;
+    ompl::base::OptimizationObjectivePtr mpMaxMinClearance;
+    ompl::base::OptimizationObjectivePtr mpTravGridOjective;
     ompl::control::ControlSpacePtr mpControlSpace;
     
     bool mReplanningRequired;
