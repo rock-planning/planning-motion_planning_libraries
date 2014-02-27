@@ -2,11 +2,13 @@
 #define _TRAV_MAP_VALIDATOR_HPP_
 
 #include <vector>
+#include <map>
 
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/spaces/SE2StateSpace.h>
 
 #include <base/samples/RigidBodyState.hpp>
+#include <base/Waypoint.hpp>
 
 #include <envire/maps/TraversabilityGrid.hpp>
 #include <envire/operators/SimpleTraversability.hpp>
@@ -20,21 +22,21 @@ namespace global_path_planner
 
 class TravMapValidator :  public ompl::base::StateValidityChecker {
  
- public:
-    //std::vector<base::samples::RigidBodyState> mSamples;
- 
  private:
     envire::TraversabilityGrid* mpTravGrid;
     ompl::base::SpaceInformationPtr mpSpaceInformation;
     envire::TraversabilityGrid::ArrayType* mpTravData;
+    mutable std::map<double, base::Waypoint> mSamples;
     
  public:
     TravMapValidator(const ompl::base::SpaceInformationPtr& si,
             envire::TraversabilityGrid* trav_grid) : 
             ompl::base::StateValidityChecker(si),
             mpTravGrid(trav_grid),
-            mpSpaceInformation(si){
-        mpTravData = new envire::TraversabilityGrid::ArrayType(mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY));
+            mpSpaceInformation(si),
+            mSamples() {
+        mpTravData = new envire::TraversabilityGrid::ArrayType(mpTravGrid->getGridData
+                (envire::TraversabilityGrid::TRAVERSABILITY));
     }
     
     ~TravMapValidator() {
@@ -58,6 +60,14 @@ class TravMapValidator :  public ompl::base::StateValidityChecker {
      */
     double clearance(const ompl::base::State *state, ompl::base::State* validState, bool &validStateAvailable) const;
 
+    std::vector<base::Waypoint> getSamples() {
+        std::vector<base::Waypoint> vec;
+        std::map<double, base::Waypoint>::iterator it = mSamples.begin();
+        for(;it != mSamples.end(); it++) {
+            vec.push_back(it->second);
+        }
+        return vec;
+    }    
 };
 
 } // end namespace global_path_planner

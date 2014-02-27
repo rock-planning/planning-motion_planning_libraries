@@ -21,6 +21,7 @@ namespace global_path_planner
 {
 
 class TravMapValidator;
+class TurningValidator;
 
 /**
  * Can be used to plan 2D trajectories considering the orientation.
@@ -33,16 +34,19 @@ class GlobalPathPlanner
  private:
     static const double REPLANNING_DIST_THRESHOLD = 0.05;
     static const double REPLANNING_TURN_THRESHOLD = 0.017;
+    double mMaxSpeed;
+    double mMaxTurningSpeed;
  
     envire::TraversabilityGrid* mpTravGrid;
     // Contains the grid coordinates and the orientation.
     base::samples::RigidBodyState mStartGrid, mGoalGrid;
     base::samples::RigidBodyState mStartWorld, mGoalWorld;
-    TravMapValidator* mpTravMapValidator;
     std::vector<base::samples::RigidBodyState> mPath;
     
     ompl::base::StateSpacePtr mpStateSpace;
     ompl::base::SpaceInformationPtr mpSpaceInformation;
+    ompl::base::StateValidityCheckerPtr mpTravMapValidator;
+    ompl::base::MotionValidatorPtr mpTurningValidator;
     ompl::base::ProblemDefinitionPtr mpProblemDefinition;
     ompl::base::PlannerPtr mpOptimizingPlanner;
     ompl::base::OptimizationObjectivePtr mpPathLengthOptimization;
@@ -89,6 +93,11 @@ class GlobalPathPlanner
     static bool grid2world(envire::TraversabilityGrid const* trav,
             base::samples::RigidBodyState const& grid_pose, 
             base::samples::RigidBodyState& world_pose);
+    
+    /**
+     * Used to check the sampling.
+     */
+    std::vector<base::Waypoint> getSamples();
     
  private:
     /**

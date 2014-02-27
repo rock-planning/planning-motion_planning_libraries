@@ -1,7 +1,5 @@
 #include "TravMapValidator.hpp"
 
-
-
 #include <ompl/base/SpaceInformation.h>
 
 namespace global_path_planner
@@ -10,17 +8,17 @@ namespace global_path_planner
 bool TravMapValidator::isValid(const ompl::base::State* state) const
 {
     const ompl::base::SE2StateSpace::StateType* state_se2 = 
-            state->as<ompl::base::SE2StateSpace::StateType>();
+            state->as<ompl::base::SE2StateSpace::StateType>();      
 
     if(mpTravGrid == NULL) {
         LOG_WARN("The traversability map has not been set yet, states are invalid");
         return false;
     }
     
-    // Maps position to grid coordinates.
+    // Maps position to grid coordinates.    
     int x_grid = (int)(state_se2->getX() + 0.5);
     int y_grid = (int)(state_se2->getY() + 0.5);
-
+    
     // Check borders.
     if(     x_grid < 0 || x_grid >= (int)mpTravGrid->getCellSizeX() ||
             y_grid < 0 || y_grid >= (int)mpTravGrid->getCellSizeY()) {
@@ -36,12 +34,14 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
         return false;
     }
     
-    /* method is const...
-    base::samples::RigidBodyState rbs;
-    rbs.position = base::Vector3d(state_se2->getX(), state_se2->getY(), 0);
-    rbs.orientation = Eigen::AngleAxis<double>(state_se2->getYaw(), base::Vector3d(0,0,1));
-    rbs.time = base::Time::now();
-    mSamples.push_back(rbs);
+    // Using yaw as z for visualization.
+    /*
+    base::Waypoint wp(base::Vector3d(x_grid, y_grid, yaw), state_se2->getYaw(), 0, 0);
+    double key = x_grid * 400000 + y_grid * 1000 + (int)(yaw+0.5);
+    // Try to reduce the number of samples.
+    if(mSamples.find(key) == mSamples.end()) {
+        mSamples.insert(std::pair<double,base::Waypoint>(key,wp));
+    }
     */
     
     return true;

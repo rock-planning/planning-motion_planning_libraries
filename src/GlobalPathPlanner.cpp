@@ -11,6 +11,7 @@
 #include <ompl/config.h>
 
 #include <global_path_planner/validators/TravMapValidator.hpp>
+#include <global_path_planner/validators/TurningValidator.hpp>
 #include <global_path_planner/objectives/PathClearance.hpp>
 #include <global_path_planner/objectives/TravGridObjective.hpp>
 
@@ -24,7 +25,6 @@ namespace global_path_planner
 GlobalPathPlanner::GlobalPathPlanner() : mpTravGrid(NULL), 
         mStartGrid(), 
         mGoalGrid(), 
-        mpTravMapValidator(NULL), 
         mPath(),
         mReplanningRequired(true) {
         
@@ -32,6 +32,8 @@ GlobalPathPlanner::GlobalPathPlanner() : mpTravGrid(NULL),
     mStartGrid.invalidateOrientation();        
     mGoalGrid.invalidatePosition();
     mGoalGrid.invalidateOrientation();  
+    mMaxSpeed = 0.5; // m/s
+    mMaxTurningSpeed = M_PI / 5; // rad/s
 }
 
 GlobalPathPlanner::~GlobalPathPlanner() {
@@ -248,6 +250,15 @@ bool GlobalPathPlanner::grid2world(envire::TraversabilityGrid const* trav,
     return true;
 }
 
+std::vector<base::Waypoint> GlobalPathPlanner::getSamples() {
+    if(mpTravMapValidator == NULL) {
+        std::cout << "mpTravMapValidator is empty" << std::endl; 
+        return std::vector<base::Waypoint>();
+    } else {
+        //return mpTravMapValidator->getSamples();
+    }    
+}
+
 // PRIVATE
 envire::TraversabilityGrid* GlobalPathPlanner::extractTravGrid(envire::Environment* env, 
         std::string trav_map_id) {
@@ -278,9 +289,9 @@ bool GlobalPathPlanner::createOMPLObjects() {
         LOG_WARN("No traversability map available, OMPL objects cannot be constructed");
         return false;
     }
+    
 
     mpStateSpace = ompl::base::StateSpacePtr(new ob::SE2StateSpace());
-    
     // Set the bounds for the RealVectorStateSpace (x,y), 
     // not required/possible for orientation (default bound?)
     ob::RealVectorBounds bounds(2);
@@ -290,8 +301,7 @@ bool GlobalPathPlanner::createOMPLObjects() {
     mpStateSpace->as<ob::SE2StateSpace>()->setBounds(bounds);
     mpStateSpace->setLongestValidSegmentFraction(1/(double)mpTravGrid->getCellSizeX()); // TODO What does LongestValidSegmentFraction mean? Optimal value here?
     std::cout << "GET LONGEST VALID SEGMENT FRACTION: " << mpStateSpace->getLongestValidSegmentFraction() << std::endl;
-     std::cout << "GET MAX EXTENT: " << mpStateSpace->getMaximumExtent() << std::endl;   
-
+    std::cout << "GET MAX EXTENT: " << mpStateSpace->getMaximumExtent() << std::endl;   
       
     // Create the control  space.
 //    mpControlSpace = ompl::control::ControlSpacePtr(
@@ -300,8 +310,11 @@ bool GlobalPathPlanner::createOMPLObjects() {
     
     // Create a space information object using the traversability map validator.
     mpSpaceInformation = ob::SpaceInformationPtr(new ob::SpaceInformation(mpStateSpace));
-    mpSpaceInformation->setStateValidityChecker(ompl::base::StateValidityCheckerPtr(
-            new TravMapValidator(mpSpaceInformation, mpTravGrid)));
+    mpTravMapValidator = ompl::base::StateValidityCheckerPtr(new TravMapValidator(mpSpaceInformation, mpTravGrid));
+    mpSpaceInformation->setStateValidityChecker(mpTravMapValidator);
+    double max_grid_sec = mMaxSpeed / mpTravGrid->getScaleX();
+    mpTurningValidator = ompl::base::MotionValidatorPtr(new TurningValidator(mpSpaceInformation, max_grid_sec, mMaxTurningSpeed));
+    mpSpaceInformation->setMotionValidator(mpTurningValidator);
     mpSpaceInformation->setup();
             
     // Create problem definition.        
@@ -398,7 +411,7 @@ ompl::base::OptimizationObjectivePtr GlobalPathPlanner::getBalancedObjective(
     opt->addObjective(mpPathLengthOptimization, 1.0);
     //opt->addObjective(mpPathClearanceOptimization, 1.0);
     //opt->addObjective(mpMaxMinClearance, 0.0);
-    opt->addObjective(mpTravGridOjective, 1.0);
+    //opt->addObjective(mpTravGridOjective, 1.0);
     mpMultiOptimization = ompl::base::OptimizationObjectivePtr(opt);
 
     return mpMultiOptimization;
