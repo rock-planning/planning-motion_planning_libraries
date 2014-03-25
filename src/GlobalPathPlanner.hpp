@@ -35,7 +35,7 @@ class GlobalPathPlanner
     static const double REPLANNING_DIST_THRESHOLD = 0.05;
     static const double REPLANNING_TURN_THRESHOLD = 0.017;
     double mMaxSpeed;
-    double mMaxTurningSpeed;
+    double mMaxTurningAngleRad;
  
     envire::TraversabilityGrid* mpTravGrid;
     // Contains the grid coordinates and the orientation.

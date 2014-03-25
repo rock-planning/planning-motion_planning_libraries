@@ -33,7 +33,7 @@ GlobalPathPlanner::GlobalPathPlanner() : mpTravGrid(NULL),
     mGoalGrid.invalidatePosition();
     mGoalGrid.invalidateOrientation();  
     mMaxSpeed = 0.5; // m/s
-    mMaxTurningSpeed = M_PI / 5; // rad/s
+    mMaxTurningAngleRad = M_PI / 18; // rad
 }
 
 GlobalPathPlanner::~GlobalPathPlanner() {
@@ -313,7 +313,7 @@ bool GlobalPathPlanner::createOMPLObjects() {
     mpTravMapValidator = ompl::base::StateValidityCheckerPtr(new TravMapValidator(mpSpaceInformation, mpTravGrid));
     mpSpaceInformation->setStateValidityChecker(mpTravMapValidator);
     double max_grid_sec = mMaxSpeed / mpTravGrid->getScaleX();
-    mpTurningValidator = ompl::base::MotionValidatorPtr(new TurningValidator(mpSpaceInformation, max_grid_sec, mMaxTurningSpeed));
+    mpTurningValidator = ompl::base::MotionValidatorPtr(new TurningValidator(mpSpaceInformation, max_grid_sec, mMaxTurningAngleRad));
     mpSpaceInformation->setMotionValidator(mpTurningValidator);
     mpSpaceInformation->setup();
             

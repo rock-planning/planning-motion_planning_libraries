@@ -22,16 +22,16 @@ class TurningValidator :  public ompl::base::DiscreteMotionValidator {
  private:
     ompl::base::SpaceInformationPtr mpSpaceInformation;
     double mMaxSpeed;
-    double mMaxTurningSpeed;
+    double mMaxSteeringAngleRad;
     
     bool isValidTurn(const ompl::base::State *s1, const ompl::base::State *s2) const;
     
  public:
     TurningValidator(const ompl::base::SpaceInformationPtr& si, 
-            double max_speed, double max_turning_speed) : 
+            double max_speed, double max_steering_angle_rad) : 
             ompl::base::DiscreteMotionValidator(si),
             mMaxSpeed(max_speed), 
-            mMaxTurningSpeed(max_turning_speed) {
+            mMaxSteeringAngleRad(max_steering_angle_rad) {
     }
     
     ~TurningValidator() {
@@ -50,12 +50,12 @@ class TurningValidator :  public ompl::base::DiscreteMotionValidator {
         return mMaxSpeed;
     }
     
-    inline void setMaxTurningSpeed(double max_turning_speed) {
-        mMaxTurningSpeed = max_turning_speed;
+    inline void setMaxSteeringAngle(double max_steering_speed) {
+        mMaxSteeringAngleRad = max_steering_speed;
     }
     
-    inline double getMaxTurningSpeed() const {
-        return mMaxTurningSpeed;
+    inline double getMaxSteeringAngle() const {
+        return mMaxSteeringAngleRad;
     }
 };
 
