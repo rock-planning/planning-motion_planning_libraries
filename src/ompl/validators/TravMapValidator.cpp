@@ -22,7 +22,7 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
     // Check borders.
     if(     x_grid < 0 || x_grid >= (int)mpTravGrid->getCellSizeX() ||
             y_grid < 0 || y_grid >= (int)mpTravGrid->getCellSizeY()) {
-        LOG_INFO("State (%d,%d) is invalid (not within the grid)", x_grid, y_grid);
+        LOG_DEBUG("State (%d,%d) is invalid (not within the grid)", x_grid, y_grid);
         return false;
     }   
     
@@ -30,19 +30,9 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
     //envire::TraversabilityGrid::ArrayType &trav_data(
     //        mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY));
     if((*mpTravData)[y_grid][x_grid] == envire::SimpleTraversability::CLASS_OBSTACLE) {
-        LOG_INFO("State (%d,%d) is invalid (lies on an obstacle)", x_grid, y_grid);
+        LOG_DEBUG("State (%d,%d) is invalid (lies on an obstacle)", x_grid, y_grid);
         return false;
     }
-    
-    // Using yaw as z for visualization.
-    /*
-    base::Waypoint wp(base::Vector3d(x_grid, y_grid, yaw), state_se2->getYaw(), 0, 0);
-    double key = x_grid * 400000 + y_grid * 1000 + (int)(yaw+0.5);
-    // Try to reduce the number of samples.
-    if(mSamples.find(key) == mSamples.end()) {
-        mSamples.insert(std::pair<double,base::Waypoint>(key,wp));
-    }
-    */
     
     return true;
 }
@@ -107,13 +97,8 @@ double TravMapValidator::clearance(const ompl::base::State* state) const
     return 0.0;
 }
 
-/** 
-    * Report the distance to the nearest invalid state when starting from \e state, and if possible,
-    * also specify a valid state \e validState in the direction that moves away from the colliding
-    * state. The \e validStateAvailable flag is set to true if \e validState is updated. 
-    */
-double TravMapValidator::clearance(const ompl::base::State *state, ompl::base::State*
-validState, bool &validStateAvailable) const
+double TravMapValidator::clearance(const ompl::base::State *state, ompl::base::State* 
+        validState, bool &validStateAvailable) const
 {
     validStateAvailable = false;
     return clearance(state);

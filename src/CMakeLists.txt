@@ -1,6 +1,6 @@
 rock_library(global_path_planner
-    SOURCES GlobalPathPlanner.cpp validators/TravMapValidator.cpp validators/TurningValidator.cpp objectives/PathClearance.cpp objectives/TravGridObjective.cpp
-    HEADERS GlobalPathPlanner.hpp validators/TravMapValidator.hpp validators/TurningValidator.hpp objectives/PathClearance.hpp objectives/TravGridObjective.hpp
+    SOURCES GlobalPathPlanner.cpp sbpl/Sbpl.cpp ompl/Ompl.cpp ompl/validators/TravMapValidator.cpp ompl/objectives/TravGridObjective.cpp
+    HEADERS GlobalPathPlanner.hpp sbpl/Sbpl.hpp ompl/Ompl.hpp ompl/validators/TravMapValidator.hpp ompl/objectives/TravGridObjective.hpp
     DEPS_PKGCONFIG ompl
     DEPS_PKGCONFIG envire
 )
