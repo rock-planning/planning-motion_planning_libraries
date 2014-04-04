@@ -19,7 +19,6 @@ namespace global_path_planner
 Ompl::Ompl() : GlobalPathPlanner() {
 }
  
-
 bool Ompl::initialize() {
     mpStateSpace = ob::StateSpacePtr(new ob::SE2StateSpace());
     ob::RealVectorBounds bounds(2);

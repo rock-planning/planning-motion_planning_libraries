@@ -3,6 +3,12 @@
 
 #include <global_path_planner/GlobalPathPlanner.hpp>
 
+#include <boost/shared_ptr.hpp>
+
+#include <sbpl/utils/utils.h>
+
+class EnvironmentNAVXYTHETAMLEVLAT;
+
 namespace global_path_planner
 {
 
@@ -32,6 +38,11 @@ class Sbpl : public GlobalPathPlanner
      * 
      */
     virtual bool fillPath(std::vector<base::samples::RigidBodyState>& path);
+    
+ private:
+    boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> mpEnv;
+    
+    vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
 };
     
 } // end namespace global_path_planner

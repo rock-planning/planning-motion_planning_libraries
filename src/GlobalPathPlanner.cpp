@@ -1,8 +1,5 @@
 #include "GlobalPathPlanner.hpp"
 
-#include <envire/maps/TraversabilityGrid.hpp>
-#include <envire/core/Environment.hpp>
-
 namespace global_path_planner
 {
 
@@ -17,6 +14,11 @@ GlobalPathPlanner::GlobalPathPlanner() : mpTravGrid(NULL),
     mStartGrid.invalidateOrientation();        
     mGoalGrid.invalidatePosition();
     mGoalGrid.invalidateOrientation();  
+    
+    mRobotWidth = 0.5;
+    mRobotHeight = 0.5;
+    mRobotForwardVelocity = 0.2;
+    mRobotRotationalVelocity = 0.1;
 }
 
 GlobalPathPlanner::~GlobalPathPlanner() {

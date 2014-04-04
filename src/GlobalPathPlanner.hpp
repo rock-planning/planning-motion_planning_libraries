@@ -5,10 +5,8 @@
 #include <base/Waypoint.hpp>
 #include <base/Trajectory.hpp>
 
-namespace envire {
-class TraversabilityGrid;
-class Environment;
-}
+#include <envire/maps/TraversabilityGrid.hpp>
+#include <envire/core/Environment.hpp>
 
 namespace global_path_planner
 {
@@ -30,6 +28,11 @@ class GlobalPathPlanner
     base::samples::RigidBodyState mStartGrid, mGoalGrid;
     std::vector<base::samples::RigidBodyState> mPathInGrid;
     bool mReplanningRequired;
+    
+    double mRobotWidth;
+    double mRobotHeight;
+    double mRobotForwardVelocity; // m/sec
+    double mRobotRotationalVelocity; // Time in seconds to turn 45°. 
     
  public: 
     GlobalPathPlanner();
@@ -94,7 +97,7 @@ class GlobalPathPlanner
      * Initialize the complete planning environment.
      * It has to be possible to call this methods several times, which should
      * remove the old environment and create a new one.
-     * The current traversability map, start and goal should be used.
+     * The current traversability map, start and goal are set and should be used.
      */
     virtual bool initialize() = 0;
     virtual bool solve(double time) = 0;
