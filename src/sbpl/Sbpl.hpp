@@ -1,11 +1,13 @@
 #ifndef _GLOBAL_PATH_PLANNER_SBPL_HPP_
 #define _GLOBAL_PATH_PLANNER_SBPL_HPP_
 
-#include <global_path_planner/GlobalPathPlanner.hpp>
+#include <vector>
 
 #include <boost/shared_ptr.hpp>
 
 #include <sbpl/utils/utils.h>
+
+#include <global_path_planner/GlobalPathPlanner.hpp>
 
 class EnvironmentNAVXYTHETAMLEVLAT;
 
@@ -27,7 +29,15 @@ class Sbpl : public GlobalPathPlanner
     /**
      * 
      */
-    virtual bool initialize();
+    virtual bool initialize(size_t grid_width, size_t grid_height, 
+            double scale_x, double scale_y, 
+            boost::shared_ptr<TravData> grid_data);
+    
+    /**
+     * 
+     */
+    virtual bool setStartGoal(int start_x, int start_y, double start_yaw, 
+            int goal_x, int goal_y, double goal_yaw);
     
     /**
      * 
@@ -42,7 +52,7 @@ class Sbpl : public GlobalPathPlanner
  private:
     boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> mpEnv;
     
-    vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
+    std::vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
 };
     
 } // end namespace global_path_planner

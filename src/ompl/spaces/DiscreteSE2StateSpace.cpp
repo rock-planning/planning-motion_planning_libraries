@@ -1,6 +1,9 @@
-#include "ompl/base/spaces/SE2StateSpace.h"
-#include "ompl/tools/config/MagicConstants.h"
+#include "DiscreteSE2StateSpace.hpp"
+
 #include <cstring>
+
+#include <ompl/base/spaces/SE2StateSpace.h>
+#include <ompl/tools/config/MagicConstants.h>
 
 namespace global_path_planner
 {

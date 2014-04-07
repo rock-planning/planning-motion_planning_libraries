@@ -7,8 +7,8 @@
 #include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/config.h>
 
-#include <global_path_planner/validators/TravMapValidator.hpp>
-#include <global_path_planner/objectives/TravGridObjective.hpp>
+#include <global_path_planner/ompl/validators/TravMapValidator.hpp>
+#include <global_path_planner/ompl/objectives/TravGridObjective.hpp>
 
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
@@ -16,31 +16,39 @@ namespace og = ompl::geometric;
 namespace global_path_planner
 {
 
-Ompl::Ompl() : GlobalPathPlanner() {
+Ompl::Ompl() : GlobalPathPlanner(), mGridWidth(0), mGridHeight(0) {
 }
  
-bool Ompl::initialize() {
+bool Ompl::initialize(size_t grid_width, size_t grid_height, 
+            double scale_x, double scale_y, 
+            boost::shared_ptr<TravData> grid_data) {
+    
+    mGridWidth = grid_width;
+    mGridHeight = grid_height;
+    
     mpStateSpace = ob::StateSpacePtr(new ob::SE2StateSpace());
     ob::RealVectorBounds bounds(2);
     bounds.setLow (0, 0);
-    bounds.setHigh(0, mpTravGrid->getCellSizeX());
+    bounds.setHigh(0, grid_width);
     bounds.setLow (1, 0);
-    bounds.setHigh(1, mpTravGrid->getCellSizeY());
+    bounds.setHigh(1, grid_height);
     mpStateSpace->as<ob::SE2StateSpace>()->setBounds(bounds);
     // TODO Is this the correct 'longest valid segment fraction'?
-    mpStateSpace->setLongestValidSegmentFraction(1/(double)mpTravGrid->getCellSizeX());
+    mpStateSpace->setLongestValidSegmentFraction(1/(double)grid_width);
       
     // Create a space information object using the traversability map validator.
     mpSpaceInformation = ob::SpaceInformationPtr(new ob::SpaceInformation(mpStateSpace));
-    mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidator(mpSpaceInformation, mpTravGrid));
+    mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidator(
+                mpSpaceInformation, grid_width, grid_height, grid_data));
     mpSpaceInformation->setStateValidityChecker(mpTravMapValidator);
         
     // Create problem definition.        
     mpProblemDefinition = ob::ProblemDefinitionPtr(new ob::ProblemDefinition(mpSpaceInformation));
     mpProblemDefinition->setOptimizationObjective(getBalancedObjective(mpSpaceInformation));
     
-    // Set start and goal.  
-    setStartGoal(mStartGrid, mGoalGrid, mpStateSpace, mpProblemDefinition);
+    // Uses the currently set start and goal.
+    setStartGoal(mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
+            mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw());
     
     // Stop if the found solution is nearly a straight line.
     double dist_start_goal = (mStartGrid.position - mGoalGrid.position).norm() * 1.1;
@@ -51,6 +59,24 @@ bool Ompl::initialize() {
     // Set the problem instance for our planner to solve
     mpPlanner->setProblemDefinition(mpProblemDefinition);
     mpPlanner->setup(); // Calls mpSpaceInformation->setup() as well.
+    
+    return true;
+}
+
+bool Ompl::setStartGoal(int start_x, int start_y, double start_yaw, 
+        int goal_x, int goal_y, double goal_yaw) {
+    
+    ob::ScopedState<> start_ompl(mpStateSpace);
+    start_ompl->as<ob::SE2StateSpace::StateType>()->setX(start_x);
+    start_ompl->as<ob::SE2StateSpace::StateType>()->setY(start_y);
+    start_ompl->as<ob::SE2StateSpace::StateType>()->setYaw(start_yaw);
+
+    ob::ScopedState<> goal_ompl(mpStateSpace);
+    goal_ompl->as<ob::SE2StateSpace::StateType>()->setX(goal_x);
+    goal_ompl->as<ob::SE2StateSpace::StateType>()->setY(goal_y);
+    goal_ompl->as<ob::SE2StateSpace::StateType>()->setYaw(goal_yaw);
+
+    mpProblemDefinition->setStartAndGoalStates(start_ompl, goal_ompl);
     
     return true;
 }
@@ -100,7 +126,7 @@ ompl::base::OptimizationObjectivePtr Ompl::getBalancedObjective(
     mpPathLengthOptimization = ob::OptimizationObjectivePtr(
             new ob::PathLengthOptimizationObjective(si));
     mpTravGridOjective = ob::OptimizationObjectivePtr(
-            new TravGridObjective(si, mpTravGrid));
+            new TravGridObjective(si, mpTravData, mGridWidth, mGridHeight));
 
     ob::MultiOptimizationObjective* opt = new ob::MultiOptimizationObjective(si);
     opt->addObjective(mpPathLengthOptimization, 1.0);
@@ -108,28 +134,6 @@ ompl::base::OptimizationObjectivePtr Ompl::getBalancedObjective(
     mpMultiOptimization = ompl::base::OptimizationObjectivePtr(opt);
 
     return mpMultiOptimization;
-}
-
-void Ompl::setStartGoal(base::samples::RigidBodyState& start_in_grid, 
-        base::samples::RigidBodyState& goal_in_grid, 
-        ompl::base::StateSpacePtr state_space, 
-        ompl::base::ProblemDefinitionPtr& problem_definition) {
-    
-    ob::ScopedState<> start_ompl(state_space);
-    start_ompl->as<ob::SE2StateSpace::StateType>()->setX(start_in_grid.position.x());
-    start_ompl->as<ob::SE2StateSpace::StateType>()->setY(start_in_grid.position.y());
-    start_ompl->as<ob::SE2StateSpace::StateType>()->setYaw(start_in_grid.getYaw());
-    
-    ob::ScopedState<> goal_ompl(state_space);
-    goal_ompl->as<ob::SE2StateSpace::StateType>()->setX(goal_in_grid.position.x());
-    goal_ompl->as<ob::SE2StateSpace::StateType>()->setY(goal_in_grid.position.y());
-    goal_ompl->as<ob::SE2StateSpace::StateType>()->setYaw(goal_in_grid.getYaw());
-    
-    LOG_INFO("Planning from (x,y,yaw) (%4.2f, %4.2f, %4.2f) to (%4.2f, %4.2f, %4.2f)", 
-            start_in_grid.position.x(), start_in_grid.position.y(), start_in_grid.getYaw(),
-            goal_in_grid.position.x(), goal_in_grid.position.y(), goal_in_grid.getYaw());
-    
-    problem_definition->setStartAndGoalStates(start_ompl, goal_ompl);
 }
 
 } // namespace global_path_planner

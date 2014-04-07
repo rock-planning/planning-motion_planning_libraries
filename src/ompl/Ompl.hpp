@@ -1,12 +1,12 @@
 #ifndef _GLOBAL_PATH_PLANNER_OMPL_HPP_
 #define _GLOBAL_PATH_PLANNER_OMPL_HPP_
 
-#include <global_path_planner/GlobalPathPlanner.hpp>
-
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/base/ProblemDefinition.h>
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/Planner.h>
+
+#include <global_path_planner/GlobalPathPlanner.hpp>
 
 namespace global_path_planner
 {
@@ -30,6 +30,9 @@ class Ompl : public GlobalPathPlanner
     ompl::base::OptimizationObjectivePtr mpMaxMinClearance;
     ompl::base::OptimizationObjectivePtr mpTravGridOjective;
     ompl::base::PathPtr mpPathInGridOmpl;
+    
+    size_t mGridWidth;
+    size_t mGridHeight;
       
  public: 
     Ompl();
@@ -39,7 +42,15 @@ class Ompl : public GlobalPathPlanner
     /**
      * (Re-)creates the complete ompl environment.
      */
-    virtual bool initialize();
+    virtual bool initialize(size_t grid_width, size_t grid_height, 
+            double scale_x, double scale_y, 
+            boost::shared_ptr<TravData> grid_data);
+    
+    /**
+     * Sets the global start and goal poses (in grid coordinates) in OMPL.
+     */ 
+    virtual bool setStartGoal(int start_x, int start_y, double start_yaw, 
+            int goal_x, int goal_y, double goal_yaw);
     
     /**
      * Tries to find a valid path for \a time seconds.
@@ -59,14 +70,6 @@ class Ompl : public GlobalPathPlanner
      */ 
     ompl::base::OptimizationObjectivePtr getBalancedObjective(
         const ompl::base::SpaceInformationPtr& si);
-        
-    /**
-     * Sets the global start and goal poses (in grid coordinates) in OMPL.
-     */    
-    void setStartGoal(base::samples::RigidBodyState& start_in_grid, 
-            base::samples::RigidBodyState& goal_in_grid, 
-            ompl::base::StateSpacePtr state_space, 
-            ompl::base::ProblemDefinitionPtr& problem_definition);
 };
 
 } // end namespace global_path_planner

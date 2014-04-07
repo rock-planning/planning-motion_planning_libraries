@@ -1,8 +1,8 @@
 #ifndef _DISCRETE_SE2_STATE_SPACE_HPP_
 #define _DISCRETE_SE2_STATE_SPACE_HPP_
 
-#include "ompl/base/StateSpace.h"
-#include "ompl/base/spaces/DiscreteStateSpace.h"
+#include <ompl/base/StateSpace.h>
+#include <ompl/base/spaces/DiscreteStateSpace.h>
 
 namespace global_path_planner
 {

@@ -11,6 +11,8 @@
 namespace global_path_planner
 {
 
+typedef envire::TraversabilityGrid::ArrayType TravData;
+    
 /**
  * Can be used to plan 2D trajectories considering the orientation.
  * The planner is meant to work on a single, local traversability map.
@@ -24,10 +26,12 @@ class GlobalPathPlanner
     static const double REPLANNING_TURN_THRESHOLD = 0.017;
     
     envire::TraversabilityGrid* mpTravGrid;
+    boost::shared_ptr<TravData> mpTravData;
     base::samples::RigidBodyState mStartWorld, mGoalWorld;
     base::samples::RigidBodyState mStartGrid, mGoalGrid;
     std::vector<base::samples::RigidBodyState> mPathInGrid;
-    bool mReplanningRequired;
+    bool mReceivedNewTravGrid;
+    bool mReceivedNewStartGoal;
     
     double mRobotWidth;
     double mRobotHeight;
@@ -94,13 +98,30 @@ class GlobalPathPlanner
             
  protected:
     /**
-     * Initialize the complete planning environment.
-     * It has to be possible to call this methods several times, which should
-     * remove the old environment and create a new one.
-     * The current traversability map, start and goal are set and should be used.
+     * (Re-)initializes the complete planning environment using the passed 
+     * traversability map.
      */
-    virtual bool initialize() = 0;
+    virtual bool initialize(size_t grid_width, size_t grid_height, 
+            double scale_x, double scale_y, 
+            boost::shared_ptr<TravData> grid_data) = 0;
+    
+    /**
+     * Sets the start and the goal within the planning environment.
+     * This method is only called if a new pose has been received 
+     * (REPLANNING_XXXX_THRESHOLDs are used).
+     */
+    virtual bool setStartGoal(int start_x, int start_y, double start_yaw, 
+            int goal_x, int goal_y, double goal_yaw) = 0;
+    
+    /**
+     * Tries to find a solution (if the environment has just been initialized) 
+     * or to improve the existing solution.
+     */
     virtual bool solve(double time) = 0;
+    
+    /**
+     * Fills the passed vector with the found path.
+     */
     virtual bool fillPath(std::vector<base::samples::RigidBodyState>& path) = 0;
      
  private:

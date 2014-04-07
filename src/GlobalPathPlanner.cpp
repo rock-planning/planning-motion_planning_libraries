@@ -5,10 +5,12 @@ namespace global_path_planner
 
 // PUBLIC
 GlobalPathPlanner::GlobalPathPlanner() : mpTravGrid(NULL), 
+        mpTravData(),
         mStartWorld(), mGoalWorld(), 
         mStartGrid(), mGoalGrid(), 
         mPathInGrid(),
-        mReplanningRequired(true) {
+        mReceivedNewTravGrid(false),
+        mReceivedNewStartGoal(false) {
         
     mStartGrid.invalidatePosition();
     mStartGrid.invalidateOrientation();        
@@ -31,7 +33,12 @@ bool GlobalPathPlanner::setTravGrid(envire::Environment* env, std::string trav_m
         return false;
     } else {
         mpTravGrid = trav_grid;
-        mReplanningRequired = true;
+        std::cout << "Before shared" << std::endl;
+        // Creates a copy of the current grid data.
+        mpTravData = boost::shared_ptr<TravData>(new TravData(
+            mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY)));
+        mReceivedNewTravGrid = true;
+        std::cout << "After shared" << std::endl;
         return true;
     }
 }
@@ -48,10 +55,10 @@ bool GlobalPathPlanner::setStartPoseInWorld(base::samples::RigidBodyState& start
         double dist = (mStartWorld.position - start_world.position).norm();
         double turn = fabs(mStartWorld.getYaw() - start_world.getYaw());
         if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
-            mReplanningRequired = true;
+            mReceivedNewStartGoal = true;
         }
     } else {
-        mReplanningRequired = true;
+        mReceivedNewStartGoal = true;
     }
     
     mStartGrid = start_grid_new;
@@ -72,10 +79,10 @@ bool GlobalPathPlanner::setGoalPoseInWorld(base::samples::RigidBodyState& goal_w
         double dist = (mGoalWorld.position - goal_world.position).norm();
         double turn = fabs(mGoalWorld.getYaw() - goal_world.getYaw());
         if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
-            mReplanningRequired = true;
+            mReceivedNewStartGoal = true;
         }
     } else {
-        mReplanningRequired = true;
+        mReceivedNewStartGoal = true;
     }
     
     mGoalGrid = goal_grid_new;
@@ -97,15 +104,30 @@ bool GlobalPathPlanner::plan(double max_time) {
         return false;
     }
     
-    if(mReplanningRequired) {
+    if(mReceivedNewTravGrid) {
         LOG_INFO("Replanning initiated");
         
-        if(!initialize()) {
+        if(!initialize(mpTravGrid->getCellSizeX(), mpTravGrid->getCellSizeY(),
+                mpTravGrid->getScaleX(), mpTravGrid->getScaleY(), mpTravData)) {
             LOG_WARN("Initialization of the planning library failed"); 
             return false;
         }
-    } else {
-        LOG_INFO("Try to improve the current solution");
+    }
+    
+    if(mReceivedNewStartGoal) {
+        LOG_INFO("Planning from (%4.2f, %4.2f, %4.2f) to (%4.2f, %4.2f, %4.2f)",
+                mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
+                mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw());
+        
+        if(!setStartGoal(mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
+                mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw())) {
+            LOG_WARN("Start/goal could not be set");
+            return false;
+        }
+    }
+    
+    if(!mReceivedNewTravGrid && !mReceivedNewStartGoal) {
+        LOG_INFO("Try to improve the current solution"); 
     }
     
     // Try to solve the problem / improve the solution.
@@ -116,7 +138,8 @@ bool GlobalPathPlanner::plan(double max_time) {
         LOG_INFO("Solution found");
         mPathInGrid.clear();
         fillPath(mPathInGrid);
-        mReplanningRequired = false;
+        mReceivedNewTravGrid = false;
+        mReceivedNewStartGoal = false;
         return true;
     } else {
         LOG_WARN("No solution found");        
@@ -236,7 +259,7 @@ envire::TraversabilityGrid* GlobalPathPlanner::extractTravGrid(envire::Environme
         std::string trav_map_id) {
     typedef envire::TraversabilityGrid e_trav;
 
-    // Extract traversability map from evironment.
+    // Extract traversability map from evironment (as an intrusive_pointer).
     e_trav* trav_map = env->getItem< e_trav >(trav_map_id).get();
     if(trav_map) {
         return trav_map;

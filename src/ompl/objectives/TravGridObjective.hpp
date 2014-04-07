@@ -8,6 +8,8 @@
 
 namespace global_path_planner
 {
+    
+typedef envire::TraversabilityGrid::ArrayType TravData;
 
 /**
  * Using the costs of the trav grid. 
@@ -15,35 +17,38 @@ namespace global_path_planner
 class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
 
  private:
-     envire::TraversabilityGrid* mpTravGrid;
-     envire::TraversabilityGrid::ArrayType* mpTravData;
+     boost::shared_ptr<TravData> mpTravData;
+     int mGridWidth;
+     int mGridHeight;
         
  public:
     TravGridObjective(const ompl::base::SpaceInformationPtr& si, 
-            envire::TraversabilityGrid* trav_grid) : 
-            ompl::base::StateCostIntegralObjective(si, true), mpTravGrid(trav_grid) {
-        mpTravData = new envire::TraversabilityGrid::ArrayType(
-                mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY));
+            boost::shared_ptr<TravData> trav_data, int grid_width, int grid_height) : 
+            ompl::base::StateCostIntegralObjective(si, true), mpTravData(trav_data),
+            mGridWidth(grid_width), mGridHeight(grid_height) {
     }
     
     ~TravGridObjective() {
-        delete mpTravData;
     }
     
     ompl::base::Cost stateCost(const ompl::base::State* s) const
     {
+        const ompl::base::SE2StateSpace::StateType* state_se2 = 
+                s->as<ompl::base::SE2StateSpace::StateType>();
+        
         // TODO Assuming: only valid states are passed?
-        if(mpTravGrid == NULL) {
-            LOG_WARN("No traversability grid available yet, cost 0 will be returned");
-            return ompl::base::Cost(0.0);
+        if(state_se2->getX() < 0 || state_se2->getX() >= mGridWidth || 
+                state_se2->getY() < 0 || state_se2->getY() >= mGridHeight) {
+            LOG_WARN("Invalid state (%4.2f, %4.2f) has been passed and will be ignored", 
+                   state_se2->getX(), state_se2->getY()); 
+            throw std::runtime_error("Invalid state received");
+            //return ompl::base::Cost(0);
         }
     
         // TODO Use real costs and a terrain class configuration file.
         // Assuming 12 classes and using each of the classes as it costs: 13 - class
         // 0: unkown, 1: obstacle
-        const ompl::base::SE2StateSpace::StateType* state_se2 = 
-            s->as<ompl::base::SE2StateSpace::StateType>();
-        double grid_class = (double)(*mpTravData)[state_se2->getY()][state_se2->getY()];
+        double grid_class = (double)(*mpTravData)[state_se2->getY()][state_se2->getX()];
         if(grid_class == 1) { // obstacle
             return ompl::base::Cost(600);
         }

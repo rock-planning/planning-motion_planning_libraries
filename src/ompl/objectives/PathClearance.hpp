@@ -1,13 +1,12 @@
 #ifndef _OBJECTIVE_PATH_CLEARANCE_HPP_
 #define _OBJECTIVE_PATH_CLEARANCE_HPP_
 
+#include <stdio.h>
+
 #include <vector>
 
 #include <ompl/base/spaces/SE2StateSpace.h>
-#include <stdio.h>
-
 #include <ompl/base/objectives/StateCostIntegralObjective.h>
-//#include <ompl/base/spaces/SE2StateSpace.h>
 
 namespace global_path_planner
 {
