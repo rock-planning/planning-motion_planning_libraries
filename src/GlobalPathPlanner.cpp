@@ -4,7 +4,8 @@ namespace global_path_planner
 {
 
 // PUBLIC
-GlobalPathPlanner::GlobalPathPlanner() : mpTravGrid(NULL), 
+GlobalPathPlanner::GlobalPathPlanner(Configuration* config) : mpConfig(config),
+        mpTravGrid(NULL), 
         mpTravData(),
         mStartWorld(), mGoalWorld(), 
         mStartGrid(), mGoalGrid(), 
@@ -16,11 +17,6 @@ GlobalPathPlanner::GlobalPathPlanner() : mpTravGrid(NULL),
     mStartGrid.invalidateOrientation();        
     mGoalGrid.invalidatePosition();
     mGoalGrid.invalidateOrientation();  
-    
-    mRobotWidth = 0.5;
-    mRobotHeight = 0.5;
-    mRobotForwardVelocity = 0.2;
-    mRobotRotationalVelocity = 0.1;
 }
 
 GlobalPathPlanner::~GlobalPathPlanner() {
@@ -33,12 +29,10 @@ bool GlobalPathPlanner::setTravGrid(envire::Environment* env, std::string trav_m
         return false;
     } else {
         mpTravGrid = trav_grid;
-        std::cout << "Before shared" << std::endl;
         // Creates a copy of the current grid data.
         mpTravData = boost::shared_ptr<TravData>(new TravData(
             mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY)));
         mReceivedNewTravGrid = true;
-        std::cout << "After shared" << std::endl;
         return true;
     }
 }

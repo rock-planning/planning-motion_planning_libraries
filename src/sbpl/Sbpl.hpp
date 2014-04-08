@@ -6,14 +6,27 @@
 #include <boost/shared_ptr.hpp>
 
 #include <sbpl/utils/utils.h>
+#include <sbpl/discrete_space_information/environment.h>
+#include <sbpl/planners/planner.h>
 
 #include <global_path_planner/GlobalPathPlanner.hpp>
-
-class EnvironmentNAVXYTHETAMLEVLAT;
 
 namespace global_path_planner
 {
 
+struct ConfigurationSBPL : public Configuration {
+    ConfigurationSBPL() : 
+            mMotionPrimitivesFile(), 
+            mForwardSearch(true), 
+            mSearchUntilFirstSolution(false) {
+    }
+    
+    std::string mEnvFile;
+    std::string mMotionPrimitivesFile;
+    bool mForwardSearch;
+    bool mSearchUntilFirstSolution;
+};
+    
 /**
  * Finds the path with minimal cost from start to goal using a traversability map. 
  * The orientation of the robot cannot be regarded, because (it seems as if)
@@ -50,7 +63,9 @@ class Sbpl : public GlobalPathPlanner
     virtual bool fillPath(std::vector<base::samples::RigidBodyState>& path);
     
  private:
-    boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> mpEnv;
+    boost::shared_ptr<DiscreteSpaceInformation> mpEnv;
+    boost::shared_ptr<SBPLPlanner> mpPlanner;
+    std::vector<int> mWaypointIDs;
     
     std::vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
 };

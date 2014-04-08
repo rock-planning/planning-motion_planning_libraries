@@ -12,6 +12,19 @@ namespace global_path_planner
 {
 
 typedef envire::TraversabilityGrid::ArrayType TravData;
+
+struct Configuration {
+    Configuration() : mRobotWidth(0.5), 
+            mRobotHeight(0.5), 
+            mRobotForwardVelocity(0.2), 
+            mRobotRotationalVelocity(1.0) {
+    }
+    
+    double mRobotWidth;
+    double mRobotHeight;
+    double mRobotForwardVelocity; // m/sec
+    double mRobotRotationalVelocity; // sec/45° degrees turn.   
+};
     
 /**
  * Can be used to plan 2D trajectories considering the orientation.
@@ -25,6 +38,8 @@ class GlobalPathPlanner
     static const double REPLANNING_DIST_THRESHOLD = 0.05;
     static const double REPLANNING_TURN_THRESHOLD = 0.017;
     
+    Configuration* mpConfig;
+    
     envire::TraversabilityGrid* mpTravGrid;
     boost::shared_ptr<TravData> mpTravData;
     base::samples::RigidBodyState mStartWorld, mGoalWorld;
@@ -33,13 +48,8 @@ class GlobalPathPlanner
     bool mReceivedNewTravGrid;
     bool mReceivedNewStartGoal;
     
-    double mRobotWidth;
-    double mRobotHeight;
-    double mRobotForwardVelocity; // m/sec
-    double mRobotRotationalVelocity; // Time in seconds to turn 45°. 
-    
  public: 
-    GlobalPathPlanner();
+    GlobalPathPlanner(Configuration* config = new Configuration());
     ~GlobalPathPlanner();
     
     /**
