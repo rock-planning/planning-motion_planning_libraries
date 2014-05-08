@@ -1,10 +1,11 @@
 #include "GlobalPathPlanner.hpp"
+#include <base/Logging.hpp>
 
 namespace global_path_planner
 {
 
 // PUBLIC
-GlobalPathPlanner::GlobalPathPlanner(Configuration* config) : mpConfig(config),
+GlobalPathPlanner::GlobalPathPlanner(ConfigurationBase config) : mConfigBase(config),
         mpTravGrid(NULL), 
         mpTravData(),
         mStartWorld(), mGoalWorld(), 

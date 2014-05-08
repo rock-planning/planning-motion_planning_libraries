@@ -5,6 +5,7 @@
 #include <ompl/base/objectives/StateCostIntegralObjective.h>
 
 #include <envire/maps/TraversabilityGrid.hpp>
+#include <base/Logging.hpp>
 
 namespace global_path_planner
 {

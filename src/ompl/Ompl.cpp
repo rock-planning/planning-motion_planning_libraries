@@ -9,6 +9,7 @@
 
 #include <global_path_planner/ompl/validators/TravMapValidator.hpp>
 #include <global_path_planner/ompl/objectives/TravGridObjective.hpp>
+#include <base/Logging.hpp>
 
 namespace ob = ompl::base;
 namespace og = ompl::geometric;

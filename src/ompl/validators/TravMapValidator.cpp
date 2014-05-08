@@ -1,6 +1,7 @@
 #include "TravMapValidator.hpp"
 
 #include <ompl/base/SpaceInformation.h>
+#include <base/Logging.hpp>
 
 namespace global_path_planner
 {

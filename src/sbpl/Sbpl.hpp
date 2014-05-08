@@ -5,26 +5,30 @@
 
 #include <boost/shared_ptr.hpp>
 
-#include <sbpl/utils/utils.h>
-#include <sbpl/discrete_space_information/environment.h>
-#include <sbpl/planners/planner.h>
-
+#include <base/Logging.hpp>
 #include <global_path_planner/GlobalPathPlanner.hpp>
+
+#include <sbpl/utils/utils.h>
+#include <sbpl/config.h> // here #define DEBUG 0, causes a lot of trouble
+#include <sbpl/discrete_space_information/environment_nav2D.h>
+#include <sbpl/planners/planner.h>
+#undef DEBUG
 
 namespace global_path_planner
 {
 
-struct ConfigurationSBPL : public Configuration {
+struct ConfigurationSBPL : public ConfigurationBase {
     ConfigurationSBPL() : 
-            mMotionPrimitivesFile(), 
-            mForwardSearch(true), 
-            mSearchUntilFirstSolution(false) {
+            mSBPLEnvFile(),
+            mSBPLMotionPrimitivesFile(), 
+            mSBPLForwardSearch(true), 
+            mSBPLSearchUntilFirstSolution(false) {
     }
     
-    std::string mEnvFile;
-    std::string mMotionPrimitivesFile;
-    bool mForwardSearch;
-    bool mSearchUntilFirstSolution;
+    std::string mSBPLEnvFile;
+    std::string mSBPLMotionPrimitivesFile;
+    bool mSBPLForwardSearch;
+    bool mSBPLSearchUntilFirstSolution;
 };
     
 /**
@@ -34,11 +38,18 @@ struct ConfigurationSBPL : public Configuration {
  */
 class Sbpl : public GlobalPathPlanner
 {  
+private:
+    ConfigurationSBPL mConfigSBPL;
+    
+    boost::shared_ptr<EnvironmentNAV2D> mpSBPLEnv;
+    boost::shared_ptr<SBPLPlanner> mpSBPLPlanner;
+    std::vector<int> mSBPLWaypointIDs;
+    
  public: 
-    Sbpl();
+    Sbpl(ConfigurationSBPL config_sbpl = ConfigurationSBPL());
+    void mpEnv();
  
  protected:
-
     /**
      * 
      */
@@ -62,11 +73,7 @@ class Sbpl : public GlobalPathPlanner
      */
     virtual bool fillPath(std::vector<base::samples::RigidBodyState>& path);
     
- private:
-    boost::shared_ptr<DiscreteSpaceInformation> mpEnv;
-    boost::shared_ptr<SBPLPlanner> mpPlanner;
-    std::vector<int> mWaypointIDs;
-    
+ private:    
     std::vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
 };
     

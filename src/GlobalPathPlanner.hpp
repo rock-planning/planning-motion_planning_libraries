@@ -6,15 +6,15 @@
 #include <base/Trajectory.hpp>
 
 #include <envire/maps/TraversabilityGrid.hpp>
-#include <envire/core/Environment.hpp>
+//#include <envire/core/Environment.hpp>
 
 namespace global_path_planner
 {
 
 typedef envire::TraversabilityGrid::ArrayType TravData;
 
-struct Configuration {
-    Configuration() : mRobotWidth(0.5), 
+struct ConfigurationBase {
+    ConfigurationBase() : mRobotWidth(0.5), 
             mRobotHeight(0.5), 
             mRobotForwardVelocity(0.2), 
             mRobotRotationalVelocity(1.0) {
@@ -37,8 +37,8 @@ class GlobalPathPlanner
  protected:
     static const double REPLANNING_DIST_THRESHOLD = 0.05;
     static const double REPLANNING_TURN_THRESHOLD = 0.017;
-    
-    Configuration* mpConfig;
+     
+    ConfigurationBase mConfigBase;
     
     envire::TraversabilityGrid* mpTravGrid;
     boost::shared_ptr<TravData> mpTravData;
@@ -49,7 +49,7 @@ class GlobalPathPlanner
     bool mReceivedNewStartGoal;
     
  public: 
-    GlobalPathPlanner(Configuration* config = new Configuration());
+    GlobalPathPlanner(ConfigurationBase config = ConfigurationBase());
     ~GlobalPathPlanner();
     
     /**
