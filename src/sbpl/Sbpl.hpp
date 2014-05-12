@@ -37,13 +37,19 @@ struct ConfigurationSBPL : public ConfigurationBase {
  * controll problems cannot be optimized in OMPL. 
  */
 class Sbpl : public GlobalPathPlanner
-{  
+{      
 private:
+    // Driveability 0.0 to 1.0 will be mapped to SBPL_MAX_COST to 0 
+    // with obstacle threshold of SBPL_MAX_COST.
+    static const unsigned char SBPL_MAX_COST = 100;
+    
     ConfigurationSBPL mConfigSBPL;
     
     boost::shared_ptr<EnvironmentNAV2D> mpSBPLEnv;
     boost::shared_ptr<SBPLPlanner> mpSBPLPlanner;
     std::vector<int> mSBPLWaypointIDs;
+    unsigned char* mpSBPLMapData;
+    size_t mSBPLNumElementsMap;
     
  public: 
     Sbpl(ConfigurationSBPL config_sbpl = ConfigurationSBPL());
@@ -73,7 +79,13 @@ private:
      */
     virtual bool fillPath(std::vector<base::samples::RigidBodyState>& path);
     
- private:    
+ private:        
+    /**
+     * Converts the trav map to a sbpl map using the driveability value.
+     * Driveability 0.0 to 1.0 is mapped to costs 100 to 0 with obstacle threshold 100.
+     */
+    void createSBPLMap(boost::shared_ptr<TravData> trav_data);
+    
     std::vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
 };
     

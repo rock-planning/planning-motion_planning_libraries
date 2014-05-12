@@ -31,6 +31,8 @@ struct ConfigurationBase {
  * The planner is meant to work on a single, local traversability map.
  * The start/goal poses are transformed from world to local grid and the
  * resulting trajectory from local grid to world.
+ * 
+ * TODO: Integrate: WayypointFactor, clear start, use next goal
  */
 class GlobalPathPlanner
 {
