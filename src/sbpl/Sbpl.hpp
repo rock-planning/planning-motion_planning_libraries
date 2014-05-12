@@ -10,21 +10,27 @@
 
 #include <sbpl/utils/utils.h>
 #include <sbpl/config.h> // here #define DEBUG 0, causes a lot of trouble
+#include <sbpl/discrete_space_information/environment.h>
 #include <sbpl/discrete_space_information/environment_nav2D.h>
+#include <sbpl/discrete_space_information/environment_navxythetamlevlat.h>
 #include <sbpl/planners/planner.h>
 #undef DEBUG
 
 namespace global_path_planner
 {
 
+enum SbplEnv {SBPL_XY, SBPL_XYTHETA};
+    
 struct ConfigurationSBPL : public ConfigurationBase {
-    ConfigurationSBPL() : 
+    ConfigurationSBPL() :
+            mSBPLEnvType(SBPL_XY),
             mSBPLEnvFile(),
             mSBPLMotionPrimitivesFile(), 
             mSBPLForwardSearch(true), 
             mSBPLSearchUntilFirstSolution(false) {
     }
     
+    SbplEnv mSBPLEnvType;
     std::string mSBPLEnvFile;
     std::string mSBPLMotionPrimitivesFile;
     bool mSBPLForwardSearch;
@@ -33,8 +39,6 @@ struct ConfigurationSBPL : public ConfigurationBase {
     
 /**
  * Finds the path with minimal cost from start to goal using a traversability map. 
- * The orientation of the robot cannot be regarded, because (it seems as if)
- * controll problems cannot be optimized in OMPL. 
  */
 class Sbpl : public GlobalPathPlanner
 {      
@@ -45,11 +49,14 @@ private:
     
     ConfigurationSBPL mConfigSBPL;
     
-    boost::shared_ptr<EnvironmentNAV2D> mpSBPLEnv;
+    boost::shared_ptr<DiscreteSpaceInformation> mpSBPLEnv;
     boost::shared_ptr<SBPLPlanner> mpSBPLPlanner;
     std::vector<int> mSBPLWaypointIDs;
     unsigned char* mpSBPLMapData;
     size_t mSBPLNumElementsMap;
+    // Required to set start/goal in SBPL_XYTHETA 
+    // (grid coordinates have to be converted back to meters) 
+    double mScaleX, mScaleY; 
     
  public: 
     Sbpl(ConfigurationSBPL config_sbpl = ConfigurationSBPL());

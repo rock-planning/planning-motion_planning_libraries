@@ -12,7 +12,9 @@ namespace global_path_planner
 Sbpl::Sbpl(ConfigurationSBPL config_sbpl) : GlobalPathPlanner(),
         mConfigSBPL(config_sbpl),
         mpSBPLMapData(NULL),
-        mSBPLNumElementsMap(0) {
+        mSBPLNumElementsMap(0),
+        mScaleX(0),
+        mScaleY(0) {
 }
 
 // PROTECTED
@@ -21,42 +23,75 @@ bool Sbpl::initialize(size_t grid_width, size_t grid_height,
             boost::shared_ptr<TravData> grid_data) { 
     
     LOG_DEBUG("SBPL initialize");
+    
+    mScaleX = scale_x;
+    mScaleY = scale_y;
        
     // Create and fill SBPL environment.
-    mpSBPLEnv = boost::shared_ptr<EnvironmentNAV2D>(new EnvironmentNAV2D());
+    switch(mConfigSBPL.mSBPLEnvType) {
+        case SBPL_XY: {
+            mpSBPLEnv = boost::shared_ptr<EnvironmentNAV2D>(new EnvironmentNAV2D());
+            break;
+        }
+        case SBPL_XYTHETA: {
+            mpSBPLEnv = boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT>(
+                    new EnvironmentNAVXYTHETAMLEVLAT());
+            break;
+        }
+    }
+    
     try {
         // Use the sbpl-env file if path is given.
         if(!mConfigSBPL.mSBPLEnvFile.empty()) {
             LOG_INFO("Load SBPL environment '%s'", mConfigSBPL.mSBPLEnvFile.c_str());
             mpSBPLEnv->InitializeEnv(mConfigSBPL.mSBPLEnvFile.c_str());
+            // Request loaded cellsize / scale for environment SBPL_XYTHETA.
+            if(mConfigSBPL.mSBPLEnvType == SBPL_XYTHETA) {
+                boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
+                        boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
+                mScaleX = mScaleY = env_xytheta->GetEnvNavConfig()->cellsize_m;
+            }
         // Create an sbpl-environment.
         } else {
             createSBPLMap(mpTravData);
-            mpSBPLEnv->InitializeEnv(grid_width, grid_height, mpSBPLMapData, SBPL_MAX_COST);
+            switch(mConfigSBPL.mSBPLEnvType) {
+                case SBPL_XY: {
+                    boost::shared_ptr<EnvironmentNAV2D> env_xy =
+                            boost::dynamic_pointer_cast<EnvironmentNAV2D>(mpSBPLEnv);
+                    env_xy->InitializeEnv(grid_width, grid_height, mpSBPLMapData, SBPL_MAX_COST);
+                    break;
+                }
+                case SBPL_XYTHETA: {
+                    boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
+                            boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
+                    try {
+                        env_xytheta->InitializeEnv(grid_width, grid_height, 
+                            mpSBPLMapData, // initial map
+                            0,0,0, //mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
+                            0,0,0, //mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw(),
+                            0.1, 0.1, 0.1, // tolerance x,y,yaw, ignored
+                            createFootprint(mConfigSBPL.mRobotWidth, mConfigSBPL.mRobotHeight), 
+                            scale_x,  // Size of a cell in meter => in SBPL cells have to be quadrats
+                            mConfigSBPL.mRobotForwardVelocity, mConfigSBPL.mRobotRotationalVelocity,
+                            SBPL_MAX_COST, // cost threshold
+                            mConfigSBPL.mSBPLMotionPrimitivesFile.c_str()); // motion primitives file
+                    } catch (SBPL_Exception& e) {
+                        LOG_ERROR("EnvironmentNAVXYTHETAMLEVLAT could not be initialized");
+                        return false;
+                    }
+                    
+                    std::cout << "ENV CREATED" << std::endl;
+                    break;
+                }
+            }
         }
     } catch (SBPL_Exception& e) {
         LOG_ERROR("SBPL environment '%s' could not be loaded", 
                 mConfigSBPL.mSBPLEnvFile.c_str());
         mpSBPLEnv.reset();
         return false;
-    } catch(...) {
-        LOG_ERROR("Any error");
-    }
-    
-    /*
-    mpEnv = boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT>(new EnvironmentNAVXYTHETAMLEVLAT());    
-    // TODO For SBPL the cells have to be quadrats.
-    mpEnv->InitializeEnv(grid_width, grid_height, 
-            NULL, // initial map, use it 
-            mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
-            mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw(),
-            0.1, 0.1, 0.1, // tolerance x,y,yaw, ignored
-            createFootprint(mConfig.mRobotWidth, mConfig.mRobotHeight), scale_x,
-            mConfig.mRobotForwardVelocity, mConfig.mRobotRotationalVelocity,
-            12, // cost threshold
-            conf_sbpl->mMotionPrimitivesFile); // motion primitives file
-    */
-    
+    } 
+      
     // Create planner.
     mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ARAPlanner(mpSBPLEnv.get(), mConfigSBPL.mSBPLForwardSearch));
     mpSBPLPlanner->set_search_mode(mConfigSBPL.mSBPLSearchUntilFirstSolution); 
@@ -91,8 +126,27 @@ bool Sbpl::setStartGoal(int start_x, int start_y, double start_yaw,
     
     LOG_DEBUG("SBPL setStartGoal");
     
-    int start_id = mpSBPLEnv->SetStart(start_x, start_y/*, start_yaw*/);
-    int goal_id = mpSBPLEnv->SetGoal(goal_x, goal_y/*, goal_yaw*/);
+    int start_id = 0;
+    int goal_id = 0;
+    
+    switch(mConfigSBPL.mSBPLEnvType) {
+        case SBPL_XY: { // Start/goal have to be defined as grid coordinates.
+            boost::shared_ptr<EnvironmentNAV2D> env_xy =
+                    boost::dynamic_pointer_cast<EnvironmentNAV2D>(mpSBPLEnv);
+            start_id = env_xy->SetStart(start_x, start_y);
+            goal_id = env_xy->SetGoal(goal_x, goal_y);
+            break;
+        }
+        case SBPL_XYTHETA: { // Strat/goal have to be defined in meters!
+            boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
+                    boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
+            
+            start_id = env_xytheta->SetStart(start_x * mScaleX, start_y * mScaleY, start_yaw);
+            goal_id = env_xytheta->SetGoal(goal_x * mScaleX, goal_y * mScaleY, goal_yaw);
+            break;
+        }
+    }
+    
     
     if (mpSBPLPlanner->set_start(start_id) == 0) {
         LOG_ERROR("Failed to set start state");
@@ -127,14 +181,28 @@ bool Sbpl::fillPath(std::vector<base::samples::RigidBodyState>& path) {
     mPathInGrid.clear();
     base::samples::RigidBodyState rbs;
     
-    int x = 0, y = 0;
+    int x = 0, y = 0, theta = 0; // In SBPL theta is an integer as well.
     
     // Fill global grid path with the found solution.
     // env: nav2D
     std::vector<int>::iterator it = mSBPLWaypointIDs.begin();
     for(; it != mSBPLWaypointIDs.end(); it++) {
-        mpSBPLEnv->GetCoordFromState(*it, x, y);
+        switch(mConfigSBPL.mSBPLEnvType) {
+            case SBPL_XY: {
+                boost::shared_ptr<EnvironmentNAV2D> env_xy =
+                        boost::dynamic_pointer_cast<EnvironmentNAV2D>(mpSBPLEnv);
+                env_xy->GetCoordFromState(*it, x, y);
+                break;
+            }
+            case SBPL_XYTHETA: {
+                boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
+                        boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
+                env_xytheta->GetCoordFromState(*it, x, y, theta);
+                break;
+            }
+        }
         rbs.position = base::Vector3d(x,y,0);
+        rbs.orientation =  Eigen::AngleAxis<double>(theta, base::Vector3d(0,0,1));
         mPathInGrid.push_back(rbs);
     }
     
@@ -169,7 +237,6 @@ void Sbpl::createSBPLMap(boost::shared_ptr<TravData> trav_data) {
     unsigned char* sbpl_map_p = mpSBPLMapData;
     uint8_t* stop_p = trav_data->origin() + trav_data->num_elements();
     
-    //std::cout << "ORIGIN " << std::hex << trav_data->origin() << " ENDE " << std::hex << trav_data->origin() + trav_data->num_elements() << std::endl;
     for(uint8_t* p = trav_data->origin(); p < stop_p; p++, sbpl_map_p++) {
         uint8_t class_value = *p;
         driveability = (mpTravGrid->getTraversabilityClass(class_value)).getDrivability();
