@@ -4,7 +4,7 @@
 #include <ompl/base/StateSpace.h>
 #include <ompl/base/spaces/DiscreteStateSpace.h>
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 /** \brief A state space representing SE(2) */
 class DiscreteSE2StateSpace : public CompoundStateSpace
@@ -102,6 +102,6 @@ public:
 
 };
 
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries
 
 #endif

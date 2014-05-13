@@ -1,5 +1,5 @@
-#ifndef _GLOBAL_PATH_PLANNER_HPP_
-#define _GLOBAL_PATH_PLANNER_HPP_
+#ifndef _MOTION_PLANNING_LIBRARIES_HPP_
+#define _MOTION_PLANNING_LIBRARIES_HPP_
 
 #include <base/samples/RigidBodyState.hpp>
 #include <base/Waypoint.hpp>
@@ -8,7 +8,7 @@
 #include <envire/maps/TraversabilityGrid.hpp>
 //#include <envire/core/Environment.hpp>
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 
 typedef envire::TraversabilityGrid::ArrayType TravData;
@@ -34,7 +34,7 @@ struct ConfigurationBase {
  * 
  * TODO: Integrate: WayypointFactor, clear start, use next goal
  */
-class GlobalPathPlanner
+class MotionPlanningLibraries
 {
  protected:
     static const double REPLANNING_DIST_THRESHOLD = 0.05;
@@ -51,8 +51,8 @@ class GlobalPathPlanner
     bool mReceivedNewStartGoal;
     
  public: 
-    GlobalPathPlanner(ConfigurationBase config = ConfigurationBase());
-    ~GlobalPathPlanner();
+    MotionPlanningLibraries(ConfigurationBase config = ConfigurationBase());
+    ~MotionPlanningLibraries();
     
     /**
      * Sets the traversability map to plan on.
@@ -145,6 +145,6 @@ class GlobalPathPlanner
             std::string trav_map_id);
 };
 
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries
 
-#endif // _GLOBAL_PATH_PLANNER_HPP_
+#endif // _MOTION_PLANNING_LIBRARIES_HPP_

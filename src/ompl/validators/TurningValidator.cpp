@@ -4,7 +4,7 @@
 
 #include <ompl/base/spaces/SE2StateSpace.h>
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
     
 bool TurningValidator::checkMotion (const ompl::base::State *s1, 
@@ -108,4 +108,4 @@ bool TurningValidator::isValidTurn(const ompl::base::State *s1,
     return false;
 }
     
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries

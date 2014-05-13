@@ -17,7 +17,7 @@ namespace envire {
 class TraversabilityGrid;
 }
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
     
 typedef envire::TraversabilityGrid::ArrayType TravData;
@@ -54,6 +54,6 @@ class TravMapValidator :  public ompl::base::StateValidityChecker {
     double clearance(const ompl::base::State *state, ompl::base::State* validState, bool &validStateAvailable) const;   
 };
 
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries
 
 #endif

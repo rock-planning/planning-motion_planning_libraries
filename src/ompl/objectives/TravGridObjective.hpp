@@ -7,7 +7,7 @@
 #include <envire/maps/TraversabilityGrid.hpp>
 #include <base/Logging.hpp>
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
     
 typedef envire::TraversabilityGrid::ArrayType TravData;
@@ -60,6 +60,6 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
     }
 };
 
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries
 
 #endif

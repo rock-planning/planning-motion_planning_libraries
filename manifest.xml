@@ -1,5 +1,5 @@
 <package>
-  <description brief="Path planner regarding the pose in 3D of the rigid body.">
+  <description brief="Collection of motion planning libraries">
   
   </description>
   <author>Stefan Haase/stefan.haase@dfki.de</author>
@@ -10,4 +10,5 @@
   <depend package="base/types" />
   <depend package="slam/envire" />
   <depend package="external/ompl" />
+  <depend package="external/sbpl" />
 </package>

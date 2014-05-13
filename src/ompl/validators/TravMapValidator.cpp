@@ -3,7 +3,7 @@
 #include <ompl/base/SpaceInformation.h>
 #include <base/Logging.hpp>
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 
 TravMapValidator::TravMapValidator(const ompl::base::SpaceInformationPtr& si,
@@ -106,5 +106,5 @@ double TravMapValidator::clearance(const ompl::base::State *state, ompl::base::S
     return clearance(state);
 }
 
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries
 

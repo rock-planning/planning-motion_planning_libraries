@@ -1,14 +1,14 @@
-#include <global_path_planner/ompl/Ompl.hpp>
-#include <global_path_planner/sbpl/Sbpl.hpp>
+#include <motion_planning_libraries/ompl/Ompl.hpp>
+#include <motion_planning_libraries/sbpl/Sbpl.hpp>
 
 #include <stdlib.h>
 #include <stdio.h>
 
 int main(int argc, char** argv)
 {
-    //global_path_planner::Ompl ompl_planner;
+    //motion_planning_libraries::Ompl ompl_planner;
     
-    using namespace global_path_planner;
+    using namespace motion_planning_libraries;
     
     ConfigurationSBPL conf;
     std::string path_env(getenv ("AUTOPROJ_PROJECT_BASE"));

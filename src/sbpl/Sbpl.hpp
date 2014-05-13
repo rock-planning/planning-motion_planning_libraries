@@ -1,12 +1,12 @@
-#ifndef _GLOBAL_PATH_PLANNER_SBPL_HPP_
-#define _GLOBAL_PATH_PLANNER_SBPL_HPP_
+#ifndef _MOTION_PLANNING_LIBRARIES_SBPL_HPP_
+#define _MOTION_PLANNING_LIBRARIES_SBPL_HPP_
 
 #include <vector>
 
 #include <boost/shared_ptr.hpp>
 
 #include <base/Logging.hpp>
-#include <global_path_planner/GlobalPathPlanner.hpp>
+#include <motion_planning_libraries/MotionPlanningLibraries.hpp>
 
 #include <sbpl/utils/utils.h>
 #include <sbpl/config.h> // here #define DEBUG 0, causes a lot of trouble
@@ -16,7 +16,7 @@
 #include <sbpl/planners/planner.h>
 #undef DEBUG
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 
 enum SbplEnv {SBPL_XY, SBPL_XYTHETA};
@@ -40,7 +40,7 @@ struct ConfigurationSBPL : public ConfigurationBase {
 /**
  * Finds the path with minimal cost from start to goal using a traversability map. 
  */
-class Sbpl : public GlobalPathPlanner
+class Sbpl : public MotionPlanningLibraries
 {      
 private:
     // Driveability 0.0 to 1.0 will be mapped to SBPL_MAX_COST to 0 
@@ -96,6 +96,6 @@ private:
     std::vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
 };
     
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries
 
-#endif // _GLOBAL_PATH_PLANNER_SBPL_HPP_
+#endif // _MOTION_PLANNING_LIBRARIES_SBPL_HPP_

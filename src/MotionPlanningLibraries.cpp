@@ -1,11 +1,11 @@
-#include "GlobalPathPlanner.hpp"
+#include "MotionPlanningLibraries.hpp"
 #include <base/Logging.hpp>
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 
 // PUBLIC
-GlobalPathPlanner::GlobalPathPlanner(ConfigurationBase config) : mConfigBase(config),
+MotionPlanningLibraries::MotionPlanningLibraries(ConfigurationBase config) : mConfigBase(config),
         mpTravGrid(NULL), 
         mpTravData(),
         mStartWorld(), mGoalWorld(), 
@@ -20,10 +20,10 @@ GlobalPathPlanner::GlobalPathPlanner(ConfigurationBase config) : mConfigBase(con
     mGoalGrid.invalidateOrientation();  
 }
 
-GlobalPathPlanner::~GlobalPathPlanner() {
+MotionPlanningLibraries::~MotionPlanningLibraries() {
 }
 
-bool GlobalPathPlanner::setTravGrid(envire::Environment* env, std::string trav_map_id) {
+bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string trav_map_id) {
     envire::TraversabilityGrid* trav_grid = extractTravGrid(env, trav_map_id);
     if(trav_grid == NULL) {
         LOG_WARN("Traversability map could not be set");
@@ -38,7 +38,7 @@ bool GlobalPathPlanner::setTravGrid(envire::Environment* env, std::string trav_m
     }
 }
 
-bool GlobalPathPlanner::setStartPoseInWorld(base::samples::RigidBodyState& start_world) {
+bool MotionPlanningLibraries::setStartPoseInWorld(base::samples::RigidBodyState& start_world) {
     base::samples::RigidBodyState start_grid_new;
     if(!world2grid(mpTravGrid, start_world, start_grid_new)) {
         LOG_WARN("Start pose could not be set");
@@ -62,7 +62,7 @@ bool GlobalPathPlanner::setStartPoseInWorld(base::samples::RigidBodyState& start
     return true;
 }
 
-bool GlobalPathPlanner::setGoalPoseInWorld(base::samples::RigidBodyState& goal_world) {
+bool MotionPlanningLibraries::setGoalPoseInWorld(base::samples::RigidBodyState& goal_world) {
     base::samples::RigidBodyState goal_grid_new;
     if(!world2grid(mpTravGrid, goal_world, goal_grid_new)) {
         LOG_WARN("Goal pose could not be set");
@@ -86,7 +86,7 @@ bool GlobalPathPlanner::setGoalPoseInWorld(base::samples::RigidBodyState& goal_w
     return true;
 }
 
-bool GlobalPathPlanner::plan(double max_time) {
+bool MotionPlanningLibraries::plan(double max_time) {
 
     if(mpTravGrid == NULL) {
         LOG_WARN("No traversability map available, planning cannot be executed");
@@ -142,7 +142,7 @@ bool GlobalPathPlanner::plan(double max_time) {
     }
 }
 
-std::vector<base::Waypoint> GlobalPathPlanner::getPathInWorld() {
+std::vector<base::Waypoint> MotionPlanningLibraries::getPathInWorld() {
     std::vector<base::Waypoint> path;
     std::vector<base::samples::RigidBodyState>::iterator it = mPathInGrid.begin();
     base::samples::RigidBodyState pose_in_world;
@@ -157,7 +157,7 @@ std::vector<base::Waypoint> GlobalPathPlanner::getPathInWorld() {
     return path;
 }
 
-base::Trajectory GlobalPathPlanner::getTrajectoryInWorld(double speed) {
+base::Trajectory MotionPlanningLibraries::getTrajectoryInWorld(double speed) {
     base::Trajectory trajectory;
     trajectory.speed = speed;
     
@@ -180,15 +180,15 @@ base::Trajectory GlobalPathPlanner::getTrajectoryInWorld(double speed) {
     return trajectory;
 }
 
-base::samples::RigidBodyState GlobalPathPlanner::getStartPoseInGrid() {
+base::samples::RigidBodyState MotionPlanningLibraries::getStartPoseInGrid() {
     return mStartGrid;
 }
 
-base::samples::RigidBodyState GlobalPathPlanner::getGoalPoseInGrid() {
+base::samples::RigidBodyState MotionPlanningLibraries::getGoalPoseInGrid() {
     return mGoalGrid;
 } 
 
-bool GlobalPathPlanner::world2grid(envire::TraversabilityGrid const* trav,
+bool MotionPlanningLibraries::world2grid(envire::TraversabilityGrid const* trav,
         base::samples::RigidBodyState const& world_pose, 
         base::samples::RigidBodyState& grid_pose) {
         
@@ -221,7 +221,7 @@ bool GlobalPathPlanner::world2grid(envire::TraversabilityGrid const* trav,
     return true;
 }
 
-bool GlobalPathPlanner::grid2world(envire::TraversabilityGrid const* trav,
+bool MotionPlanningLibraries::grid2world(envire::TraversabilityGrid const* trav,
         base::samples::RigidBodyState const& grid_pose,
         base::samples::RigidBodyState& world_pose) {
         
@@ -250,7 +250,7 @@ bool GlobalPathPlanner::grid2world(envire::TraversabilityGrid const* trav,
 }
 
 // PRIVATE
-envire::TraversabilityGrid* GlobalPathPlanner::extractTravGrid(envire::Environment* env, 
+envire::TraversabilityGrid* MotionPlanningLibraries::extractTravGrid(envire::Environment* env, 
         std::string trav_map_id) {
     typedef envire::TraversabilityGrid e_trav;
 
@@ -274,4 +274,4 @@ envire::TraversabilityGrid* GlobalPathPlanner::extractTravGrid(envire::Environme
     }
 }
 
-} // namespace global_path_planner
+} // namespace motion_planning_libraries

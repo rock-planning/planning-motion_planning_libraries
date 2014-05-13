@@ -7,17 +7,17 @@
 #include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/config.h>
 
-#include <global_path_planner/ompl/validators/TravMapValidator.hpp>
-#include <global_path_planner/ompl/objectives/TravGridObjective.hpp>
+#include <motion_planning_libraries/ompl/validators/TravMapValidator.hpp>
+#include <motion_planning_libraries/ompl/objectives/TravGridObjective.hpp>
 #include <base/Logging.hpp>
 
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 
-Ompl::Ompl() : GlobalPathPlanner(), mGridWidth(0), mGridHeight(0) {
+Ompl::Ompl() : MotionPlanningLibraries(), mGridWidth(0), mGridHeight(0) {
 }
  
 bool Ompl::initialize(size_t grid_width, size_t grid_height, 
@@ -137,4 +137,4 @@ ompl::base::OptimizationObjectivePtr Ompl::getBalancedObjective(
     return mpMultiOptimization;
 }
 
-} // namespace global_path_planner
+} // namespace motion_planning_libraries

@@ -5,11 +5,11 @@
 #include <sbpl/headers.h>
 #include <sbpl/sbpl_exception.h>
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 
 // PUBLIC
-Sbpl::Sbpl(ConfigurationSBPL config_sbpl) : GlobalPathPlanner(),
+Sbpl::Sbpl(ConfigurationSBPL config_sbpl) : MotionPlanningLibraries(),
         mConfigSBPL(config_sbpl),
         mpSBPLMapData(NULL),
         mSBPLNumElementsMap(0),
@@ -183,8 +183,7 @@ bool Sbpl::fillPath(std::vector<base::samples::RigidBodyState>& path) {
     
     int x = 0, y = 0, theta = 0; // In SBPL theta is an integer as well.
     
-    // Fill global grid path with the found solution.
-    // env: nav2D
+    // Fill path with the found solution.
     std::vector<int>::iterator it = mSBPLWaypointIDs.begin();
     for(; it != mSBPLWaypointIDs.end(); it++) {
         switch(mConfigSBPL.mSBPLEnvType) {
@@ -270,4 +269,4 @@ std::vector<sbpl_2Dpt_t> Sbpl::createFootprint(double robot_width, double robot_
     return footprint;
 }
 
-} // namespace global_path_planner
+} // namespace motion_planning_libraries

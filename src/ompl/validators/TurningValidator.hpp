@@ -10,7 +10,7 @@ namespace envire {
 class TraversabilityGrid;
 }
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 
 /**
@@ -59,6 +59,6 @@ class TurningValidator :  public ompl::base::DiscreteMotionValidator {
     }
 };
 
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries
 
 #endif

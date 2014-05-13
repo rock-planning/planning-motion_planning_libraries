@@ -5,7 +5,7 @@
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/tools/config/MagicConstants.h>
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 
 ompl::base::State* DiscreteSE2StateSpace::allocState(void) const
@@ -52,4 +52,4 @@ void DiscreteSE2StateSpace::registerProjections(void)
     registerDefaultProjection(ProjectionEvaluatorPtr(dynamic_cast<ProjectionEvaluator*>(new SE2DefaultProjection(this))));
 }
 
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries

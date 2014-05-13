@@ -8,7 +8,7 @@
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/base/objectives/StateCostIntegralObjective.h>
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 
 class PathClearance :  public ompl::base::StateCostIntegralObjective {
@@ -29,6 +29,6 @@ class PathClearance :  public ompl::base::StateCostIntegralObjective {
     }
 };
 
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries
 
 #endif

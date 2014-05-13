@@ -1,22 +1,22 @@
-#ifndef _GLOBAL_PATH_PLANNER_OMPL_HPP_
-#define _GLOBAL_PATH_PLANNER_OMPL_HPP_
+#ifndef _MOTION_PLANNING_LIBRARIES_OMPL_HPP_
+#define _MOTION_PLANNING_LIBRARIES_OMPL_HPP_
 
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/base/ProblemDefinition.h>
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/Planner.h>
 
-#include <global_path_planner/GlobalPathPlanner.hpp>
+#include <motion_planning_libraries/MotionPlanningLibraries.hpp>
 
-namespace global_path_planner
+namespace motion_planning_libraries
 {
 
 /**
  * Finds the path with minimal cost from start to goal using a traversability map. 
- * The orientation of the robot cannot be regarded, because (it seems as if)
- * controll problems cannot be optimized in OMPL. 
+ * The orientation of the robot cannot be regarded, because
+ * controll problems cannot be optimized in OMPL yet. 
  */
-class Ompl : public GlobalPathPlanner
+class Ompl : public MotionPlanningLibraries
 {
  private: 
     ompl::base::StateSpacePtr mpStateSpace;
@@ -72,6 +72,6 @@ class Ompl : public GlobalPathPlanner
         const ompl::base::SpaceInformationPtr& si);
 };
 
-} // end namespace global_path_planner
+} // end namespace motion_planning_libraries
 
-#endif // _GLOBAL_PATH_PLANNER_OMPL_HPP_
+#endif // _MOTION_PLANNING_LIBRARIES_OMPL_HPP_

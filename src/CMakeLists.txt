@@ -1,10 +1,10 @@
-rock_library(global_path_planner
-    SOURCES GlobalPathPlanner.cpp 
+rock_library(motion_planning_libraries
+    SOURCES MotionPlanningLibraries.cpp 
         sbpl/Sbpl.cpp 
         ompl/Ompl.cpp 
         ompl/validators/TravMapValidator.cpp 
         ompl/objectives/TravGridObjective.cpp
-    HEADERS GlobalPathPlanner.hpp 
+    HEADERS MotionPlanningLibraries.hpp 
         sbpl/Sbpl.hpp 
         ompl/Ompl.hpp 
         ompl/validators/TravMapValidator.hpp 
@@ -14,5 +14,5 @@ rock_library(global_path_planner
     DEPS_PKGCONFIG sbpl
 )
 
-rock_executable(global_path_planner_bin Main.cpp
-    DEPS global_path_planner)
+rock_executable(motion_planning_libraries_bin Main.cpp
+    DEPS motion_planning_libraries)
