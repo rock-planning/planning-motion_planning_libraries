@@ -10,14 +10,14 @@ int main(int argc, char** argv)
     
     using namespace motion_planning_libraries;
     
-    ConfigurationSBPL conf;
+    ConfigSBPL conf;
     std::string path_env(getenv ("AUTOPROJ_PROJECT_BASE"));
     path_env += "/external/sbpl/env_examples/env2.cfg";
-    conf.mSBPLEnvFile = path_env;
+    conf.mEnvFile = path_env;
     
     std::string path_primitives(getenv ("AUTOPROJ_PROJECT_BASE"));
     path_primitives += "/external/sbpl/matlab/mprim";
-    conf.mSBPLMotionPrimitivesFile = path_primitives;
+    conf.mMotionPrimitivesFile = path_primitives;
     
     Sbpl sbpl(conf);
     

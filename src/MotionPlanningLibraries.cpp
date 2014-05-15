@@ -5,7 +5,7 @@ namespace motion_planning_libraries
 {
 
 // PUBLIC
-MotionPlanningLibraries::MotionPlanningLibraries(ConfigurationBase config) : mConfigBase(config),
+MotionPlanningLibraries::MotionPlanningLibraries(Config config) : mConfig(config),
         mpTravGrid(NULL), 
         mpTravData(),
         mStartWorld(), mGoalWorld(), 

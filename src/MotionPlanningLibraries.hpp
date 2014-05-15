@@ -6,25 +6,13 @@
 #include <base/Trajectory.hpp>
 
 #include <envire/maps/TraversabilityGrid.hpp>
-//#include <envire/core/Environment.hpp>
+
+#include <motion_planning_libraries/Config.hpp>
 
 namespace motion_planning_libraries
 {
 
 typedef envire::TraversabilityGrid::ArrayType TravData;
-
-struct ConfigurationBase {
-    ConfigurationBase() : mRobotWidth(0.5), 
-            mRobotHeight(0.5), 
-            mRobotForwardVelocity(0.2), 
-            mRobotRotationalVelocity(1.0) {
-    }
-    
-    double mRobotWidth;
-    double mRobotHeight;
-    double mRobotForwardVelocity; // m/sec
-    double mRobotRotationalVelocity; // sec/45° degrees turn.   
-};
     
 /**
  * Can be used to plan 2D trajectories considering the orientation.
@@ -40,7 +28,7 @@ class MotionPlanningLibraries
     static const double REPLANNING_DIST_THRESHOLD = 0.05;
     static const double REPLANNING_TURN_THRESHOLD = 0.017;
      
-    ConfigurationBase mConfigBase;
+    Config mConfig;
     
     envire::TraversabilityGrid* mpTravGrid;
     boost::shared_ptr<TravData> mpTravData;
@@ -51,7 +39,7 @@ class MotionPlanningLibraries
     bool mReceivedNewStartGoal;
     
  public: 
-    MotionPlanningLibraries(ConfigurationBase config = ConfigurationBase());
+    MotionPlanningLibraries(Config config = Config());
     ~MotionPlanningLibraries();
     
     /**

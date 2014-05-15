@@ -18,24 +18,6 @@
 
 namespace motion_planning_libraries
 {
-
-enum SbplEnv {SBPL_XY, SBPL_XYTHETA};
-    
-struct ConfigurationSBPL : public ConfigurationBase {
-    ConfigurationSBPL() :
-            mSBPLEnvType(SBPL_XY),
-            mSBPLEnvFile(),
-            mSBPLMotionPrimitivesFile(), 
-            mSBPLForwardSearch(true), 
-            mSBPLSearchUntilFirstSolution(false) {
-    }
-    
-    SbplEnv mSBPLEnvType;
-    std::string mSBPLEnvFile;
-    std::string mSBPLMotionPrimitivesFile;
-    bool mSBPLForwardSearch;
-    bool mSBPLSearchUntilFirstSolution;
-};
     
 /**
  * Finds the path with minimal cost from start to goal using a traversability map. 
@@ -47,19 +29,20 @@ private:
     // with obstacle threshold of SBPL_MAX_COST.
     static const unsigned char SBPL_MAX_COST = 100;
     
-    ConfigurationSBPL mConfigSBPL;
+    ConfigSBPL mSBPLConfig;
     
     boost::shared_ptr<DiscreteSpaceInformation> mpSBPLEnv;
     boost::shared_ptr<SBPLPlanner> mpSBPLPlanner;
     std::vector<int> mSBPLWaypointIDs;
     unsigned char* mpSBPLMapData;
     size_t mSBPLNumElementsMap;
-    // Required to set start/goal in SBPL_XYTHETA 
+    
+    // Required to set start/goal in ENV_XYTHETA 
     // (grid coordinates have to be converted back to meters) 
     double mScaleX, mScaleY; 
     
  public: 
-    Sbpl(ConfigurationSBPL config_sbpl = ConfigurationSBPL());
+    Sbpl(ConfigSBPL config_sbpl = ConfigSBPL());
     void mpEnv();
  
  protected:

@@ -4,7 +4,8 @@ rock_library(motion_planning_libraries
         ompl/Ompl.cpp 
         ompl/validators/TravMapValidator.cpp 
         ompl/objectives/TravGridObjective.cpp
-    HEADERS MotionPlanningLibraries.hpp 
+    HEADERS Config.hppl 
+        MotionPlanningLibraries.hpp 
         sbpl/Sbpl.hpp 
         ompl/Ompl.hpp 
         ompl/validators/TravMapValidator.hpp 
