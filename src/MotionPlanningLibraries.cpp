@@ -180,6 +180,17 @@ base::Trajectory MotionPlanningLibraries::getTrajectoryInWorld(double speed) {
     return trajectory;
 }
 
+void MotionPlanningLibraries::printPathInWorld() {
+    std::vector<base::Waypoint> waypoints = getPathInWorld();
+    std::vector<base::Waypoint>::iterator it = waypoints.begin();
+    int counter = 1;
+    printf("%s %s %s %s %s\n", "       #", "       X", "       Y", "       Z", "   THETA");
+    for(; it != waypoints.end(); it++, counter++) {
+        printf("%8d %8.2f %8.2f %8.2f %8.2f\n", counter, it->position[0], 
+                it->position[1], it->position[2], it->heading);
+    }
+}
+
 base::samples::RigidBodyState MotionPlanningLibraries::getStartPoseInGrid() {
     return mStartGrid;
 }

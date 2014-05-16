@@ -35,12 +35,29 @@ bool TurningValidator::isValidTurn(const ompl::base::State *s1,
     //double dist = se2_ss->as<ompl::base::RealVectorStateSpace>(0)->distance(s1, s2);  
     //double angle = se2_ss->as<ompl::base::SO2StateSpace>(1)->distance(s1, s2);
 
-    double s1_x = s1->as<ompl::base::SE2StateSpace::StateType>()->getX();
-    double s1_y = s1->as<ompl::base::SE2StateSpace::StateType>()->getY();
-    double s1_yaw = s1->as<ompl::base::SE2StateSpace::StateType>()->getYaw();
-    double s2_x = s2->as<ompl::base::SE2StateSpace::StateType>()->getX();
-    double s2_y = s2->as<ompl::base::SE2StateSpace::StateType>()->getY();
-    double s2_yaw = s2->as<ompl::base::SE2StateSpace::StateType>()->getYaw();
+    double s1_x = 0.0;
+    double s1_y = 0.0;
+    double s1_yaw = 0.0;
+    double s2_x = 0.0;
+    double s2_y = 0.0;
+    double s2_yaw = 0.0;
+    
+    switch(mEnvType) {
+        case ENV_XY: {
+            return true;
+        }
+        case ENV_XYTHETA: {
+            double s1_x = s1->as<ompl::base::SE2StateSpace::StateType>()->getX();
+            double s1_y = s1->as<ompl::base::SE2StateSpace::StateType>()->getY();
+            double s1_yaw = s1->as<ompl::base::SE2StateSpace::StateType>()->getYaw();
+            double s2_x = s2->as<ompl::base::SE2StateSpace::StateType>()->getX();
+            double s2_y = s2->as<ompl::base::SE2StateSpace::StateType>()->getY();
+            double s2_yaw = s2->as<ompl::base::SE2StateSpace::StateType>()->getYaw();
+            break;
+        }
+    }
+    
+    
    
     double dist = sqrt((s1_x - s2_x)*(s1_x - s2_x)+(s1_y - s2_y)*(s1_y - s2_y));
 /* 

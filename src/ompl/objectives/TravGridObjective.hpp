@@ -7,6 +7,8 @@
 #include <envire/maps/TraversabilityGrid.hpp>
 #include <base/Logging.hpp>
 
+#include <motion_planning_libraries/Config.hpp>
+
 namespace motion_planning_libraries
 {
     
@@ -17,16 +19,27 @@ typedef envire::TraversabilityGrid::ArrayType TravData;
  */
 class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
 
+ public:   
+     static const unsigned char OMPL_MAX_COST = 100;
+    
  private:
+     envire::TraversabilityGrid* mpTravGrid; // To request the driveability values.
      boost::shared_ptr<TravData> mpTravData;
      int mGridWidth;
      int mGridHeight;
+     enum EnvType mEnvType;
         
  public:
     TravGridObjective(const ompl::base::SpaceInformationPtr& si, 
-            boost::shared_ptr<TravData> trav_data, int grid_width, int grid_height) : 
-            ompl::base::StateCostIntegralObjective(si, true), mpTravData(trav_data),
-            mGridWidth(grid_width), mGridHeight(grid_height) {
+                        envire::TraversabilityGrid* trav_grid,
+                        boost::shared_ptr<TravData> trav_data, 
+                        int grid_width, int grid_height,
+                        enum EnvType env_type) : 
+                ompl::base::StateCostIntegralObjective(si, true), 
+                mpTravGrid(trav_grid), 
+                mpTravData(trav_data),
+                mGridWidth(grid_width), mGridHeight(grid_height), 
+                mEnvType(env_type) {
     }
     
     ~TravGridObjective() {
@@ -34,29 +47,38 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
     
     ompl::base::Cost stateCost(const ompl::base::State* s) const
     {
-        const ompl::base::SE2StateSpace::StateType* state_se2 = 
-                s->as<ompl::base::SE2StateSpace::StateType>();
+        double x = 0, y = 0;
+        
+        switch(mEnvType) {
+            case ENV_XY: {
+                const ompl::base::RealVectorStateSpace::StateType* state_rv = 
+                        s->as<ompl::base::RealVectorStateSpace::StateType>();
+                x = state_rv->values[0];
+                y = state_rv->values[1];
+                break;
+            }
+            case ENV_XYTHETA: {
+                const ompl::base::SE2StateSpace::StateType* state_se2 = 
+                        s->as<ompl::base::SE2StateSpace::StateType>();
+                x = state_se2->getX();
+                y = state_se2->getY();
+                break;
+            }
+        }
         
         // TODO Assuming: only valid states are passed?
-        if(state_se2->getX() < 0 || state_se2->getX() >= mGridWidth || 
-                state_se2->getY() < 0 || state_se2->getY() >= mGridHeight) {
+        if(x < 0 || x >= mGridWidth || 
+                y < 0 || y >= mGridHeight) {
             LOG_WARN("Invalid state (%4.2f, %4.2f) has been passed and will be ignored", 
-                   state_se2->getX(), state_se2->getY()); 
+                   x, y); 
             throw std::runtime_error("Invalid state received");
             //return ompl::base::Cost(0);
         }
     
-        // TODO Use real costs and a terrain class configuration file.
-        // Assuming 12 classes and using each of the classes as it costs: 13 - class
-        // 0: unkown, 1: obstacle
-        double grid_class = (double)(*mpTravData)[state_se2->getY()][state_se2->getX()];
-        if(grid_class == 1) { // obstacle
-            return ompl::base::Cost(600);
-        }
-        if(grid_class == 0) { // unknown
-            return ompl::base::Cost(6.0);
-        }
-        return ompl::base::Cost(13 - grid_class);        
+        // Uses the driveability which creates costs from 0 to OMPL_MAX_COST.
+        double class_value = (double)(*mpTravData)[y][x];
+        double driveability = (mpTravGrid->getTraversabilityClass(class_value)).getDrivability();
+        return ompl::base::Cost(OMPL_MAX_COST - (driveability * (double)OMPL_MAX_COST + 0.5));        
     }
 };
 

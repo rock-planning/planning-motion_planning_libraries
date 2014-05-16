@@ -6,6 +6,8 @@
 
 #include <ompl/base/DiscreteMotionValidator.h>
 
+#include <motion_planning_libraries/Config.hpp>
+
 namespace envire {
 class TraversabilityGrid;
 }
@@ -23,15 +25,17 @@ class TurningValidator :  public ompl::base::DiscreteMotionValidator {
     ompl::base::SpaceInformationPtr mpSpaceInformation;
     double mMaxSpeed;
     double mMaxSteeringAngleRad;
+    enum EnvType mEnvType;
     
     bool isValidTurn(const ompl::base::State *s1, const ompl::base::State *s2) const;
     
  public:
     TurningValidator(const ompl::base::SpaceInformationPtr& si, 
-            double max_speed, double max_steering_angle_rad) : 
+            double max_speed, double max_steering_angle_rad, enum EnvType env_type) : 
             ompl::base::DiscreteMotionValidator(si),
             mMaxSpeed(max_speed), 
-            mMaxSteeringAngleRad(max_steering_angle_rad) {
+            mMaxSteeringAngleRad(max_steering_angle_rad),
+            mEnvType(env_type){
     }
     
     ~TurningValidator() {

@@ -76,6 +76,9 @@ class MotionPlanningLibraries
     /** Returns the path stored in mPath as a trajectory (spline). */
     base::Trajectory getTrajectoryInWorld(double speed);
     
+    /** Prints the current path to the console. */
+    void printPathInWorld();
+    
     /** Returns the start pose within the grid. */
     base::samples::RigidBodyState getStartPoseInGrid();
     

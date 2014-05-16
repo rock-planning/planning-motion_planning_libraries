@@ -29,8 +29,6 @@ private:
     // with obstacle threshold of SBPL_MAX_COST.
     static const unsigned char SBPL_MAX_COST = 100;
     
-    ConfigSBPL mSBPLConfig;
-    
     boost::shared_ptr<DiscreteSpaceInformation> mpSBPLEnv;
     boost::shared_ptr<SBPLPlanner> mpSBPLPlanner;
     std::vector<int> mSBPLWaypointIDs;
@@ -39,10 +37,10 @@ private:
     
     // Required to set start/goal in ENV_XYTHETA 
     // (grid coordinates have to be converted back to meters) 
-    double mScaleX, mScaleY; 
+    double mSBPLScaleX, mSBPLScaleY; 
     
  public: 
-    Sbpl(ConfigSBPL config_sbpl = ConfigSBPL());
+    Sbpl(Config config = Config());
     void mpEnv();
  
  protected:

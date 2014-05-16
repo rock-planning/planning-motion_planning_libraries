@@ -5,6 +5,8 @@
 #include <ompl/base/ProblemDefinition.h>
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/Planner.h>
+#include <ompl/control/ODESolver.h>
+#include <ompl/control/spaces/RealVectorControlSpace.h>
 
 #include <motion_planning_libraries/MotionPlanningLibraries.hpp>
 
@@ -14,7 +16,8 @@ namespace motion_planning_libraries
 /**
  * Finds the path with minimal cost from start to goal using a traversability map. 
  * The orientation of the robot cannot be regarded, because
- * controll problems cannot be optimized in OMPL yet. 
+ * controll problems cannot be optimized in OMPL yet. Using SE2StateSpace with
+ * a MotionValidator for the orientation does not create driveable trajectories as well.
  */
 class Ompl : public MotionPlanningLibraries
 {
@@ -30,13 +33,32 @@ class Ompl : public MotionPlanningLibraries
     ompl::base::OptimizationObjectivePtr mpMaxMinClearance;
     ompl::base::OptimizationObjectivePtr mpTravGridOjective;
     ompl::base::PathPtr mpPathInGridOmpl;
+    ompl::control::ODESolverPtr mpODESolver;
+    ompl::control::ControlSpacePtr mpControlSpace;
     
     size_t mGridWidth;
     size_t mGridHeight;
       
  public: 
-    Ompl();
- 
+    Ompl(Config config = Config());
+    
+    // Definition of the ODE for the kinematic car.
+    static const void kinematic_car_ode (const ompl::control::ODESolver::StateType& q, 
+            const ompl::control::Control* control, 
+            ompl::control::ODESolver::StateType& qdot)
+    {
+        const double *u = control->as<ompl::control::RealVectorControlSpace::ControlType>()->values;
+        const double theta = q[2];
+        double carLength = 0.2;
+
+        // Zero out qdot
+        qdot.resize (q.size (), 0);
+
+        qdot[0] = u[0] * cos(theta);
+        qdot[1] = u[0] * sin(theta);
+        qdot[2] = u[0] * tan(u[1]) / carLength;
+    }
+    
  protected:
 
     /**

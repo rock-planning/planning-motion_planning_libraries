@@ -9,12 +9,14 @@ namespace motion_planning_libraries
 TravMapValidator::TravMapValidator(const ompl::base::SpaceInformationPtr& si,
             size_t grid_width, 
             size_t grid_height,
-            boost::shared_ptr<TravData> grid_data) : 
+            boost::shared_ptr<TravData> grid_data,
+            enum EnvType env_type) : 
             ompl::base::StateValidityChecker(si),
             mpSpaceInformation(si),
             mGridWidth(grid_width), 
             mGridHeight(grid_height),
-            mpTravData(grid_data) {
+            mpTravData(grid_data),
+            mEnvType(env_type){
 }
 
 TravMapValidator::~TravMapValidator() {
@@ -22,13 +24,27 @@ TravMapValidator::~TravMapValidator() {
     
 bool TravMapValidator::isValid(const ompl::base::State* state) const
 {
-    const ompl::base::SE2StateSpace::StateType* state_se2 = 
-            state->as<ompl::base::SE2StateSpace::StateType>();      
     
-    // Maps position to grid coordinates.    
-    int x_grid = (int)(state_se2->getX());
-    int y_grid = (int)(state_se2->getY());
+    int x_grid = 0;
+    int y_grid = 0;
     
+    switch(mEnvType) {
+        case ENV_XY: {
+            const ompl::base::RealVectorStateSpace::StateType* state_rv = 
+                    state->as<ompl::base::RealVectorStateSpace::StateType>();
+            x_grid = (int)state_rv->values[0];
+            y_grid = (int)state_rv->values[1];
+            break;
+        }
+        case ENV_XYTHETA: {
+            const ompl::base::SE2StateSpace::StateType* state_se2 = 
+                    state->as<ompl::base::SE2StateSpace::StateType>();
+            x_grid = (int)state_se2->getX();
+            y_grid = (int)state_se2->getY();
+            break;
+        }
+    }
+   
     // Check borders.
     if(     x_grid < 0 || x_grid >= (int)mGridWidth ||
             y_grid < 0 || y_grid >= (int)mGridHeight) {
@@ -37,8 +53,6 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
     }   
     
     // Check obstacle.
-    //envire::TraversabilityGrid::ArrayType &trav_data(
-    //        mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY));
     if((*mpTravData)[y_grid][x_grid] == envire::SimpleTraversability::CLASS_OBSTACLE) {
         LOG_DEBUG("State (%d,%d) is invalid (lies on an obstacle)", x_grid, y_grid);
         return false;
@@ -49,6 +63,8 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
 
 double TravMapValidator::clearance(const ompl::base::State* state) const
 {
+    // Not used currently (and needs adaption regarding the different environments).
+#if 0
     bool state_start_valid = isValid(state);
     bool state_cur_valid = state_start_valid;
     
@@ -96,6 +112,7 @@ double TravMapValidator::clearance(const ompl::base::State* state) const
         }    
     }
     mpSpaceInformation->freeState(state_cur_mem);
+#endif
     return 0.0;
 }
 

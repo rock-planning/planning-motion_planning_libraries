@@ -13,6 +13,8 @@
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/spaces/SE2StateSpace.h>
 
+#include <motion_planning_libraries/Config.hpp>
+
 namespace envire {
 class TraversabilityGrid;
 }
@@ -29,12 +31,14 @@ class TravMapValidator :  public ompl::base::StateValidityChecker {
     size_t mGridWidth;
     size_t mGridHeight;
     boost::shared_ptr<TravData> mpTravData;
+    enum EnvType mEnvType;
     
  public:
     TravMapValidator(const ompl::base::SpaceInformationPtr& si,
             size_t grid_width, 
             size_t grid_height,
-            boost::shared_ptr<TravData> grid_data);
+            boost::shared_ptr<TravData> grid_data,
+            enum EnvType env_type);
     
     ~TravMapValidator();
     
