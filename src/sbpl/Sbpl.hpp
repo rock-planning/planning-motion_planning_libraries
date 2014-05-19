@@ -6,7 +6,7 @@
 #include <boost/shared_ptr.hpp>
 
 #include <base/Logging.hpp>
-#include <motion_planning_libraries/MotionPlanningLibraries.hpp>
+#include <motion_planning_libraries/AbstractMotionPlanningLibrary.hpp>
 
 #include <sbpl/utils/utils.h>
 #include <sbpl/config.h> // here #define DEBUG 0, causes a lot of trouble
@@ -22,9 +22,9 @@ namespace motion_planning_libraries
 /**
  * Finds the path with minimal cost from start to goal using a traversability map. 
  */
-class Sbpl : public MotionPlanningLibraries
+class Sbpl : public AbstractMotionPlanningLibrary
 {      
-private:
+ private:
     // Driveability 0.0 to 1.0 will be mapped to SBPL_MAX_COST to 0 
     // with obstacle threshold of SBPL_MAX_COST.
     static const unsigned char SBPL_MAX_COST = 100;
@@ -41,14 +41,13 @@ private:
     
  public: 
     Sbpl(Config config = Config());
-    void mpEnv();
  
- protected:
     /**
      * 
      */
     virtual bool initialize(size_t grid_width, size_t grid_height, 
             double scale_x, double scale_y, 
+            envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data);
     
     /**
@@ -72,7 +71,8 @@ private:
      * Converts the trav map to a sbpl map using the driveability value.
      * Driveability 0.0 to 1.0 is mapped to costs 100 to 0 with obstacle threshold 100.
      */
-    void createSBPLMap(boost::shared_ptr<TravData> trav_data);
+    void createSBPLMap(envire::TraversabilityGrid* trav_grid, 
+            boost::shared_ptr<TravData> trav_data);
     
     std::vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
 };

@@ -17,11 +17,15 @@ namespace og = ompl::geometric;
 namespace motion_planning_libraries
 {
 
-Ompl::Ompl(Config config) : MotionPlanningLibraries(config), mGridWidth(0), mGridHeight(0) {
+// PUBLIC
+Ompl::Ompl(Config config) : AbstractMotionPlanningLibrary(config), 
+        mGridWidth(0), 
+        mGridHeight(0) {
 }
  
 bool Ompl::initialize(size_t grid_width, size_t grid_height, 
             double scale_x, double scale_y, 
+            envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data) {
     
     mGridWidth = grid_width;
@@ -30,6 +34,8 @@ bool Ompl::initialize(size_t grid_width, size_t grid_height,
     // Defines a geometric problem in XY.
     switch (mConfig.mEnvType) {
         case ENV_XY: {
+            LOG_INFO("Create OMPL RealVector(2) environment");
+            
             mpStateSpace = ob::StateSpacePtr(new ob::RealVectorStateSpace(2));
             ob::RealVectorBounds bounds(2);
             bounds.setLow (0, 0);
@@ -46,6 +52,8 @@ bool Ompl::initialize(size_t grid_width, size_t grid_height,
         
         // Will define a control problem in SE2 (X, Y, THETA).
         case ENV_XYTHETA: {
+            LOG_INFO("Create OMPL SE2 environment");
+            
             mpStateSpace = ompl::base::StateSpacePtr(new ob::SE2StateSpace());
             ob::RealVectorBounds bounds(2);
             bounds.setLow (0, 0);
@@ -58,19 +66,21 @@ bool Ompl::initialize(size_t grid_width, size_t grid_height,
             mpControlSpace = ompl::control::ControlSpacePtr(
                     new ompl::control::RealVectorControlSpace(mpStateSpace, 2));
             ompl::base::RealVectorBounds cbounds(2);
-            cbounds.setLow(0, -mConfig.mRobotForwardVelocity);
-            cbounds.setHigh(0, mConfig.mRobotForwardVelocity);
-            cbounds.setLow(1, -mConfig.mRobotRotationalVelocity);
-            cbounds.setHigh(1, mConfig.mRobotRotationalVelocity);
+            // TODO The cbounds are ignored completely..
+            cbounds.setLow(0, 0/*-mConfig.mRobotForwardVelocity*/);
+            cbounds.setHigh(0, 0/*mConfig.mRobotForwardVelocity*/);
+            cbounds.setLow(1, 0/*-mConfig.mRobotRotationalVelocity*/);
+            cbounds.setHigh(1, 0/*mConfig.mRobotRotationalVelocity*/);
             mpControlSpace->as<ompl::control::RealVectorControlSpace>()->setBounds(cbounds);
             
             ompl::control::SpaceInformationPtr control_space_inf = ompl::control::SpaceInformationPtr(
                     new ompl::control::SpaceInformation(mpStateSpace,mpControlSpace));
+            // TODO Test the other ODE solvers.
             mpODESolver = ompl::control::ODESolverPtr(
-                    new ompl::control::ODEBasicSolver<> (control_space_inf, &kinematic_car_ode));
+                    new ompl::control::ODEAdaptiveSolver<> (control_space_inf, &kinematicCarOde));
             // setStatePropagator can also be used to define a post-propagator.
             control_space_inf->setStatePropagator(
-                    ompl::control::ODESolver::getStatePropagator(mpODESolver));
+                    ompl::control::ODESolver::getStatePropagator(mpODESolver, &postPropagate));
             
             // Control space information inherits from base space informartion.
             mpSpaceInformation = control_space_inf;
@@ -86,16 +96,12 @@ bool Ompl::initialize(size_t grid_width, size_t grid_height,
         
     // Create problem definition.        
     mpProblemDefinition = ob::ProblemDefinitionPtr(new ob::ProblemDefinition(mpSpaceInformation));
+    // Create optimizations and balance them in getBalancedObjective().
+    mpPathLengthOptimization = ob::OptimizationObjectivePtr(
+        new ob::PathLengthOptimizationObjective(mpSpaceInformation));
+    mpTravGridObjective = ob::OptimizationObjectivePtr(new TravGridObjective(mpSpaceInformation, 
+            trav_grid, grid_data, grid_width, grid_height, mConfig.mEnvType));
     mpProblemDefinition->setOptimizationObjective(getBalancedObjective(mpSpaceInformation));
-    
-    // Uses the currently set start and goal.
-    setStartGoal(mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
-            mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw());
-    
-    // Stop if the found solution is nearly a straight line.
-    double dist_start_goal = (mStartGrid.position - mGoalGrid.position).norm() * 1.1;
-    LOG_INFO("Set cost threshold to %4.2f", dist_start_goal);
-    mpPathLengthOptimization->setCostThreshold(ob::Cost(dist_start_goal));  
     
     if(mConfig.mSearchUntilFirstSolution) { // Not optimizing planner, 
         mpPlanner = ob::PlannerPtr(new og::RRTConnect(mpSpaceInformation));
@@ -137,6 +143,12 @@ bool Ompl::setStartGoal(int start_x, int start_y, double start_yaw,
     }
     
     mpProblemDefinition->setStartAndGoalStates(start_ompl, goal_ompl);
+    
+    // Stop if the found solution is nearly a straight line.
+    double dist_start_goal = sqrt((start_x - goal_x) * (start_x - goal_x) + 
+            (start_y - goal_y) * (start_y - goal_y)) * 1.1;
+    LOG_INFO("Set cost threshold to %4.2f", dist_start_goal);
+    mpPathLengthOptimization->setCostThreshold(ob::Cost(dist_start_goal));
     
     return true;
 }
@@ -203,15 +215,9 @@ bool Ompl::fillPath(std::vector<base::samples::RigidBodyState>& path) {
 ompl::base::OptimizationObjectivePtr Ompl::getBalancedObjective(
     const ompl::base::SpaceInformationPtr& si) {
 
-    mpPathLengthOptimization = ob::OptimizationObjectivePtr(
-            new ob::PathLengthOptimizationObjective(si));
-    
-    mpTravGridOjective = ob::OptimizationObjectivePtr(new TravGridObjective(si, 
-            mpTravGrid, mpTravData, mGridWidth, mGridHeight, mConfig.mEnvType));
-
     ob::MultiOptimizationObjective* opt = new ob::MultiOptimizationObjective(si);
     opt->addObjective(mpPathLengthOptimization, 1.0);
-    opt->addObjective(mpTravGridOjective, 1.0);
+    opt->addObjective(mpTravGridObjective, 1.0);
     mpMultiOptimization = ompl::base::OptimizationObjectivePtr(opt);
 
     return mpMultiOptimization;

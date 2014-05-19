@@ -9,16 +9,17 @@ namespace motion_planning_libraries
 {
 
 // PUBLIC
-Sbpl::Sbpl(Config config) : MotionPlanningLibraries(config),
+Sbpl::Sbpl(Config config) : AbstractMotionPlanningLibrary(config),
         mpSBPLMapData(NULL),
         mSBPLNumElementsMap(0),
         mSBPLScaleX(0),
         mSBPLScaleY(0) {
+    LOG_DEBUG("SBPL constructor");
 }
 
-// PROTECTED
 bool Sbpl::initialize(size_t grid_width, size_t grid_height, 
             double scale_x, double scale_y, 
+            envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data) { 
     
     LOG_DEBUG("SBPL initialize");
@@ -52,15 +53,17 @@ bool Sbpl::initialize(size_t grid_width, size_t grid_height,
             }
         // Create an sbpl-environment.
         } else {
-            createSBPLMap(mpTravData);
+            createSBPLMap(trav_grid, grid_data);
             switch(mConfig.mEnvType) {
                 case ENV_XY: {
+                    LOG_INFO("Create SBPL EnvironmentNAV2D environment");
                     boost::shared_ptr<EnvironmentNAV2D> env_xy =
                             boost::dynamic_pointer_cast<EnvironmentNAV2D>(mpSBPLEnv);
                     env_xy->InitializeEnv(grid_width, grid_height, mpSBPLMapData, SBPL_MAX_COST);
                     break;
                 }
                 case ENV_XYTHETA: {
+                    LOG_INFO("Create SBPL EnvironmentNAVXYTHETAMLEVLAT environment");
                     boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
                             boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
                     try {
@@ -92,7 +95,8 @@ bool Sbpl::initialize(size_t grid_width, size_t grid_height,
     } 
       
     // Create planner.
-    mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ARAPlanner(mpSBPLEnv.get(), mConfig.mSBPLForwardSearch));
+    //mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ARAPlanner(mpSBPLEnv.get(), mConfig.mSBPLForwardSearch));
+    mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ADPlanner(mpSBPLEnv.get(), mConfig.mSBPLForwardSearch));
     mpSBPLPlanner->set_search_mode(mConfig.mSearchUntilFirstSolution); 
     
     // If available use the start and goal defined in the SBPL environment.
@@ -165,19 +169,27 @@ bool Sbpl::solve(double time) {
     LOG_DEBUG("SBPL solve()");
     
     mSBPLWaypointIDs.clear();
-    if(mpSBPLPlanner->replan(time, &mSBPLWaypointIDs)) {
+    
+    bool ret = false;
+    try {
+        ret = mpSBPLPlanner->replan(time, &mSBPLWaypointIDs);
+    } catch (...) {
+        LOG_ERROR("Replanning failed");
+        return false;
+    }
+    
+    if(ret) {
         LOG_INFO("Found solution contains %d waypoints", mSBPLWaypointIDs.size());
+        return true;
     } else {
         return false;
     }
-    return true;
 }
     
 bool Sbpl::fillPath(std::vector<base::samples::RigidBodyState>& path) {
     
     LOG_DEBUG("SBPL fillPath");
     
-    mPathInGrid.clear();
     base::samples::RigidBodyState rbs;
     
     int x = 0, y = 0, theta = 0; // In SBPL theta is an integer as well.
@@ -201,14 +213,15 @@ bool Sbpl::fillPath(std::vector<base::samples::RigidBodyState>& path) {
         }
         rbs.position = base::Vector3d(x,y,0);
         rbs.orientation =  Eigen::AngleAxis<double>(theta, base::Vector3d(0,0,1));
-        mPathInGrid.push_back(rbs);
+        path.push_back(rbs);
     }
     
     return true;
 }
 
 // PRIVATE
-void Sbpl::createSBPLMap(boost::shared_ptr<TravData> trav_data) {
+void Sbpl::createSBPLMap(envire::TraversabilityGrid* trav_grid,
+        boost::shared_ptr<TravData> trav_data) {
     
     LOG_DEBUG("SBPL createSBPLMap");
     
@@ -237,7 +250,7 @@ void Sbpl::createSBPLMap(boost::shared_ptr<TravData> trav_data) {
     
     for(uint8_t* p = trav_data->origin(); p < stop_p; p++, sbpl_map_p++) {
         uint8_t class_value = *p;
-        driveability = (mpTravGrid->getTraversabilityClass(class_value)).getDrivability();
+        driveability = (trav_grid->getTraversabilityClass(class_value)).getDrivability();
         sbpl_cost = SBPL_MAX_COST - (int)(driveability * (double)SBPL_MAX_COST + 0.5);
         *sbpl_map_p = sbpl_cost;
     }

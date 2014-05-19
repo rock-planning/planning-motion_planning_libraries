@@ -7,7 +7,8 @@
 
 #include <envire/maps/TraversabilityGrid.hpp>
 
-#include <motion_planning_libraries/Config.hpp>
+#include "Config.hpp"
+#include "AbstractMotionPlanningLibrary.hpp"
 
 namespace motion_planning_libraries
 {
@@ -20,15 +21,15 @@ typedef envire::TraversabilityGrid::ArrayType TravData;
  * The start/goal poses are transformed from world to local grid and the
  * resulting trajectory from local grid to world.
  * 
- * TODO: Integrate: WayypointFactor, clear start, use next goal
+ * TODO: Integrate: clear start, use next reachable goal
  */
 class MotionPlanningLibraries
 {
  protected:
     static const double REPLANNING_DIST_THRESHOLD = 0.05;
     static const double REPLANNING_TURN_THRESHOLD = 0.017;
-     
-    Config mConfig;
+    
+    boost::shared_ptr<AbstractMotionPlanningLibrary> mpPlanningLib;
     
     envire::TraversabilityGrid* mpTravGrid;
     boost::shared_ptr<TravData> mpTravData;
@@ -98,34 +99,6 @@ class MotionPlanningLibraries
     static bool grid2world(envire::TraversabilityGrid const* trav,
             base::samples::RigidBodyState const& grid_pose, 
             base::samples::RigidBodyState& world_pose);
-            
- protected:
-    /**
-     * (Re-)initializes the complete planning environment using the passed 
-     * traversability map.
-     */
-    virtual bool initialize(size_t grid_width, size_t grid_height, 
-            double scale_x, double scale_y, 
-            boost::shared_ptr<TravData> grid_data) = 0;
-    
-    /**
-     * Sets the start and the goal within the planning environment.
-     * This method is only called if a new pose has been received 
-     * (REPLANNING_XXXX_THRESHOLDs are used).
-     */
-    virtual bool setStartGoal(int start_x, int start_y, double start_yaw, 
-            int goal_x, int goal_y, double goal_yaw) = 0;
-    
-    /**
-     * Tries to find a solution (if the environment has just been initialized) 
-     * or to improve the existing solution.
-     */
-    virtual bool solve(double time) = 0;
-    
-    /**
-     * Fills the passed vector with the found path.
-     */
-    virtual bool fillPath(std::vector<base::samples::RigidBodyState>& path) = 0;
      
  private:
     /**

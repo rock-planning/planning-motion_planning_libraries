@@ -1,18 +1,33 @@
 #include "MotionPlanningLibraries.hpp"
+
 #include <base/Logging.hpp>
+
+#include <motion_planning_libraries/sbpl/Sbpl.hpp>
+#include <motion_planning_libraries/ompl/Ompl.hpp>
 
 namespace motion_planning_libraries
 {
 
 // PUBLIC
-MotionPlanningLibraries::MotionPlanningLibraries(Config config) : mConfig(config),
-        mpTravGrid(NULL), 
+MotionPlanningLibraries::MotionPlanningLibraries(Config config) : mpTravGrid(NULL), 
         mpTravData(),
         mStartWorld(), mGoalWorld(), 
         mStartGrid(), mGoalGrid(), 
         mPathInGrid(),
         mReceivedNewTravGrid(false),
         mReceivedNewStartGoal(false) {
+
+    // Creates the requested planning library.  
+    switch(config.mPlanningLibType) {
+        case LIB_SBPL: {
+            mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>(new Sbpl(config));    
+            break;
+        }
+        case LIB_OMPL: {
+            mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>(new Ompl(config));
+            break;
+        }
+    }
         
     mStartGrid.invalidatePosition();
     mStartGrid.invalidateOrientation();        
@@ -102,10 +117,16 @@ bool MotionPlanningLibraries::plan(double max_time) {
     if(mReceivedNewTravGrid) {
         LOG_INFO("Replanning initiated");
         
-        if(!initialize(mpTravGrid->getCellSizeX(), mpTravGrid->getCellSizeY(),
-                mpTravGrid->getScaleX(), mpTravGrid->getScaleY(), mpTravData)) {
+        if(!mpPlanningLib->initialize(mpTravGrid->getCellSizeX(), 
+                mpTravGrid->getCellSizeY(),
+                mpTravGrid->getScaleX(), 
+                mpTravGrid->getScaleY(),
+                mpTravGrid, 
+                mpTravData)) {
             LOG_WARN("Initialization of the planning library failed"); 
             return false;
+        } else {
+            mReceivedNewTravGrid = false;    
         }
     }
     
@@ -114,10 +135,16 @@ bool MotionPlanningLibraries::plan(double max_time) {
                 mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
                 mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw());
         
-        if(!setStartGoal(mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
-                mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw())) {
+        if(!mpPlanningLib->setStartGoal(mStartGrid.position.x(), 
+                mStartGrid.position.y(), 
+                mStartGrid.getYaw(), 
+                mGoalGrid.position.x(), 
+                mGoalGrid.position.y(), 
+                mGoalGrid.getYaw())) {
             LOG_WARN("Start/goal could not be set");
             return false;
+        } else {
+            mReceivedNewStartGoal = false;
         }
     }
     
@@ -126,15 +153,13 @@ bool MotionPlanningLibraries::plan(double max_time) {
     }
     
     // Try to solve the problem / improve the solution.
-    bool solved = solve(max_time);
+    bool solved = mpPlanningLib->solve(max_time);
     
     if (solved)
     {
         LOG_INFO("Solution found");
         mPathInGrid.clear();
-        fillPath(mPathInGrid);
-        mReceivedNewTravGrid = false;
-        mReceivedNewStartGoal = false;
+        mpPlanningLib->fillPath(mPathInGrid);
         return true;
     } else {
         LOG_WARN("No solution found");        
@@ -163,13 +188,20 @@ base::Trajectory MotionPlanningLibraries::getTrajectoryInWorld(double speed) {
     
     std::vector<base::Vector3d> path;
     std::vector<double> parameters;
+    base::Vector3d last_position;
+    last_position[0] = last_position[1] = last_position[2] = nan("");
     std::vector<base::geometry::SplineBase::CoordinateType> coord_types;
     std::vector<base::samples::RigidBodyState>::iterator it = mPathInGrid.begin();
     base::samples::RigidBodyState pose_in_world;    
     for(;it != mPathInGrid.end(); it++) {
         if (grid2world(mpTravGrid, *it, pose_in_world)) {
-            path.push_back(pose_in_world.position);
-            coord_types.push_back(base::geometry::SplineBase::ORDINARY_POINT);
+            // Prevents to add the same position consecutively, otherwise
+            // the spline creation fails.
+            if(pose_in_world.position != last_position) {
+                path.push_back(pose_in_world.position);
+                coord_types.push_back(base::geometry::SplineBase::ORDINARY_POINT);
+            } 
+            last_position = pose_in_world.position;
         }
     }
     try {
