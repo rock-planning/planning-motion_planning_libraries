@@ -21,6 +21,11 @@ namespace motion_planning_libraries
     
 /**
  * Finds the path with minimal cost from start to goal using a traversability map. 
+ * 
+ * TODO In XYTHETA: Even the path is correct, the orientation of the single wypoints is 
+ *      somehow random. Why?
+ * TODO In XYTHETA: Does SBPL ignore the rotational speed? Very small values like 0.001 m/sec
+ *      lead to normal looking curves (but more waypoints a the curve).
  */
 class Sbpl : public AbstractMotionPlanningLibrary
 {      

@@ -19,6 +19,10 @@ namespace motion_planning_libraries
  * The orientation of the robot cannot be regarded, because
  * controll problems cannot be optimized in OMPL yet. Using SE2StateSpace with
  * a MotionValidator for the orientation does not create driveable trajectories as well.
+ * 
+ * TODO For XYTHETA: The reached goal orientation is turned around z by 180°, why?
+ * TODO For XYTHETA: A steering angle of 0.04 matches a turning velocity of 45° per sec.
+ *      Higher values allows nearly every turning. Why? Something to do with step size?
  */
 class Ompl : public AbstractMotionPlanningLibrary
 {
@@ -39,6 +43,7 @@ class Ompl : public AbstractMotionPlanningLibrary
     
     size_t mGridWidth;
     size_t mGridHeight;
+    static double mCarWidth;
       
  public: 
     Ompl(Config config = Config());
@@ -70,27 +75,48 @@ class Ompl : public AbstractMotionPlanningLibrary
     
  private:
     /**
-     * Creates a combined obtimization objective which tries to minimize the
+     * Creates a combined optimization objective which tries to minimize the
      * costs of the trav grid.
      */ 
     ompl::base::OptimizationObjectivePtr getBalancedObjective(
         const ompl::base::SpaceInformationPtr& si);
     
-        // Definition of the ODE for the kinematic car.
+    // Definition of the ODE for the kinematic car. Calculates the delt/opt/software_transterra/install/log/planning/motion_planning_libraries-build.loga.
     static const void kinematicCarOde (const ompl::control::ODESolver::StateType& q, 
             const ompl::control::Control* control, 
             ompl::control::ODESolver::StateType& qdot)
     {
+        
+        // u contains [0] forward velocity and [1] rotational velocity
         const double *u = control->as<ompl::control::RealVectorControlSpace::ControlType>()->values;
+        // q contains [0] x, [1] y and [2] current orientation. 
         const double theta = q[2];
-        double carLength = 0.2;
-
+        
         // Zero out qdot
         qdot.resize (q.size (), 0);
 
+        // Calculates delta.
         qdot[0] = u[0] * cos(theta);
         qdot[1] = u[0] * sin(theta);
-        qdot[2] = u[0] * tan(u[1]) / carLength;
+        qdot[2] = u[0] * tan(u[1]) / mCarWidth;
+    }
+    
+    // Just sets the delta using the velocities.
+    static const void simpleOde (const ompl::control::ODESolver::StateType& q, 
+            const ompl::control::Control* control, 
+            ompl::control::ODESolver::StateType& qdot)
+    {
+        // u contains [0] forward velocity and [1] rotational velocity
+        const double *u = control->as<ompl::control::RealVectorControlSpace::ControlType>()->values;
+        const double theta = q[2];
+        
+        // Zero out qdot
+        qdot.resize (q.size (), 0);
+        
+        // Calculates the deltas XY and just set the rotational speed.
+        qdot[0] = u[0] * cos(theta);
+        qdot[1] = u[0] * sin(theta);
+        qdot[2] = u[1];
     }
     
     static const void postPropagate(const ompl::base::State* state, const ompl::control::Control* control, 

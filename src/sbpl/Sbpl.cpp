@@ -67,14 +67,25 @@ bool Sbpl::initialize(size_t grid_width, size_t grid_height,
                     boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
                             boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
                     try {
+                        // SBPL does not allow the definition of forward AND backward velocity.
+                        double speed_min = mConfig.mRobotForwardVelocity;
+                        if(mConfig.mRobotForwardVelocity != mConfig.mRobotBackwardVelocity) {
+                            LOG_WARN("SBPL does not use forward AND backward velocity, minimal speed will be used");
+                            speed_min = std::min<double>(mConfig.mRobotForwardVelocity, mConfig.mRobotBackwardVelocity);
+                        }
+                       
+                        // SBPL: time in sec for a 45° turn
+                        double time_to_turn_45_degree = (M_PI / 4.0) / mConfig.mRobotRotationalVelocity;
+                        
                         env_xytheta->InitializeEnv(grid_width, grid_height, 
                             mpSBPLMapData, // initial map
                             0,0,0, //mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
                             0,0,0, //mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw(),
                             0.1, 0.1, 0.1, // tolerance x,y,yaw, ignored
-                            createFootprint(mConfig.mRobotWidth, mConfig.mRobotHeight), 
+                            createFootprint(mConfig.mRobotWidth, mConfig.mRobotLength), 
                             scale_x,  // Size of a cell in meter => in SBPL cells have to be quadrats
-                            mConfig.mRobotForwardVelocity, mConfig.mRobotRotationalVelocity,
+                            speed_min, 
+                            time_to_turn_45_degree, 
                             SBPL_MAX_COST, // cost threshold
                             mConfig.mSBPLMotionPrimitivesFile.c_str()); // motion primitives file
                     } catch (SBPL_Exception& e) {
@@ -256,26 +267,27 @@ void Sbpl::createSBPLMap(envire::TraversabilityGrid* trav_grid,
     }
 }
 
-std::vector<sbpl_2Dpt_t> Sbpl::createFootprint(double robot_width, double robot_height) {
+// TODO Check whether x == length and y == width are correct.
+std::vector<sbpl_2Dpt_t> Sbpl::createFootprint(double robot_width, double robot_length) {
 
     LOG_DEBUG("SBPL createFootprint");
     
     double half_robot_width = robot_width / 2.0;
-    double half_robot_height = robot_height / 2.0;
+    double half_robot_length = robot_length / 2.0;
     std::vector<sbpl_2Dpt_t> footprint;
     
     sbpl_2Dpt_t pt_m;
-    pt_m.x = -half_robot_width;
-    pt_m.y = -half_robot_height;
+    pt_m.y = -half_robot_width;
+    pt_m.x = -half_robot_length;
     footprint.push_back(pt_m);
-    pt_m.x = half_robot_width;
-    pt_m.y = -half_robot_height;
+    pt_m.y = half_robot_width;
+    pt_m.x = -half_robot_length;
     footprint.push_back(pt_m);
-    pt_m.x = half_robot_width;
-    pt_m.y = half_robot_height;
+    pt_m.y = half_robot_width;
+    pt_m.x = half_robot_length;
     footprint.push_back(pt_m);
-    pt_m.x = -half_robot_width;
-    pt_m.y = half_robot_height;
+    pt_m.y = -half_robot_width;
+    pt_m.x = half_robot_length;
     footprint.push_back(pt_m);
     
     return footprint;

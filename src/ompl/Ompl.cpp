@@ -1,10 +1,12 @@
 #include "Ompl.hpp"
 
 #include <ompl/base/SpaceInformation.h>
+#include <ompl/control/SpaceInformation.h>
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
+#include <ompl/control/planners/rrt/RRT.h>
 #include <ompl/config.h>
 
 #include <motion_planning_libraries/ompl/validators/TravMapValidator.hpp>
@@ -17,10 +19,13 @@ namespace og = ompl::geometric;
 namespace motion_planning_libraries
 {
 
+double Ompl::mCarWidth = 2.0;     
+    
 // PUBLIC
 Ompl::Ompl(Config config) : AbstractMotionPlanningLibrary(config), 
         mGridWidth(0), 
         mGridHeight(0) {
+    mCarWidth = mConfig.mRobotLength;
 }
  
 bool Ompl::initialize(size_t grid_width, size_t grid_height, 
@@ -30,6 +35,7 @@ bool Ompl::initialize(size_t grid_width, size_t grid_height,
     
     mGridWidth = grid_width;
     mGridHeight = grid_height;
+    ompl::control::SpaceInformationPtr control_space_inf;
     
     // Defines a geometric problem in XY.
     switch (mConfig.mEnvType) {
@@ -66,21 +72,25 @@ bool Ompl::initialize(size_t grid_width, size_t grid_height,
             mpControlSpace = ompl::control::ControlSpacePtr(
                     new ompl::control::RealVectorControlSpace(mpStateSpace, 2));
             ompl::base::RealVectorBounds cbounds(2);
-            // TODO The cbounds are ignored completely..
-            cbounds.setLow(0, 0/*-mConfig.mRobotForwardVelocity*/);
-            cbounds.setHigh(0, 0/*mConfig.mRobotForwardVelocity*/);
-            cbounds.setLow(1, 0/*-mConfig.mRobotRotationalVelocity*/);
-            cbounds.setHigh(1, 0/*mConfig.mRobotRotationalVelocity*/);
+            // Requires a control-planner.
+                        
+            cbounds.setLow(0, -mConfig.mRobotBackwardVelocity);
+            cbounds.setHigh(0, mConfig.mRobotForwardVelocity);
+            cbounds.setLow(1, -mConfig.mRobotRotationalVelocity);
+            cbounds.setHigh(1, mConfig.mRobotRotationalVelocity);
             mpControlSpace->as<ompl::control::RealVectorControlSpace>()->setBounds(cbounds);
             
-            ompl::control::SpaceInformationPtr control_space_inf = ompl::control::SpaceInformationPtr(
+            control_space_inf = ompl::control::SpaceInformationPtr(
                     new ompl::control::SpaceInformation(mpStateSpace,mpControlSpace));
             // TODO Test the other ODE solvers.
             mpODESolver = ompl::control::ODESolverPtr(
-                    new ompl::control::ODEAdaptiveSolver<> (control_space_inf, &kinematicCarOde));
+                    new ompl::control::ODEAdaptiveSolver<> (control_space_inf, &simpleOde));
             // setStatePropagator can also be used to define a post-propagator.
             control_space_inf->setStatePropagator(
                     ompl::control::ODESolver::getStatePropagator(mpODESolver, &postPropagate));
+            control_space_inf->setPropagationStepSize(1);
+            control_space_inf->setMinMaxControlDuration(1,10);
+            
             
             // Control space information inherits from base space informartion.
             mpSpaceInformation = control_space_inf;
@@ -103,11 +113,26 @@ bool Ompl::initialize(size_t grid_width, size_t grid_height,
             trav_grid, grid_data, grid_width, grid_height, mConfig.mEnvType));
     mpProblemDefinition->setOptimizationObjective(getBalancedObjective(mpSpaceInformation));
     
-    if(mConfig.mSearchUntilFirstSolution) { // Not optimizing planner, 
-        mpPlanner = ob::PlannerPtr(new og::RRTConnect(mpSpaceInformation));
-    } else { // Optimizing planners use all the available time to improve the solution.
-        mpPlanner = ob::PlannerPtr(new og::RRTstar(mpSpaceInformation));
+    switch (mConfig.mEnvType) {
+        case ENV_XY: {
+    
+            if(mConfig.mSearchUntilFirstSolution) { // Not optimizing planner, 
+                mpPlanner = ob::PlannerPtr(new og::RRTConnect(mpSpaceInformation));
+            } else { // Optimizing planners use all the available time to improve the solution.
+                mpPlanner = ob::PlannerPtr(new og::RRTstar(mpSpaceInformation));
+            }
+            break;
+        }
+        // Control based planner, optimization is not supported by OMPL.
+        case ENV_XYTHETA: {
+            ompl::control::SpaceInformationPtr si = 
+                    boost::static_pointer_cast<ompl::control::SpaceInformation, 
+                            ob::SpaceInformation>(control_space_inf);
+            mpPlanner = ob::PlannerPtr(new ompl::control::RRT(si));
+            break;
+        }
     }
+    
     // Set the problem instance for our planner to solve
     mpPlanner->setProblemDefinition(mpProblemDefinition);
     mpPlanner->setup(); // Calls mpSpaceInformation->setup() as well.
