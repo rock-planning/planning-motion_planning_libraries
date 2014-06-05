@@ -2,6 +2,8 @@ rock_library(motion_planning_libraries
     SOURCES MotionPlanningLibraries.cpp 
         AbstractMotionPlanningLibrary.cpp
         sbpl/Sbpl.cpp 
+        sbpl/SbplEnvXY.cpp
+        sbpl/SbplEnvXYTHETA.cpp
         ompl/Ompl.cpp 
         ompl/validators/TravMapValidator.cpp 
         ompl/objectives/TravGridObjective.cpp
@@ -9,6 +11,8 @@ rock_library(motion_planning_libraries
         MotionPlanningLibraries.hpp 
         AbstractMotionPlanningLibrary.hpp
         sbpl/Sbpl.hpp 
+        sbpl/SbplEnvXY.hpp
+        sbpl/SbplEnvXYTHETA.hpp
         ompl/Ompl.hpp 
         ompl/validators/TravMapValidator.hpp 
         ompl/objectives/TravGridObjective.hpp

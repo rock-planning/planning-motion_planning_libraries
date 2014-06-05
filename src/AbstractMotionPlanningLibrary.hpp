@@ -4,10 +4,13 @@
 #include <base/samples/RigidBodyState.hpp>
 #include <base/Waypoint.hpp>
 #include <base/Trajectory.hpp>
+#include <base/Logging.hpp>
 
 #include <envire/maps/TraversabilityGrid.hpp>
 
-#include <motion_planning_libraries/Config.hpp>
+#include "Config.hpp"
+#include "State.hpp"
+
 
 namespace motion_planning_libraries
 {
@@ -40,8 +43,7 @@ class AbstractMotionPlanningLibrary
      * This method is only called if a new pose has been received 
      * (REPLANNING_XXXX_THRESHOLDs are used).
      */
-    virtual bool setStartGoal(int start_x, int start_y, double start_yaw, 
-            int goal_x, int goal_y, double goal_yaw) = 0;
+    virtual bool setStartGoal(struct State start_state, struct State goal_state) = 0;
     
     /**
      * Tries to find a solution (if the environment has just been initialized) 
@@ -52,7 +54,7 @@ class AbstractMotionPlanningLibrary
     /**
      * Fills the passed vector with the found path.
      */
-    virtual bool fillPath(std::vector<base::samples::RigidBodyState>& path) = 0;
+    virtual bool fillPath(std::vector<struct State>& path) = 0;
 };
 
 } // end namespace motion_planning_libraries

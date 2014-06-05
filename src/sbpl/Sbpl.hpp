@@ -5,7 +5,6 @@
 
 #include <boost/shared_ptr.hpp>
 
-#include <base/Logging.hpp>
 #include <motion_planning_libraries/AbstractMotionPlanningLibrary.hpp>
 
 #include <sbpl/utils/utils.h>
@@ -29,7 +28,7 @@ namespace motion_planning_libraries
  */
 class Sbpl : public AbstractMotionPlanningLibrary
 {      
- private:
+ protected:
     // Driveability 0.0 to 1.0 will be mapped to SBPL_MAX_COST to 0 
     // with obstacle threshold of SBPL_MAX_COST.
     static const unsigned char SBPL_MAX_COST = 100;
@@ -39,39 +38,15 @@ class Sbpl : public AbstractMotionPlanningLibrary
     std::vector<int> mSBPLWaypointIDs;
     unsigned char* mpSBPLMapData;
     size_t mSBPLNumElementsMap;
-    
-    // Required to set start/goal in ENV_XYTHETA 
-    // (grid coordinates have to be converted back to meters) 
-    double mSBPLScaleX, mSBPLScaleY; 
-    
+        
  public: 
     Sbpl(Config config = Config());
- 
-    /**
-     * 
-     */
-    virtual bool initialize(size_t grid_width, size_t grid_height, 
-            double scale_x, double scale_y, 
-            envire::TraversabilityGrid* trav_grid,
-            boost::shared_ptr<TravData> grid_data);
     
     /**
-     * 
+     * Clears the waypoint-id-list and replans.
      */
-    virtual bool setStartGoal(int start_x, int start_y, double start_yaw, 
-            int goal_x, int goal_y, double goal_yaw);
-    
-    /**
-     * 
-     */
-    virtual bool solve(double time);
-        
-    /**
-     * 
-     */
-    virtual bool fillPath(std::vector<base::samples::RigidBodyState>& path);
-    
- private:        
+    virtual bool solve(double time);    
+   
     /**
      * Converts the trav map to a sbpl map using the driveability value.
      * Driveability 0.0 to 1.0 is mapped to costs 100 to 0 with obstacle threshold 100.

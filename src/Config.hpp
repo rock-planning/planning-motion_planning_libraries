@@ -7,7 +7,7 @@ namespace motion_planning_libraries
 {
 
 enum PlanningLibraryType {LIB_SBPL, LIB_OMPL};    
-enum EnvType {ENV_XY, ENV_XYTHETA};
+enum EnvType {ENV_XY, ENV_XYTHETA, ENV_ARM};
 
 /**
  *  Contains the configuration for all planning libraries.
