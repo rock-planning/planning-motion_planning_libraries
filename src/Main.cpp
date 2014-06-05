@@ -40,8 +40,8 @@ int main(int argc, char** argv)
     
     MotionPlanningLibraries sbpl(conf);
     sbpl.setTravGrid(env, "/trav_map");
-    sbpl.setStartPoseInWorld(rbs_start);
-    sbpl.setGoalPoseInWorld(rbs_goal);
+    sbpl.setStartState(State(rbs_start));
+    sbpl.setGoalState(State(rbs_goal));
 
     if(sbpl.plan(10)) {
         std::cout << "SBPL problem solved" << std::endl;
@@ -49,8 +49,7 @@ int main(int argc, char** argv)
     } else {
         std::cout << "SBPL problem could not be solved" << std::endl;
     }
-    
-    
+     
     // OMPL
     std::cout << std::endl << "OMPL PLANNING" << std::endl;
     conf.mPlanningLibType = LIB_OMPL;
@@ -58,8 +57,8 @@ int main(int argc, char** argv)
     
     MotionPlanningLibraries ompl(conf);
     ompl.setTravGrid(env, "/trav_map");
-    ompl.setStartPoseInWorld(rbs_start);
-    ompl.setGoalPoseInWorld(rbs_goal);
+    ompl.setStartState(rbs_start);
+    ompl.setGoalState(rbs_goal);
     
     if(ompl.plan(10)) {
         std::cout << "OMPL problem solved" << std::endl;

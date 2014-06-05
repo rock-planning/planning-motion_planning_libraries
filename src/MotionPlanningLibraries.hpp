@@ -28,14 +28,15 @@ class MotionPlanningLibraries
  protected:
     static const double REPLANNING_DIST_THRESHOLD = 0.05;
     static const double REPLANNING_TURN_THRESHOLD = 0.017;
+    static const double REPLANNING_JOINT_ANGLE_THRESHOLD = 0.017;
     
     boost::shared_ptr<AbstractMotionPlanningLibrary> mpPlanningLib;
     
     envire::TraversabilityGrid* mpTravGrid;
     boost::shared_ptr<TravData> mpTravData;
-    base::samples::RigidBodyState mStartWorld, mGoalWorld;
+    struct State mStartState, mGoalState; // Pose in world coordinates.
     base::samples::RigidBodyState mStartGrid, mGoalGrid;
-    std::vector<base::samples::RigidBodyState> mPathInGrid;
+    std::vector<State> mPlannedPath; // Pose in grid coordinates.
     bool mReceivedNewTravGrid;
     bool mReceivedNewStartGoal;
     
@@ -51,16 +52,18 @@ class MotionPlanningLibraries
     bool setTravGrid(envire::Environment* env, std::string trav_map_id);
     
     /**
-     * Converts the world pose to the traversability grid and 
-     * sets mStartWorld and mStartGrid.
+     * Sets the start state. If the start state contains a pose it has to be defined 
+     * within the world frame. This pose is transformed to the traversability 
+     * grid and is used to set mStartGrid.
      */
-    bool setStartPoseInWorld(base::samples::RigidBodyState& start_world);
+    bool setStartState(struct State start_state);
     
     /**
-     * Converts the world pose to the traversability grid and 
-     * sets mGoalWorld and mGoalGrid.
+     * Sets the goal state. If the goal state contains a pose it has to be defined 
+     * within the world frame. This pose is transformed to the traversability 
+     * grid and is used to set mGoalGrid.
      */
-    bool setGoalPoseInWorld(base::samples::RigidBodyState& goal_world);
+    bool setGoalState(struct State goal_state);
     
     /**
      * Tries to find a trajectory within the passed time.
@@ -71,6 +74,13 @@ class MotionPlanningLibraries
      */
     bool plan(double max_time=1.0); 
     
+    /**
+     * Returns the found path containing poses or joint angles (depending on the
+     * defined start states). Resulting poses are defined within the world frame.
+     */
+    std::vector<struct State> getPath();
+    
+    // POSE SPECIFIC METHODS.
     /** Returns the path stored in mPath as a list of waypoints. */
     std::vector<base::Waypoint> getPathInWorld();
     

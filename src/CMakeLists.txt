@@ -5,15 +5,20 @@ rock_library(motion_planning_libraries
         sbpl/SbplEnvXY.cpp
         sbpl/SbplEnvXYTHETA.cpp
         ompl/Ompl.cpp 
+        ompl/OmplEnvXY.cpp
+        ompl/OmplEnvXYTHETA.cpp
         ompl/validators/TravMapValidator.cpp 
         ompl/objectives/TravGridObjective.cpp
     HEADERS Config.hpp 
+        State.hpp
         MotionPlanningLibraries.hpp 
         AbstractMotionPlanningLibrary.hpp
         sbpl/Sbpl.hpp 
         sbpl/SbplEnvXY.hpp
         sbpl/SbplEnvXYTHETA.hpp
         ompl/Ompl.hpp 
+        ompl/OmplEnvXY.hpp
+        ompl/OmplEnvXYTHETA.hpp
         ompl/validators/TravMapValidator.hpp 
         ompl/objectives/TravGridObjective.hpp
     DEPS_PKGCONFIG envire

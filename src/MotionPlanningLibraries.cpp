@@ -1,9 +1,9 @@
 #include "MotionPlanningLibraries.hpp"
 
-#include <base/Logging.hpp>
-
-#include <motion_planning_libraries/sbpl/Sbpl.hpp>
-#include <motion_planning_libraries/ompl/Ompl.hpp>
+#include <motion_planning_libraries/sbpl/SbplEnvXY.hpp>
+#include <motion_planning_libraries/sbpl/SbplEnvXYTHETA.hpp>
+#include <motion_planning_libraries/ompl/OmplEnvXY.hpp>
+#include <motion_planning_libraries/ompl/OmplEnvXYTHETA.hpp>
 
 namespace motion_planning_libraries
 {
@@ -11,20 +11,51 @@ namespace motion_planning_libraries
 // PUBLIC
 MotionPlanningLibraries::MotionPlanningLibraries(Config config) : mpTravGrid(NULL), 
         mpTravData(),
-        mStartWorld(), mGoalWorld(), 
+        mStartState(), mGoalState(), 
         mStartGrid(), mGoalGrid(), 
-        mPathInGrid(),
+        mPlannedPath(),
         mReceivedNewTravGrid(false),
         mReceivedNewStartGoal(false) {
 
     // Creates the requested planning library.  
     switch(config.mPlanningLibType) {
         case LIB_SBPL: {
-            mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>(new Sbpl(config));    
-            break;
-        }
+            switch(config.mEnvType) {
+                case ENV_XY: {
+                    mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>
+                            (new SbplEnvXY(config));    
+                    break;
+                }
+                case ENV_XYTHETA: {
+                    mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>
+                            (new SbplEnvXYTHETA(config)); 
+                    break;
+                }
+                default: {
+                    LOG_ERROR("Environment is not available in SBPL");
+                    throw new std::runtime_error("Environment not available in SBPL");
+                }
+            }
+            break;    
+        }    
         case LIB_OMPL: {
-            mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>(new Ompl(config));
+            switch(config.mEnvType) {
+                case ENV_XY: {
+                    mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>
+                            (new OmplEnvXY(config));    
+                    break;
+                }
+                case ENV_XYTHETA: {
+                    mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>
+                            (new OmplEnvXYTHETA(config));    
+                    break;
+                }
+                //mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>(new Ompl(config));
+                default: {
+                    LOG_ERROR("Environment is not available in OMPL");
+                    throw new std::runtime_error("Environment not available in OMPL");
+                }
+            }
             break;
         }
     }
@@ -53,102 +84,175 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
     }
 }
 
-bool MotionPlanningLibraries::setStartPoseInWorld(base::samples::RigidBodyState& start_world) {
-    base::samples::RigidBodyState start_grid_new;
-    if(!world2grid(mpTravGrid, start_world, start_grid_new)) {
-        LOG_WARN("Start pose could not be set");
-        return false;
-    }
+bool MotionPlanningLibraries::setStartState(struct State start_state) {
 
-    if(mStartWorld.hasValidPosition() && mStartWorld.hasValidOrientation()) {
-        // Replan if there is a difference between the old and the new start pose.
-        double dist = (mStartWorld.position - start_world.position).norm();
-        double turn = fabs(mStartWorld.getYaw() - start_world.getYaw());
-        if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
-            mReceivedNewStartGoal = true;
+    switch (start_state.getStateType()) {
+        case STATE_EMPTY: {
+            LOG_WARN("Start state contains no valid values and could not be set");
+            return false;
         }
-    } else {
-        mReceivedNewStartGoal = true;
-    }
-    
-    mStartGrid = start_grid_new;
-    mStartWorld = start_world;    
-    
+        case STATE_POSE: {  // If a pose is defined convert it to the grid.
+            base::samples::RigidBodyState start_grid_new;
+            if(!world2grid(mpTravGrid, start_state.getPose(), start_grid_new)) {
+                LOG_WARN("Start pose could not be set");
+                return false;
+            }
+                    
+            // Replan if there is a difference between the old and the new start pose.
+            if(mStartState.getStateType() == STATE_POSE) {
+                double dist = (mStartState.getPose().position - start_state.getPose().position).norm();
+                double turn = fabs(mStartState.getPose().getYaw() - start_state.getPose().getYaw());
+                if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
+                    mReceivedNewStartGoal = true;
+                }
+            } else {
+                mReceivedNewStartGoal = true;
+            }
+            
+            mStartState = start_state; 
+            mStartGrid = start_grid_new; 
+            
+            break;
+        }
+        case STATE_ARM: {
+            // Only initiate a replanning if a single joint angle exceeds the threshold.
+            if(mStartState.getStateType() == STATE_ARM) {
+                std::vector<double>::iterator it = mStartState.getJointAngles().begin();
+                std::vector<double>::iterator it_new = start_state.getJointAngles().begin();
+                assert(mStartState.getJointAngles().size() == start_state.getJointAngles().size());
+                for(; it != start_state.getJointAngles().end(); it++, it_new++) {
+                    if(fabs(*it - *it_new) > REPLANNING_JOINT_ANGLE_THRESHOLD) {
+                       mReceivedNewStartGoal = true;
+                       break; 
+                    }
+                }
+            } else {
+                mReceivedNewStartGoal = true;
+            }
+            
+            mStartState = start_state;
+            break;
+        }
+    }    
     return true;
 }
 
-bool MotionPlanningLibraries::setGoalPoseInWorld(base::samples::RigidBodyState& goal_world) {
-    base::samples::RigidBodyState goal_grid_new;
-    if(!world2grid(mpTravGrid, goal_world, goal_grid_new)) {
-        LOG_WARN("Goal pose could not be set");
-        return false;
-    }
+bool MotionPlanningLibraries::setGoalState(struct State goal_state) {
 
-    if(mGoalWorld.hasValidPosition() && mGoalWorld.hasValidOrientation()) {
-        // Replan if there is a difference between the old and the new goal pose.
-        double dist = (mGoalWorld.position - goal_world.position).norm();
-        double turn = fabs(mGoalWorld.getYaw() - goal_world.getYaw());
-        if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
-            mReceivedNewStartGoal = true;
+    switch(goal_state.getStateType()) {
+        case STATE_EMPTY: {
+            LOG_WARN("Goal state contains no valid values and could not be set");
+            return false;
         }
-    } else {
-        mReceivedNewStartGoal = true;
+        case STATE_POSE: { // If a pose is defined convert it to the grid.
+            base::samples::RigidBodyState goal_grid_new;
+            if(!world2grid(mpTravGrid, goal_state.getPose(), goal_grid_new)) {
+                LOG_WARN("Goal pose could not be set");
+                return false;
+            }
+                    
+            // Replan if there is a difference between the old and the new goal pose.
+            if(mGoalState.getStateType() == STATE_POSE) {
+                double dist = (mGoalState.getPose().position - goal_state.getPose().position).norm();
+                double turn = fabs(mGoalState.getPose().getYaw() - goal_state.getPose().getYaw());
+                if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
+                    mReceivedNewStartGoal = true;
+                }
+            } else {
+                mReceivedNewStartGoal = true;
+            }
+            
+            mGoalState = goal_state; 
+            mGoalGrid = goal_grid_new; 
+            break;
+        }
+        case STATE_ARM: {
+            // Only initiate a replanning if a single joint angle exceeds the threshold.
+            if(mGoalState.getStateType() == STATE_ARM) {
+                std::vector<double>::iterator it = mGoalState.getJointAngles().begin();
+                std::vector<double>::iterator it_new = goal_state.getJointAngles().begin();
+                assert(mGoalState.getJointAngles().size() == goal_state.getJointAngles().size());
+                for(; it != goal_state.getJointAngles().end(); it++, it_new++) {
+                    if(fabs(*it - *it_new) > REPLANNING_JOINT_ANGLE_THRESHOLD) {
+                       mReceivedNewStartGoal = true;
+                       break; 
+                    }
+                }
+            } else {
+                mReceivedNewStartGoal = true;
+            }
+            
+            mGoalState = goal_state;
+            break;
+        }  
     }
-    
-    mGoalGrid = goal_grid_new;
-    mGoalWorld = goal_world;    
     
     return true;
 }
 
 bool MotionPlanningLibraries::plan(double max_time) {
 
-    if(mpTravGrid == NULL) {
-        LOG_WARN("No traversability map available, planning cannot be executed");
-        return false;
-    } 
+    assert(mStartState.getStateType() == mGoalState.getStateType());
     
-    if(!(mStartGrid.hasValidPosition() && mStartGrid.hasValidOrientation() &&
-            mGoalGrid.hasValidPosition() && mGoalGrid.hasValidOrientation())) {
-        LOG_WARN("Start/Goal has not been set, planning can not be executed"); 
+    if(mStartState.getStateType() == STATE_EMPTY) {
+        LOG_WARN("Start/goal states have not been set yet, planning can not be executed"); 
         return false;
     }
-    
-    if(mReceivedNewTravGrid) {
-        LOG_INFO("Replanning initiated");
-        
-        if(!mpPlanningLib->initialize(mpTravGrid->getCellSizeX(), 
-                mpTravGrid->getCellSizeY(),
-                mpTravGrid->getScaleX(), 
-                mpTravGrid->getScaleY(),
-                mpTravGrid, 
-                mpTravData)) {
-            LOG_WARN("Initialization of the planning library failed"); 
+
+    // Required checks for path planning (not required for arm movement).
+    if(mStartState.getStateType() == STATE_POSE) {
+        if(mpTravGrid == NULL) {
+            LOG_WARN("No traversability map available, planning cannot be executed");
             return false;
-        } else {
-            mReceivedNewTravGrid = false;    
+        } 
+        
+        if(!(mStartGrid.hasValidPosition() && mGoalGrid.hasValidPosition())) {
+            LOG_WARN("Start/Goal has not been set, planning can not be executed"); 
+            return false;
+        }
+        
+        if(mReceivedNewTravGrid) {
+            LOG_INFO("Replanning initiated");
+            
+            if(!mpPlanningLib->initialize(mpTravGrid->getCellSizeX(), 
+                    mpTravGrid->getCellSizeY(),
+                    mpTravGrid->getScaleX(), 
+                    mpTravGrid->getScaleY(),
+                    mpTravGrid, 
+                    mpTravData)) {
+                LOG_WARN("Initialization of the planning library failed"); 
+                return false;
+            } else {
+                mReceivedNewTravGrid = false;    
+            }
         }
     }
     
     if(mReceivedNewStartGoal) {
-        LOG_INFO("Planning from (%4.2f, %4.2f, %4.2f) to (%4.2f, %4.2f, %4.2f)",
-                mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
-                mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw());
+        State start_state = mStartState;
+        State goal_state = mGoalState;
         
-        if(!mpPlanningLib->setStartGoal(mStartGrid.position.x(), 
-                mStartGrid.position.y(), 
-                mStartGrid.getYaw(), 
-                mGoalGrid.position.x(), 
-                mGoalGrid.position.y(), 
-                mGoalGrid.getYaw())) {
-            LOG_WARN("Start/goal could not be set");
+        // Create a start state using the grid poses.
+        if(mStartState.getStateType() == STATE_POSE) {
+            start_state = State(mStartGrid);
+            goal_state = State(mGoalGrid);
+        }
+        
+        
+        LOG_INFO("Planning from %s to %s", 
+                start_state.getString().c_str(), goal_state.getString().c_str());
+       
+        if(!mpPlanningLib->setStartGoal(start_state, goal_state)) {
+            LOG_WARN("Start/goal state could not be set");
             return false;
         } else {
             mReceivedNewStartGoal = false;
         }
     }
     
-    if(!mReceivedNewTravGrid && !mReceivedNewStartGoal) {
+    // No new informations since last planning.
+    if((mStartState.getStateType() == STATE_POSE && !mReceivedNewTravGrid && !mReceivedNewStartGoal) || 
+            (mStartState.getStateType() == STATE_ARM && !mReceivedNewStartGoal)) {
         LOG_INFO("Try to improve the current solution"); 
     }
     
@@ -158,8 +262,8 @@ bool MotionPlanningLibraries::plan(double max_time) {
     if (solved)
     {
         LOG_INFO("Solution found");
-        mPathInGrid.clear();
-        mpPlanningLib->fillPath(mPathInGrid);
+        mPlannedPath.clear();
+        mpPlanningLib->fillPath(mPlannedPath);
         return true;
     } else {
         LOG_WARN("No solution found");        
@@ -169,10 +273,10 @@ bool MotionPlanningLibraries::plan(double max_time) {
 
 std::vector<base::Waypoint> MotionPlanningLibraries::getPathInWorld() {
     std::vector<base::Waypoint> path;
-    std::vector<base::samples::RigidBodyState>::iterator it = mPathInGrid.begin();
+    std::vector<State>::iterator it = mPlannedPath.begin();
     base::samples::RigidBodyState pose_in_world;
-    for(;it != mPathInGrid.end(); it++) {
-        if (grid2world(mpTravGrid, *it, pose_in_world)) {
+    for(;it != mPlannedPath.end(); it++) {
+        if (grid2world(mpTravGrid, it->getPose(), pose_in_world)) {
             base::Waypoint waypoint;
             waypoint.position = pose_in_world.position;
             waypoint.heading = pose_in_world.getYaw();
@@ -191,10 +295,10 @@ base::Trajectory MotionPlanningLibraries::getTrajectoryInWorld(double speed) {
     base::Vector3d last_position;
     last_position[0] = last_position[1] = last_position[2] = nan("");
     std::vector<base::geometry::SplineBase::CoordinateType> coord_types;
-    std::vector<base::samples::RigidBodyState>::iterator it = mPathInGrid.begin();
+    std::vector<State>::iterator it = mPlannedPath.begin();
     base::samples::RigidBodyState pose_in_world;    
-    for(;it != mPathInGrid.end(); it++) {
-        if (grid2world(mpTravGrid, *it, pose_in_world)) {
+    for(;it != mPlannedPath.end(); it++) {
+        if (grid2world(mpTravGrid, it->getPose(), pose_in_world)) {
             // Prevents to add the same position consecutively, otherwise
             // the spline creation fails.
             if(pose_in_world.position != last_position) {

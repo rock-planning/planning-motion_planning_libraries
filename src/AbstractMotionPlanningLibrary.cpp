@@ -1,5 +1,4 @@
-#include "MotionPlanningLibraries.hpp"
-#include <base/Logging.hpp>
+#include "AbstractMotionPlanningLibrary.hpp"
 
 namespace motion_planning_libraries
 {

@@ -2,7 +2,6 @@
 
 #include <exception>
 
-#include <sbpl/headers.h>
 #include <sbpl/sbpl_exception.h>
 
 namespace motion_planning_libraries
@@ -11,9 +10,7 @@ namespace motion_planning_libraries
 // PUBLIC
 Sbpl::Sbpl(Config config) : AbstractMotionPlanningLibrary(config),
         mpSBPLMapData(NULL),
-        mSBPLNumElementsMap(0),
-        mSBPLScaleX(0),
-        mSBPLScaleY(0) {
+        mSBPLNumElementsMap(0) {
     LOG_DEBUG("SBPL constructor");
 }
 

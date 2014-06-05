@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include <base/Logging.hpp>
+
 namespace motion_planning_libraries
 {
 
@@ -29,7 +31,7 @@ struct Config {
     }
     
     enum PlanningLibraryType mPlanningLibType;
-    enum EnvType mEnvType; // currently 2D and 2D + orientation.
+    enum EnvType mEnvType;
     double mRobotWidth; // along the y-axis, sideward
     double mRobotLength; // along the x-axis, forward
     double mRobotForwardVelocity; // m/sec.
