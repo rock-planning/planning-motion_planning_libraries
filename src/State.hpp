@@ -14,7 +14,7 @@ enum StateType {STATE_EMPTY, STATE_POSE, STATE_ARM};
 
 /**
  * Defines the state of the system which could be the pose (xytheta) 
- * OR the joint angles of the arm.
+ * OR the joint angles of the arm. Angles have always be defined in rad from -M_PI to M_PI.
  */
 struct State {
 
@@ -50,6 +50,10 @@ struct State {
         return mJointAngles;
     }
     
+    int getNumJoints() {
+        return mJointAngles.size();
+    }
+    
     enum StateType getStateType() {
         return mStateType;
     }
@@ -59,7 +63,7 @@ struct State {
         mStateType = STATE_POSE;
     }
     
-    void setJointAngles(std::vector<double> joint_angles) {
+    void setJointAngles(std::vector<double>& joint_angles) {
         mJointAngles = joint_angles;
         mStateType = STATE_ARM;
     }

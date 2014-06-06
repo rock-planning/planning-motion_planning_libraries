@@ -7,6 +7,7 @@ rock_library(motion_planning_libraries
         ompl/Ompl.cpp 
         ompl/OmplEnvXY.cpp
         ompl/OmplEnvXYTHETA.cpp
+        ompl/OmplEnvARM.cpp
         ompl/validators/TravMapValidator.cpp 
         ompl/objectives/TravGridObjective.cpp
     HEADERS Config.hpp 
@@ -19,6 +20,7 @@ rock_library(motion_planning_libraries
         ompl/Ompl.hpp 
         ompl/OmplEnvXY.hpp
         ompl/OmplEnvXYTHETA.hpp
+        ompl/OmplEnvARM.hpp
         ompl/validators/TravMapValidator.hpp 
         ompl/objectives/TravGridObjective.hpp
     DEPS_PKGCONFIG envire

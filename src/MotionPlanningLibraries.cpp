@@ -4,6 +4,7 @@
 #include <motion_planning_libraries/sbpl/SbplEnvXYTHETA.hpp>
 #include <motion_planning_libraries/ompl/OmplEnvXY.hpp>
 #include <motion_planning_libraries/ompl/OmplEnvXYTHETA.hpp>
+#include <motion_planning_libraries/ompl/OmplEnvARM.hpp>
 
 namespace motion_planning_libraries
 {
@@ -15,7 +16,8 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) : mpTravGrid(NUL
         mStartGrid(), mGoalGrid(), 
         mPlannedPath(),
         mReceivedNewTravGrid(false),
-        mReceivedNewStartGoal(false) {
+        mReceivedNewStartGoal(false),
+        mArmInitialized(false) {
 
     // Creates the requested planning library.  
     switch(config.mPlanningLibType) {
@@ -48,6 +50,11 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) : mpTravGrid(NUL
                 case ENV_XYTHETA: {
                     mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>
                             (new OmplEnvXYTHETA(config));    
+                    break;
+                }
+                case ENV_ARM: {
+                    mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>
+                            (new OmplEnvARM(config));    
                     break;
                 }
                 //mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>(new Ompl(config));
@@ -207,10 +214,12 @@ bool MotionPlanningLibraries::plan(double max_time) {
         } 
         
         if(!(mStartGrid.hasValidPosition() && mGoalGrid.hasValidPosition())) {
-            LOG_WARN("Start/Goal has not been set, planning can not be executed"); 
+            LOG_WARN("Start/Goal (grid) has not been set, planning can not be executed"); 
             return false;
         }
         
+        // Currently the complete environment will be reinitialized 
+        // if a new trav map has been received.
         if(mReceivedNewTravGrid) {
             LOG_INFO("Replanning initiated");
             
@@ -220,10 +229,24 @@ bool MotionPlanningLibraries::plan(double max_time) {
                     mpTravGrid->getScaleY(),
                     mpTravGrid, 
                     mpTravData)) {
-                LOG_WARN("Initialization of the planning library failed"); 
+                LOG_WARN("Initialization (navigation) failed"); 
                 return false;
             } else {
                 mReceivedNewTravGrid = false;    
+            }
+        }
+    }
+    
+    // Currently the arm environment will be initialized just once.
+    // Later changes in the environment may require a reinitialization similar 
+    // to the current implementation of the robot navigation.
+    if(mStartState.getStateType() == STATE_ARM) {
+        if(!mArmInitialized) {
+            if(!mpPlanningLib->initialize_arm()) {
+                LOG_WARN("Initialization (arm motion planning) failed"); 
+                return false;
+            } else {
+                mArmInitialized = true;    
             }
         }
     }
@@ -237,7 +260,6 @@ bool MotionPlanningLibraries::plan(double max_time) {
             start_state = State(mStartGrid);
             goal_state = State(mGoalGrid);
         }
-        
         
         LOG_INFO("Planning from %s to %s", 
                 start_state.getString().c_str(), goal_state.getString().c_str());
@@ -269,6 +291,10 @@ bool MotionPlanningLibraries::plan(double max_time) {
         LOG_WARN("No solution found");        
         return false;
     }
+}
+
+std::vector<struct State> MotionPlanningLibraries::getPath() {
+    return mPlannedPath;
 }
 
 std::vector<base::Waypoint> MotionPlanningLibraries::getPathInWorld() {

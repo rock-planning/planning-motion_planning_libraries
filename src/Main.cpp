@@ -34,7 +34,7 @@ int main(int argc, char** argv)
     conf.mSearchUntilFirstSolution = false;
     
     // SBPL
-    std::cout << std::endl << "SBPL PLANNING" << std::endl;
+    std::cout << std::endl << "SBPL XYTHETA PLANNING" << std::endl;
     conf.mPlanningLibType = LIB_SBPL;
     conf.mEnvType = ENV_XYTHETA;
     
@@ -51,9 +51,9 @@ int main(int argc, char** argv)
     }
      
     // OMPL
-    std::cout << std::endl << "OMPL PLANNING" << std::endl;
+    std::cout << std::endl << "OMPL XY PLANNING" << std::endl;
     conf.mPlanningLibType = LIB_OMPL;
-    conf.mEnvType = ENV_XYTHETA;
+    conf.mEnvType = ENV_XY;
     
     MotionPlanningLibraries ompl(conf);
     ompl.setTravGrid(env, "/trav_map");
@@ -65,6 +65,44 @@ int main(int argc, char** argv)
         ompl.printPathInWorld();
     } else {
         std::cout << "OMPL problem could not be solved" << std::endl;
+    }
+    
+    std::cout << std::endl << "OMPL XY PLANNING IMPROVE" << std::endl;
+    if(ompl.plan(10)) {
+        std::cout << "OMPL problem improved" << std::endl;
+        ompl.printPathInWorld();
+    } else {
+        std::cout << "OMPL problem could not be improved" << std::endl;
+    }
+    
+    // OMPL arm motion planning
+    std::cout << std::endl << "OMPL ARM PLANNING" << std::endl;
+    conf.mPlanningLibType = LIB_OMPL;
+    conf.mEnvType = ENV_ARM;
+    conf.setJoints(4);
+    
+    MotionPlanningLibraries ompl_arm(conf);
+    std::vector<double> joint_angles_start, joint_angles_goal;
+    joint_angles_start.push_back(M_PI);
+    joint_angles_goal.push_back(0.0);
+    for(int i=0; i<3; ++i) {
+        joint_angles_start.push_back(0.0);
+        joint_angles_goal.push_back(0.0);
+    }
+    State arm_start(joint_angles_start);
+    State arm_goal(joint_angles_goal);
+     
+    ompl_arm.setStartState(arm_start);
+    ompl_arm.setGoalState(arm_goal);
+    
+    if(ompl_arm.plan(10)) {
+        std::cout << "OMPL ARM problem solved" << std::endl;
+        std::vector<struct State> states = ompl_arm.getPath();
+        for(int i=0; i<states.size(); ++i) {
+            std::cout << states[i].getString() << std::endl;
+        }
+    } else {
+        std::cout << "OMPL ARM problem could not be solved" << std::endl;
     }
 
     return 0;

@@ -30,13 +30,19 @@ class AbstractMotionPlanningLibrary
     ~AbstractMotionPlanningLibrary();
                 
     /**
+     * Implement for robot navigation: 
      * (Re-)initializes the complete planning environment using the passed 
      * traversability map / map data.
      */
     virtual bool initialize(size_t grid_width, size_t grid_height, 
             double scale_x, double scale_y, 
             envire::TraversabilityGrid* trav_grid,
-            boost::shared_ptr<TravData> grid_data) = 0;
+            boost::shared_ptr<TravData> grid_data);
+            
+    /**
+     * Implement for arm motion planning.
+     */
+    virtual bool initialize_arm();
     
     /**
      * Sets the start and the goal within the planning environment.

@@ -41,7 +41,6 @@ bool SbplEnvXY::initialize(size_t grid_width, size_t grid_height,
     } 
       
     // Create planner.
-    //mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ARAPlanner(mpSBPLEnv.get(), mConfig.mSBPLForwardSearch));
     mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ADPlanner(mpSBPLEnv.get(), mConfig.mSBPLForwardSearch));
     mpSBPLPlanner->set_search_mode(mConfig.mSearchUntilFirstSolution); 
     

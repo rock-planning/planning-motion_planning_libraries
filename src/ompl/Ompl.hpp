@@ -20,6 +20,8 @@ namespace motion_planning_libraries
  * TODO For XYTHETA: The reached goal orientation is turned around z by 180°, why?
  * TODO For XYTHETA: A steering angle of 0.04 matches a turning velocity of 45° per sec.
  *      Higher values allows nearly every turning. Why? Something to do with step size?
+ * TODO Robot width and height not used yet for collision checking.
+ * TODO Add collision checking for arm movement.
  */
 class Ompl : public AbstractMotionPlanningLibrary
 {

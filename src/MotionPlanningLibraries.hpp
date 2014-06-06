@@ -16,12 +16,14 @@ namespace motion_planning_libraries
 typedef envire::TraversabilityGrid::ArrayType TravData;
     
 /**
- * Can be used to plan 2D trajectories considering the orientation.
- * The planner is meant to work on a single, local traversability map.
+ * Allows x,y,theta path planning for navigation and motion planning for arm control.
+ * Path planning is meant to work on a single traversability map.
  * The start/goal poses are transformed from world to local grid and the
  * resulting trajectory from local grid to world.
+ * SBPL should be used for navigation and OMPL for arm control.
  * 
- * TODO: Integrate: clear start, use next reachable goal
+ * TODO: Integrate: remove obstacles within the start position, 
+ *       if the goal lies on an obstacle use next valid goal position
  */
 class MotionPlanningLibraries
 {
@@ -39,13 +41,14 @@ class MotionPlanningLibraries
     std::vector<State> mPlannedPath; // Pose in grid coordinates.
     bool mReceivedNewTravGrid;
     bool mReceivedNewStartGoal;
+    bool mArmInitialized;
     
  public: 
     MotionPlanningLibraries(Config config = Config());
     ~MotionPlanningLibraries();
     
     /**
-     * Sets the traversability map to plan on.
+     * Sets the traversability map to plan on. Required for robot navigation.
      * The pose, scale and size of the map are used for the world2grid and
      * grid2world transformation.
      */
@@ -67,10 +70,10 @@ class MotionPlanningLibraries
     
     /**
      * Tries to find a trajectory within the passed time.
-     * If this method is called several times (with the same start, goal and map),
+     * If this method is called several times (with the same configurations),
      * the planner will try to improve the found path. Otherwise a new planning
-     * will be initiated. Threshold are used to decide whether a pose is new and
-     * each received map will initiate a replan.
+     * will be initiated. Thresholds define whether a state is new one.
+     * For navigation: A new traversability map will initiate a reinitialization.
      */
     bool plan(double max_time=1.0); 
     

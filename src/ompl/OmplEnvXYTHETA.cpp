@@ -61,7 +61,9 @@ bool OmplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height,
     // setStatePropagator can also be used to define a post-propagator.
     mpControlSpaceInformation->setStatePropagator(
             ompl::control::ODESolver::getStatePropagator(mpODESolver, &postPropagate));
-    mpControlSpaceInformation->setPropagationStepSize(1);
+            
+    // TODO What does these methods do?
+    mpControlSpaceInformation->setPropagationStepSize(4);
     mpControlSpaceInformation->setMinMaxControlDuration(1,10);
 
     mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidator(

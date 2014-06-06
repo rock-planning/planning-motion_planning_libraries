@@ -54,14 +54,24 @@ bool SbplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height,
                 boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
         try {
             // SBPL does not allow the definition of forward AND backward velocity.
-            double speed_min = mConfig.mRobotForwardVelocity;
+            double speed = fabs(mConfig.mRobotForwardVelocity);
+            
             if(mConfig.mRobotForwardVelocity != mConfig.mRobotBackwardVelocity) {
-                LOG_WARN("SBPL does not use forward AND backward velocity, minimal speed will be used");
-                speed_min = std::min<double>(mConfig.mRobotForwardVelocity, mConfig.mRobotBackwardVelocity);
+                LOG_WARN("SBPL does not use backward velocity, only forward velocity will be used");
+            }
+            
+            if(speed == 0.0) {
+                LOG_WARN("Speed of zero is not allowed, abort");
+                return false;
             }
            
+            if(mConfig.mRobotRotationalVelocity == 0.0) {
+                LOG_WARN("Rotational velocity of zero is not allowed, abort");
+                return false;
+            }
             // SBPL: time in sec for a 45° turn
-            double time_to_turn_45_degree = (M_PI / 4.0) / mConfig.mRobotRotationalVelocity;
+            double time_to_turn_45_degree = fabs((M_PI / 4.0) / mConfig.mRobotRotationalVelocity);
+           
             
             env_xytheta->InitializeEnv(grid_width, grid_height, 
                 mpSBPLMapData, // initial map
@@ -70,7 +80,7 @@ bool SbplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height,
                 0.1, 0.1, 0.1, // tolerance x,y,yaw, ignored
                 createFootprint(mConfig.mRobotWidth, mConfig.mRobotLength), 
                 scale_x,  // Size of a cell in meter => in SBPL cells have to be quadrats
-                speed_min, 
+                speed, 
                 time_to_turn_45_degree, 
                 SBPL_MAX_COST, // cost threshold
                 mConfig.mSBPLMotionPrimitivesFile.c_str()); // motion primitives file
