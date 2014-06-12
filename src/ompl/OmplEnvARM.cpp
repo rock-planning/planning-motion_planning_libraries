@@ -76,7 +76,7 @@ bool OmplEnvARM::setStartGoal(struct State start_state, struct State goal_state)
     ob::ScopedState<> start_ompl(mpStateSpace);
     ob::ScopedState<> goal_ompl(mpStateSpace);
     
-    for(int i=0; i<start_state.getJointAngles().size(); ++i) {
+    for(unsigned int i=0; i<start_state.getJointAngles().size(); ++i) {
         start_ompl->as<ob::RealVectorStateSpace::StateType>()->values[i] = 
                 start_state.getJointAngles()[i];
         goal_ompl->as<ob::RealVectorStateSpace::StateType>()->values[i] = 
@@ -104,7 +104,7 @@ bool OmplEnvARM::fillPath(std::vector<struct State>& path) {
         
         State s;
         std::vector<double> joint_angles;
-        for(int i=0; i<mConfig.mJointBorders.size(); ++i) {
+        for(unsigned int i=0; i<mConfig.mJointBorders.size(); ++i) {
             joint_angles.push_back(state->values[i]);
         }
         s.setJointAngles(joint_angles);

@@ -43,6 +43,10 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
             y_grid = (int)state_se2->getY();
             break;
         }
+        default: {
+            throw std::runtime_error("TravMapValidator received an unknown environment");
+            break;
+        }
     }
    
     // Check borders.

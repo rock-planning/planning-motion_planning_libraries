@@ -32,15 +32,18 @@ class MotionPlanningLibraries
     static const double REPLANNING_TURN_THRESHOLD = 0.017;
     static const double REPLANNING_JOINT_ANGLE_THRESHOLD = 0.017;
     
+    Config mConfig;
+    
     boost::shared_ptr<AbstractMotionPlanningLibrary> mpPlanningLib;
     
     envire::TraversabilityGrid* mpTravGrid;
     boost::shared_ptr<TravData> mpTravData;
     struct State mStartState, mGoalState; // Pose in world coordinates.
-    base::samples::RigidBodyState mStartGrid, mGoalGrid;
+    struct State mStartStateGrid, mGoalStateGrid;
     std::vector<State> mPlannedPath; // Pose in grid coordinates.
     bool mReceivedNewTravGrid;
-    bool mReceivedNewStartGoal;
+    bool mReceivedNewStart;
+    bool mReceivedNewGoal;
     bool mArmInitialized;
     
  public: 

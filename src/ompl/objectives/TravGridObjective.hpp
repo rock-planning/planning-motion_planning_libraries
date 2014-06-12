@@ -64,6 +64,10 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
                 y = state_se2->getY();
                 break;
             }
+            default: {
+                throw std::runtime_error("TravMapValidator received an unknown environment");
+                break;
+            }
         }
         
         // TODO Assuming: only valid states are passed?

@@ -31,7 +31,7 @@ int main(int argc, char** argv)
     std::string path_primitives(getenv ("AUTOPROJ_PROJECT_BASE"));
     path_primitives += "/external/sbpl/matlab/mprim/pr2_10cm.mprim";
     conf.mSBPLMotionPrimitivesFile = path_primitives;
-    conf.mSearchUntilFirstSolution = false;
+    conf.mSearchUntilFirstSolution = true;
     
     // SBPL
     std::cout << std::endl << "SBPL XYTHETA PLANNING" << std::endl;

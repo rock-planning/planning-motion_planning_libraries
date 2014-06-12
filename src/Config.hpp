@@ -29,6 +29,8 @@ struct Config {
     Config() : mPlanningLibType(LIB_SBPL), 
             mEnvType(ENV_XY),
             mSearchUntilFirstSolution(false),
+            mReplanDuringEachUpdate(false),
+            mReplanOnNewStartPose(false),
             mRobotWidth(0.5), 
             mRobotLength(0.5), 
             mRobotForwardVelocity(0.4), 
@@ -43,7 +45,13 @@ struct Config {
     // GENERAL
     enum PlanningLibraryType mPlanningLibType;
     enum EnvType mEnvType;
-    bool mSearchUntilFirstSolution;
+    // Defines whether the planner accepts the first found solution or uses the
+    // complete available time.
+    bool mSearchUntilFirstSolution; 
+    // If set to true each call to plan() will try to solve the current problem / improve
+    // the solution.
+    bool mReplanDuringEachUpdate;
+    bool mReplanOnNewStartPose;
     
     // NAVIGATION
     double mRobotWidth; // along the y-axis, sideward

@@ -10,13 +10,16 @@ namespace motion_planning_libraries
 {
 
 // PUBLIC
-MotionPlanningLibraries::MotionPlanningLibraries(Config config) : mpTravGrid(NULL), 
+MotionPlanningLibraries::MotionPlanningLibraries(Config config) : 
+        mConfig(config),
+        mpTravGrid(NULL), 
         mpTravData(),
         mStartState(), mGoalState(), 
-        mStartGrid(), mGoalGrid(), 
+        mStartStateGrid(), mGoalStateGrid(), 
         mPlannedPath(),
         mReceivedNewTravGrid(false),
-        mReceivedNewStartGoal(false),
+        mReceivedNewStart(false),
+        mReceivedNewGoal(false),
         mArmInitialized(false) {
 
     // Creates the requested planning library.  
@@ -66,11 +69,6 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) : mpTravGrid(NUL
             break;
         }
     }
-        
-    mStartGrid.invalidatePosition();
-    mStartGrid.invalidateOrientation();        
-    mGoalGrid.invalidatePosition();
-    mGoalGrid.invalidateOrientation();  
 }
 
 MotionPlanningLibraries::~MotionPlanningLibraries() {
@@ -110,14 +108,14 @@ bool MotionPlanningLibraries::setStartState(struct State start_state) {
                 double dist = (mStartState.getPose().position - start_state.getPose().position).norm();
                 double turn = fabs(mStartState.getPose().getYaw() - start_state.getPose().getYaw());
                 if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
-                    mReceivedNewStartGoal = true;
+                    mReceivedNewStart = true;
                 }
             } else {
-                mReceivedNewStartGoal = true;
+                mReceivedNewStart = true;
             }
             
             mStartState = start_state; 
-            mStartGrid = start_grid_new; 
+            mStartStateGrid = State(start_grid_new); 
             
             break;
         }
@@ -129,12 +127,12 @@ bool MotionPlanningLibraries::setStartState(struct State start_state) {
                 assert(mStartState.getJointAngles().size() == start_state.getJointAngles().size());
                 for(; it != start_state.getJointAngles().end(); it++, it_new++) {
                     if(fabs(*it - *it_new) > REPLANNING_JOINT_ANGLE_THRESHOLD) {
-                       mReceivedNewStartGoal = true;
+                       mReceivedNewStart = true;
                        break; 
                     }
                 }
             } else {
-                mReceivedNewStartGoal = true;
+                mReceivedNewStart = true;
             }
             
             mStartState = start_state;
@@ -163,14 +161,14 @@ bool MotionPlanningLibraries::setGoalState(struct State goal_state) {
                 double dist = (mGoalState.getPose().position - goal_state.getPose().position).norm();
                 double turn = fabs(mGoalState.getPose().getYaw() - goal_state.getPose().getYaw());
                 if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
-                    mReceivedNewStartGoal = true;
+                    mReceivedNewGoal = true;
                 }
             } else {
-                mReceivedNewStartGoal = true;
+                mReceivedNewGoal = true;
             }
             
             mGoalState = goal_state; 
-            mGoalGrid = goal_grid_new; 
+            mGoalStateGrid = State(goal_grid_new); 
             break;
         }
         case STATE_ARM: {
@@ -181,12 +179,12 @@ bool MotionPlanningLibraries::setGoalState(struct State goal_state) {
                 assert(mGoalState.getJointAngles().size() == goal_state.getJointAngles().size());
                 for(; it != goal_state.getJointAngles().end(); it++, it_new++) {
                     if(fabs(*it - *it_new) > REPLANNING_JOINT_ANGLE_THRESHOLD) {
-                       mReceivedNewStartGoal = true;
+                       mReceivedNewGoal = true;
                        break; 
                     }
                 }
             } else {
-                mReceivedNewStartGoal = true;
+                mReceivedNewGoal = true;
             }
             
             mGoalState = goal_state;
@@ -198,13 +196,18 @@ bool MotionPlanningLibraries::setGoalState(struct State goal_state) {
 }
 
 bool MotionPlanningLibraries::plan(double max_time) {
-
-    assert(mStartState.getStateType() == mGoalState.getStateType());
-    
+  
     if(mStartState.getStateType() == STATE_EMPTY) {
-        LOG_WARN("Start/goal states have not been set yet, planning can not be executed"); 
+        LOG_WARN("Start states have not been set yet, planning can not be executed"); 
         return false;
     }
+    
+    if(mGoalState.getStateType() == STATE_EMPTY) {
+        LOG_WARN("Goal states have not been set yet, planning can not be executed"); 
+        return false;
+    }
+
+    assert(mStartState.getStateType() == mGoalState.getStateType());
 
     // Required checks for path planning (not required for arm movement).
     if(mStartState.getStateType() == STATE_POSE) {
@@ -213,15 +216,16 @@ bool MotionPlanningLibraries::plan(double max_time) {
             return false;
         } 
         
-        if(!(mStartGrid.hasValidPosition() && mGoalGrid.hasValidPosition())) {
-            LOG_WARN("Start/Goal (grid) has not been set, planning can not be executed"); 
+        if(mStartStateGrid.getStateType() != STATE_POSE || 
+                mGoalStateGrid.getStateType() != STATE_POSE) {
+            LOG_WARN("Start/Goal (grid) contains no pose, planning can not be executed"); 
             return false;
         }
         
         // Currently the complete environment will be reinitialized 
         // if a new trav map has been received.
         if(mReceivedNewTravGrid) {
-            LOG_INFO("Replanning initiated");
+            LOG_INFO("Received a new trav grid, reinitializes the environment");
             
             if(!mpPlanningLib->initialize(mpTravGrid->getCellSizeX(), 
                     mpTravGrid->getCellSizeY(),
@@ -231,8 +235,12 @@ bool MotionPlanningLibraries::plan(double max_time) {
                     mpTravData)) {
                 LOG_WARN("Initialization (navigation) failed"); 
                 return false;
-            } else {
-                mReceivedNewTravGrid = false;    
+            } 
+            
+            // Reset current start and goal state within the new environment!
+            if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
+                LOG_WARN("Start/goal state could not be set after reinitialization");
+                return false;
             }
         }
     }
@@ -251,41 +259,42 @@ bool MotionPlanningLibraries::plan(double max_time) {
         }
     }
     
-    if(mReceivedNewStartGoal) {
-        State start_state = mStartState;
-        State goal_state = mGoalState;
-        
-        // Create a start state using the grid poses.
-        if(mStartState.getStateType() == STATE_POSE) {
-            start_state = State(mStartGrid);
-            goal_state = State(mGoalGrid);
-        }
-        
-        LOG_INFO("Planning from %s to %s", 
-                start_state.getString().c_str(), goal_state.getString().c_str());
-       
-        if(!mpPlanningLib->setStartGoal(start_state, goal_state)) {
+    // Updates the start/goal pose within the planner.
+    if(mReceivedNewStart || mReceivedNewGoal) {       
+        if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
             LOG_WARN("Start/goal state could not be set");
             return false;
-        } else {
-            mReceivedNewStartGoal = false;
         }
     }
     
-    // No new informations since last planning.
-    if((mStartState.getStateType() == STATE_POSE && !mReceivedNewTravGrid && !mReceivedNewStartGoal) || 
-            (mStartState.getStateType() == STATE_ARM && !mReceivedNewStartGoal)) {
-        LOG_INFO("Try to improve the current solution"); 
+    // Replanning if a new goal, start (if mReplanningOnNewStartPose is true),
+    // trav map (navigation planning) have been received or mReplanDuringEachUpdate
+    // has been set to true.
+    bool solved = false;
+    if(     mReceivedNewGoal || 
+            (mConfig.mReplanOnNewStartPose && mReceivedNewStart) ||
+            (mStartState.getStateType() == STATE_POSE && mReceivedNewTravGrid) ||
+            mConfig.mReplanDuringEachUpdate) { 
+                  
+        LOG_INFO("Planning from %s (Grid %s) to %s (Grid %s)", 
+                mStartState.getString().c_str(), mStartStateGrid.getString().c_str(),
+                mGoalState.getString().c_str(), mGoalStateGrid.getString().c_str());    
+            
+        // Try to solve the problem / improve the solution.
+        solved = mpPlanningLib->solve(max_time);
+    } else {
+        LOG_INFO("Replanning not required");
+        return true;
     }
-    
-    // Try to solve the problem / improve the solution.
-    bool solved = mpPlanningLib->solve(max_time);
     
     if (solved)
     {
         LOG_INFO("Solution found");
         mPlannedPath.clear();
         mpPlanningLib->fillPath(mPlannedPath);
+        mReceivedNewStart = false;
+        mReceivedNewGoal = false;
+        mReceivedNewTravGrid = false;
         return true;
     } else {
         LOG_WARN("No solution found");        
@@ -354,11 +363,11 @@ void MotionPlanningLibraries::printPathInWorld() {
 }
 
 base::samples::RigidBodyState MotionPlanningLibraries::getStartPoseInGrid() {
-    return mStartGrid;
+    return mStartStateGrid.getPose();
 }
 
 base::samples::RigidBodyState MotionPlanningLibraries::getGoalPoseInGrid() {
-    return mGoalGrid;
+    return mGoalStateGrid.getPose();
 } 
 
 bool MotionPlanningLibraries::world2grid(envire::TraversabilityGrid const* trav,
