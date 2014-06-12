@@ -67,7 +67,7 @@ bool OmplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height,
     mpControlSpaceInformation->setMinMaxControlDuration(1,10);
 
     mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidator(
-                mpControlSpaceInformation, grid_width, grid_height, grid_data, mConfig.mEnvType));
+                mpControlSpaceInformation, grid_width, grid_height, trav_grid, grid_data, mConfig.mEnvType));
     mpControlSpaceInformation->setStateValidityChecker(mpTravMapValidator);
     mpControlSpaceInformation->setup();
         

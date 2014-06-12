@@ -46,7 +46,7 @@ bool OmplEnvXY::initialize(size_t grid_width, size_t grid_height,
             new ob::SpaceInformation(mpStateSpace));
  
     mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidator(
-                mpSpaceInformation, grid_width, grid_height, grid_data, mConfig.mEnvType));
+                mpSpaceInformation, grid_width, grid_height, trav_grid, grid_data, mConfig.mEnvType));
     mpSpaceInformation->setStateValidityChecker(mpTravMapValidator);
     mpSpaceInformation->setup();
         

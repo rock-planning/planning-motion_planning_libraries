@@ -30,6 +30,7 @@ class TravMapValidator :  public ompl::base::StateValidityChecker {
     ompl::base::SpaceInformationPtr mpSpaceInformation;
     size_t mGridWidth;
     size_t mGridHeight;
+    envire::TraversabilityGrid* mpTravGrid; // To request the driveability values.
     boost::shared_ptr<TravData> mpTravData;
     enum EnvType mEnvType;
     
@@ -37,6 +38,7 @@ class TravMapValidator :  public ompl::base::StateValidityChecker {
     TravMapValidator(const ompl::base::SpaceInformationPtr& si,
             size_t grid_width, 
             size_t grid_height,
+            envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data,
             enum EnvType env_type);
     

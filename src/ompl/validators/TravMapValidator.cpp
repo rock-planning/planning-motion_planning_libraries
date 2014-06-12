@@ -9,12 +9,14 @@ namespace motion_planning_libraries
 TravMapValidator::TravMapValidator(const ompl::base::SpaceInformationPtr& si,
             size_t grid_width, 
             size_t grid_height,
+            envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data,
             enum EnvType env_type) : 
             ompl::base::StateValidityChecker(si),
             mpSpaceInformation(si),
             mGridWidth(grid_width), 
             mGridHeight(grid_height),
+            mpTravGrid(trav_grid),
             mpTravData(grid_data),
             mEnvType(env_type){
 }
@@ -57,7 +59,10 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
     }   
     
     // Check obstacle.
-    if((*mpTravData)[y_grid][x_grid] == envire::SimpleTraversability::CLASS_OBSTACLE) {
+    double class_value = (double)(*mpTravData)[y_grid][x_grid];
+    double driveability = (mpTravGrid->getTraversabilityClass(class_value)).getDrivability();
+        
+    if(driveability == 0.0) {
         LOG_DEBUG("State (%d,%d) is invalid (lies on an obstacle)", x_grid, y_grid);
         return false;
     }
