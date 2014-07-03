@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include <motion_planning_libraries/MotionPlanningLibraries.hpp>
+#include <motion_planning_libraries/Helpers.hpp>
 
 #include <envire/core/Environment.hpp>
 #include <envire/maps/TraversabilityGrid.hpp>
@@ -13,6 +14,8 @@ int main(int argc, char** argv)
     // Create the trav map.
     envire::Environment* env = new  envire::Environment();
     envire::TraversabilityGrid* trav = new envire::TraversabilityGrid(100, 100, 0.1, 0.1);
+    boost::shared_ptr<TravData> trav_data = boost::shared_ptr<TravData>(new TravData(
+            trav->getGridData(envire::TraversabilityGrid::TRAVERSABILITY)));
     trav->setTraversabilityClass(0, envire::TraversabilityClass(0.5)); // driveability of unknown
     trav->setUniqueId("/trav_map");
     env->attachItem(trav);
@@ -33,6 +36,14 @@ int main(int argc, char** argv)
     conf.mSBPLMotionPrimitivesFile = path_primitives;
     conf.mSearchUntilFirstSolution = true;
     
+    // Draw a rectangle in the center 
+    GridCalculations calc;
+    calc.setTravGrid(trav, trav_data);
+    
+    // x,y,theta,width,length
+    calc.setFootprint(50, 50, 0, 10, 10);
+    calc.setValue(1); // obstacle
+    
     // SBPL
     std::cout << std::endl << "SBPL XYTHETA PLANNING" << std::endl;
     conf.mPlanningLibType = LIB_SBPL;
@@ -50,60 +61,5 @@ int main(int argc, char** argv)
         std::cout << "SBPL problem could not be solved" << std::endl;
     }
      
-    // OMPL
-    std::cout << std::endl << "OMPL XY PLANNING" << std::endl;
-    conf.mPlanningLibType = LIB_OMPL;
-    conf.mEnvType = ENV_XY;
-    
-    MotionPlanningLibraries ompl(conf);
-    ompl.setTravGrid(env, "/trav_map");
-    ompl.setStartState(rbs_start);
-    ompl.setGoalState(rbs_goal);
-    
-    if(ompl.plan(10)) {
-        std::cout << "OMPL problem solved" << std::endl;
-        ompl.printPathInWorld();
-    } else {
-        std::cout << "OMPL problem could not be solved" << std::endl;
-    }
-    
-    std::cout << std::endl << "OMPL XY PLANNING IMPROVE" << std::endl;
-    if(ompl.plan(10)) {
-        std::cout << "OMPL problem improved" << std::endl;
-        ompl.printPathInWorld();
-    } else {
-        std::cout << "OMPL problem could not be improved" << std::endl;
-    }
-    
-    // OMPL arm motion planning
-    std::cout << std::endl << "OMPL ARM PLANNING" << std::endl;
-    conf.mPlanningLibType = LIB_OMPL;
-    conf.mEnvType = ENV_ARM;
-    conf.setJoints(4);
-    
-    MotionPlanningLibraries ompl_arm(conf);
-    std::vector<double> joint_angles_start, joint_angles_goal;
-    joint_angles_start.push_back(M_PI);
-    joint_angles_goal.push_back(0.0);
-    for(int i=0; i<3; ++i) {
-        joint_angles_start.push_back(0.0);
-        joint_angles_goal.push_back(0.0);
-    }
-    State arm_start(joint_angles_start);
-    State arm_goal(joint_angles_goal);
-     
-    ompl_arm.setStartState(arm_start);
-    ompl_arm.setGoalState(arm_goal);
-    
-    if(ompl_arm.plan(10)) {
-        std::cout << "OMPL ARM problem solved" << std::endl;
-        std::vector<struct State> states = ompl_arm.getPath();
-        for(int i=0; i<states.size(); ++i) {
-            std::cout << states[i].getString() << std::endl;
-        }
-    } else {
-        std::cout << "OMPL ARM problem could not be solved" << std::endl;
-    }
-
     return 0;
 }

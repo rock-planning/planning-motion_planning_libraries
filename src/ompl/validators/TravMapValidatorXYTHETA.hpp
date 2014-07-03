@@ -14,6 +14,7 @@
 #include <ompl/base/spaces/SE2StateSpace.h>
 
 #include <motion_planning_libraries/Config.hpp>
+#include <motion_planning_libraries/Helpers.hpp>
 
 namespace envire {
 class TraversabilityGrid;
@@ -24,7 +25,7 @@ namespace motion_planning_libraries
     
 typedef envire::TraversabilityGrid::ArrayType TravData;
 
-class TravMapValidator :  public ompl::base::StateValidityChecker {
+class TravMapValidatorXYTHETA :  public ompl::base::StateValidityChecker {
  
  private:
     ompl::base::SpaceInformationPtr mpSpaceInformation;
@@ -32,32 +33,20 @@ class TravMapValidator :  public ompl::base::StateValidityChecker {
     size_t mGridHeight;
     envire::TraversabilityGrid* mpTravGrid; // To request the driveability values.
     boost::shared_ptr<TravData> mpTravData;
-    enum EnvType mEnvType;
+    Config mConfig;
+    mutable GridCalculations mGridCalc;
     
  public:
-    TravMapValidator(const ompl::base::SpaceInformationPtr& si,
+    TravMapValidatorXYTHETA(const ompl::base::SpaceInformationPtr& si,
             size_t grid_width, 
             size_t grid_height,
             envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data,
-            enum EnvType env_type);
+            Config config);
     
-    ~TravMapValidator();
+    ~TravMapValidatorXYTHETA();
     
     bool isValid(const ompl::base::State* state) const;
-
-    /** 
-     * Report the distance to the nearest invalid state when starting from \e state. If the distance is
-     * negative, the value of clearance is the penetration depth.
-     */
-    double clearance(const ompl::base::State* state) const;
-
-    /** 
-     * Report the distance to the nearest invalid state when starting from \e state, and if possible,
-     * also specify a valid state \e validState in the direction that moves away from the colliding
-     * state. The \e validStateAvailable flag is set to true if \e validState is updated. 
-     */
-    double clearance(const ompl::base::State *state, ompl::base::State* validState, bool &validStateAvailable) const;   
 };
 
 } // end namespace motion_planning_libraries

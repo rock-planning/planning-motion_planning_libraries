@@ -3,7 +3,7 @@
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/control/planners/rrt/RRT.h>
 
-#include <motion_planning_libraries/ompl/validators/TravMapValidator.hpp>
+#include <motion_planning_libraries/ompl/validators/TravMapValidatorXYTHETA.hpp>
 #include <motion_planning_libraries/ompl/objectives/TravGridObjective.hpp>
 
 namespace ob = ompl::base;
@@ -66,8 +66,8 @@ bool OmplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height,
     mpControlSpaceInformation->setPropagationStepSize(4);
     mpControlSpaceInformation->setMinMaxControlDuration(1,10);
 
-    mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidator(
-                mpControlSpaceInformation, grid_width, grid_height, trav_grid, grid_data, mConfig.mEnvType));
+    mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidatorXYTHETA(
+                mpControlSpaceInformation, grid_width, grid_height, trav_grid, grid_data, mConfig));
     mpControlSpaceInformation->setStateValidityChecker(mpTravMapValidator);
     mpControlSpaceInformation->setup();
         

@@ -54,8 +54,8 @@ struct Config {
     bool mReplanOnNewStartPose;
     
     // NAVIGATION
-    double mRobotWidth; // along the y-axis, sideward
-    double mRobotLength; // along the x-axis, forward
+    double mRobotWidth; // along the y-axis, sideward, meter
+    double mRobotLength; // along the x-axis, forward, meter
     double mRobotForwardVelocity; // m/sec.
     double mRobotBackwardVelocity; // m/sec. positive value
     double mRobotRotationalVelocity; // rad/sec. positive value 

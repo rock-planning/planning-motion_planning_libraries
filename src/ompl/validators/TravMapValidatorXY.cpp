@@ -1,4 +1,4 @@
-#include "TravMapValidator.hpp"
+#include "TravMapValidatorXY.hpp"
 
 #include <ompl/base/SpaceInformation.h>
 #include <base/Logging.hpp>
@@ -6,7 +6,7 @@
 namespace motion_planning_libraries
 {
 
-TravMapValidator::TravMapValidator(const ompl::base::SpaceInformationPtr& si,
+TravMapValidatorXY::TravMapValidatorXY(const ompl::base::SpaceInformationPtr& si,
             size_t grid_width, 
             size_t grid_height,
             envire::TraversabilityGrid* trav_grid,
@@ -21,36 +21,20 @@ TravMapValidator::TravMapValidator(const ompl::base::SpaceInformationPtr& si,
             mEnvType(env_type){
 }
 
-TravMapValidator::~TravMapValidator() {
+TravMapValidatorXY::~TravMapValidatorXY() {
 }
     
-bool TravMapValidator::isValid(const ompl::base::State* state) const
+bool TravMapValidatorXY::isValid(const ompl::base::State* state) const
 {
     
     int x_grid = 0;
     int y_grid = 0;
-    
-    switch(mEnvType) {
-        case ENV_XY: {
-            const ompl::base::RealVectorStateSpace::StateType* state_rv = 
-                    state->as<ompl::base::RealVectorStateSpace::StateType>();
-            x_grid = (int)state_rv->values[0];
-            y_grid = (int)state_rv->values[1];
-            break;
-        }
-        case ENV_XYTHETA: {
-            const ompl::base::SE2StateSpace::StateType* state_se2 = 
-                    state->as<ompl::base::SE2StateSpace::StateType>();
-            x_grid = (int)state_se2->getX();
-            y_grid = (int)state_se2->getY();
-            break;
-        }
-        default: {
-            throw std::runtime_error("TravMapValidator received an unknown environment");
-            break;
-        }
-    }
-   
+
+    const ompl::base::RealVectorStateSpace::StateType* state_rv = 
+            state->as<ompl::base::RealVectorStateSpace::StateType>();
+    x_grid = (int)state_rv->values[0];
+    y_grid = (int)state_rv->values[1];
+  
     // Check borders.
     if(     x_grid < 0 || x_grid >= (int)mGridWidth ||
             y_grid < 0 || y_grid >= (int)mGridHeight) {
@@ -70,7 +54,7 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
     return true;
 }
 
-double TravMapValidator::clearance(const ompl::base::State* state) const
+double TravMapValidatorXY::clearance(const ompl::base::State* state) const
 {
     // Not used currently (and needs adaption regarding the different environments).
 #if 0
@@ -125,7 +109,7 @@ double TravMapValidator::clearance(const ompl::base::State* state) const
     return 0.0;
 }
 
-double TravMapValidator::clearance(const ompl::base::State *state, ompl::base::State* 
+double TravMapValidatorXY::clearance(const ompl::base::State *state, ompl::base::State* 
         validState, bool &validStateAvailable) const
 {
     validStateAvailable = false;

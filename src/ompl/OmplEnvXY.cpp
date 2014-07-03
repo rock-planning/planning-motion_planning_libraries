@@ -5,7 +5,7 @@
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 
-#include <motion_planning_libraries/ompl/validators/TravMapValidator.hpp>
+#include <motion_planning_libraries/ompl/validators/TravMapValidatorXY.hpp>
 #include <motion_planning_libraries/ompl/objectives/TravGridObjective.hpp>
 
 namespace ob = ompl::base;
@@ -40,14 +40,18 @@ bool OmplEnvXY::initialize(size_t grid_width, size_t grid_height,
     bounds.setLow (1, 0);
     bounds.setHigh(1, grid_height);
     mpStateSpace->as<ob::RealVectorStateSpace>()->setBounds(bounds);
-    mpStateSpace->setLongestValidSegmentFraction(1/(double)grid_width);
+    // Defines the divisor for each dimension.
+    // E.g. width = 100, divisor 0.01 -> if dist(x1,x2) >= 1 motion validation required
+    //mpStateSpace->setLongestValidSegmentFraction(1/100.0);
     
     mpSpaceInformation = ob::SpaceInformationPtr(
             new ob::SpaceInformation(mpStateSpace));
  
-    mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidator(
+    mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidatorXY(
                 mpSpaceInformation, grid_width, grid_height, trav_grid, grid_data, mConfig.mEnvType));
     mpSpaceInformation->setStateValidityChecker(mpTravMapValidator);
+    // 1/mpStateSpace->getMaximumExtent() (max dist between two states) -> resolution of one meter.
+    mpSpaceInformation->setStateValidityCheckingResolution (1/mpStateSpace->getMaximumExtent());
     mpSpaceInformation->setup();
         
     // Create problem definition.        
@@ -63,6 +67,9 @@ bool OmplEnvXY::initialize(size_t grid_width, size_t grid_height,
         mpPlanner = ob::PlannerPtr(new og::RRTConnect(mpSpaceInformation));
     } else { // Optimizing planners use all the available time to improve the solution.
         mpPlanner = ob::PlannerPtr(new og::RRTstar(mpSpaceInformation));
+        // Allows to configure the max allowed dist between two samples.
+        ompl::base::ParamSet param_set = mpPlanner->params();
+        param_set.setParam("range", "0.5");
     }
 
     // Set the problem instance for our planner to solve

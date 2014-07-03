@@ -24,6 +24,7 @@ typedef envire::TraversabilityGrid::ArrayType TravData;
  * 
  * TODO: Integrate: remove obstacles within the start position, 
  *       if the goal lies on an obstacle use next valid goal position
+ * TODO: Split State and Config to classes using inheritance.
  */
 class MotionPlanningLibraries
 {

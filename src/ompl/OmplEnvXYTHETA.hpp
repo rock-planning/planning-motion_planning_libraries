@@ -24,6 +24,7 @@ class OmplEnvXYTHETA : public Ompl
       
     size_t mGridWidth;
     size_t mGridHeight;
+    // Used in static member functions.
     static double mCarWidth;  
       
  public: 
