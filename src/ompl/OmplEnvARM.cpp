@@ -5,7 +5,6 @@
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 
-#include <motion_planning_libraries/ompl/validators/TravMapValidator.hpp>
 #include <motion_planning_libraries/ompl/objectives/TravGridObjective.hpp>
 
 namespace ob = ompl::base;
