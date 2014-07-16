@@ -5,7 +5,7 @@
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 
-#include <motion_planning_libraries/ompl/validators/TravMapValidatorXY.hpp>
+#include <motion_planning_libraries/ompl/validators/TravMapValidator.hpp>
 #include <motion_planning_libraries/ompl/objectives/TravGridObjective.hpp>
 
 namespace ob = ompl::base;
@@ -13,32 +13,22 @@ namespace og = ompl::geometric;
 
 namespace motion_planning_libraries
 {
-
-double OmplEnvXY::mCarWidth = 2.0; 
     
 // PUBLIC
-OmplEnvXY::OmplEnvXY(Config config) : Ompl(config), 
-        mGridWidth(0), 
-        mGridHeight(0) {
-    mCarWidth = mConfig.mRobotLength;
+OmplEnvXY::OmplEnvXY(Config config) : Ompl(config) {
 }
  
-bool OmplEnvXY::initialize(size_t grid_width, size_t grid_height, 
-            double scale_x, double scale_y, 
-            envire::TraversabilityGrid* trav_grid,
-            boost::shared_ptr<TravData> grid_data) {
-    
-    mGridWidth = grid_width;
-    mGridHeight = grid_height;  
+bool OmplEnvXY::initialize(envire::TraversabilityGrid* trav_grid,
+            boost::shared_ptr<TravData> grid_data) { 
 
     LOG_INFO("Create OMPL RealVector(2) environment");
     
     mpStateSpace = ob::StateSpacePtr(new ob::RealVectorStateSpace(2));
     ob::RealVectorBounds bounds(2);
     bounds.setLow (0, 0);
-    bounds.setHigh(0, grid_width);
+    bounds.setHigh(0, trav_grid->getCellSizeX());
     bounds.setLow (1, 0);
-    bounds.setHigh(1, grid_height);
+    bounds.setHigh(1, trav_grid->getCellSizeY());
     mpStateSpace->as<ob::RealVectorStateSpace>()->setBounds(bounds);
     // Defines the divisor for each dimension.
     // E.g. width = 100, divisor 0.01 -> if dist(x1,x2) >= 1 motion validation required
@@ -47,8 +37,8 @@ bool OmplEnvXY::initialize(size_t grid_width, size_t grid_height,
     mpSpaceInformation = ob::SpaceInformationPtr(
             new ob::SpaceInformation(mpStateSpace));
  
-    mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidatorXY(
-                mpSpaceInformation, grid_width, grid_height, trav_grid, grid_data, mConfig.mEnvType));
+    mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidator(
+                mpSpaceInformation, trav_grid, grid_data, mConfig));
     mpSpaceInformation->setStateValidityChecker(mpTravMapValidator);
     // 1/mpStateSpace->getMaximumExtent() (max dist between two states) -> resolution of one meter.
     mpSpaceInformation->setStateValidityCheckingResolution (1/mpStateSpace->getMaximumExtent());
@@ -59,8 +49,8 @@ bool OmplEnvXY::initialize(size_t grid_width, size_t grid_height,
     // Create optimizations and balance them in getBalancedObjective().
     mpPathLengthOptimization = ob::OptimizationObjectivePtr(
         new ob::PathLengthOptimizationObjective(mpSpaceInformation));
-    mpTravGridObjective = ob::OptimizationObjectivePtr(new TravGridObjective(mpSpaceInformation, 
-            trav_grid, grid_data, grid_width, grid_height, mConfig.mEnvType));
+    mpTravGridObjective = ob::OptimizationObjectivePtr(new TravGridObjective(mpSpaceInformation, false,
+            trav_grid, grid_data, mConfig));
     mpProblemDefinition->setOptimizationObjective(getBalancedObjective(mpSpaceInformation));
 
     if(mConfig.mSearchUntilFirstSolution) { // Not optimizing planner, 

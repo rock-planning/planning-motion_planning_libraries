@@ -18,12 +18,14 @@ enum PlanningLibraryType {
 enum EnvType {
     ENV_XY, 
     ENV_XYTHETA, 
-    ENV_ARM
+    ENV_ARM,
+    ENV_SHERPA
 };
 
 /**
  *  Contains the configuration for all planning libraries.
  *  Just ignore the non relevant parameters.
+ * TODO: Split into PlanningConfig and RobotConfig
  */
 struct Config {
     Config() : mPlanningLibType(LIB_SBPL), 
@@ -31,8 +33,8 @@ struct Config {
             mSearchUntilFirstSolution(false),
             mReplanDuringEachUpdate(false),
             mReplanOnNewStartPose(false),
-            mRobotWidth(0.5), 
-            mRobotLength(0.5), 
+            mRobotWidthMinMax(0.5,0.5), 
+            mRobotLengthMinMax(0.5,0.5), 
             mRobotForwardVelocity(0.4), 
             mRobotBackwardVelocity(0.4),
             mRobotRotationalVelocity(1.0),
@@ -54,8 +56,8 @@ struct Config {
     bool mReplanOnNewStartPose;
     
     // NAVIGATION
-    double mRobotWidth; // along the y-axis, sideward, meter
-    double mRobotLength; // along the x-axis, forward, meter
+    std::pair<double,double> mRobotWidthMinMax; // along the y-axis, sideward, meter, min and max width
+    std::pair<double,double> mRobotLengthMinMax; // along the x-axis, forward, meter, min and max length
     double mRobotForwardVelocity; // m/sec.
     double mRobotBackwardVelocity; // m/sec. positive value
     double mRobotRotationalVelocity; // rad/sec. positive value 

@@ -35,10 +35,6 @@ class GridCalculations {
     void setTravGrid(envire::TraversabilityGrid* trav_grid, boost::shared_ptr<TravData> trav_data) {
         mpTravGrid = trav_grid; 
         mpTravData = trav_data;
-        // Creates a local copy of the grid data.
-        // fails:
-        //mpTravData = trav_grid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY);
-        //mpTravData = boost::shared_ptr<TravData>(new TravData(trav_grid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY)));   
     }
     
     void setFootprint(double footprint_x_grid, 

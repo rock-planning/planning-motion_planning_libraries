@@ -7,18 +7,14 @@ namespace motion_planning_libraries
 {
 
 TravMapValidatorXY::TravMapValidatorXY(const ompl::base::SpaceInformationPtr& si,
-            size_t grid_width, 
-            size_t grid_height,
             envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data,
-            enum EnvType env_type) : 
+            Config config) : 
             ompl::base::StateValidityChecker(si),
             mpSpaceInformation(si),
-            mGridWidth(grid_width), 
-            mGridHeight(grid_height),
             mpTravGrid(trav_grid),
             mpTravData(grid_data),
-            mEnvType(env_type){
+            mConfig(config){
 }
 
 TravMapValidatorXY::~TravMapValidatorXY() {
@@ -36,8 +32,8 @@ bool TravMapValidatorXY::isValid(const ompl::base::State* state) const
     y_grid = (int)state_rv->values[1];
   
     // Check borders.
-    if(     x_grid < 0 || x_grid >= (int)mGridWidth ||
-            y_grid < 0 || y_grid >= (int)mGridHeight) {
+    if(     x_grid < 0 || x_grid >= (int)mpTravGrid->getCellSizeX() ||
+            y_grid < 0 || y_grid >= (int)mpTravGrid->getCellSizeY()) {
         LOG_DEBUG("State (%d,%d) is invalid (not within the grid)", x_grid, y_grid);
         return false;
     }   

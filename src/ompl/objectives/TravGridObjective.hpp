@@ -8,6 +8,7 @@
 #include <base/Logging.hpp>
 
 #include <motion_planning_libraries/Config.hpp>
+#include <motion_planning_libraries/ompl/spaces/SherpaStateSpace.hpp>
 
 namespace motion_planning_libraries
 {
@@ -21,35 +22,56 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
 
  public:   
      static const unsigned char OMPL_MAX_COST = 100;
+     static const double TIME_TO_ADAPT_FOOTPRINT = 40; // Time to move from min to max
+     static const double PENALTY_TO_ADAPT_FOOTPRINT = 20;
     
  private:
      envire::TraversabilityGrid* mpTravGrid; // To request the driveability values.
      boost::shared_ptr<TravData> mpTravData;
-     int mGridWidth;
-     int mGridHeight;
-     enum EnvType mEnvType;
+     Config mConfig;
         
  public:
+    /**
+     * \param enable_motion_cost_interpolation Defines if only start and end state
+     * are used for cost calculations or smaller intermediate steps. By default false.
+     */
     TravGridObjective(const ompl::base::SpaceInformationPtr& si, 
+                        bool enable_motion_cost_interpolation,
+                        Config config) : 
+                ompl::base::StateCostIntegralObjective(si, enable_motion_cost_interpolation), 
+                mpTravGrid(NULL), 
+                mpTravData(),
+                mConfig(config) {
+    }     
+     
+    TravGridObjective(const ompl::base::SpaceInformationPtr& si, 
+                        bool enable_motion_cost_interpolation,
                         envire::TraversabilityGrid* trav_grid,
-                        boost::shared_ptr<TravData> trav_data, 
-                        int grid_width, int grid_height,
-                        enum EnvType env_type) : 
-                ompl::base::StateCostIntegralObjective(si, true), 
+                        boost::shared_ptr<TravData> trav_data,
+                        Config config) : 
+                ompl::base::StateCostIntegralObjective(si, enable_motion_cost_interpolation), 
                 mpTravGrid(trav_grid), 
                 mpTravData(trav_data),
-                mGridWidth(grid_width), mGridHeight(grid_height), 
-                mEnvType(env_type) {
+                mConfig(config) {
     }
     
     ~TravGridObjective() {
     }
     
+    void setTravGrid(envire::TraversabilityGrid* trav_grid, boost::shared_ptr<TravData> trav_data) {
+        mpTravGrid = trav_grid;
+        mpTravData = trav_data;
+    }
+    
     ompl::base::Cost stateCost(const ompl::base::State* s) const
     {
+        if(mpTravGrid == NULL) {
+            throw std::runtime_error("TravGridObjective: No traversability grid available");
+        }
+    
         double x = 0, y = 0;
         
-        switch(mEnvType) {
+        switch(mConfig.mEnvType) {
             case ENV_XY: {
                 const ompl::base::RealVectorStateSpace::StateType* state_rv = 
                         s->as<ompl::base::RealVectorStateSpace::StateType>();
@@ -64,25 +86,78 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
                 y = state_se2->getY();
                 break;
             }
+            case ENV_SHERPA: {
+                const SherpaStateSpace::StateType* state_sherpa = 
+                        s->as<SherpaStateSpace::StateType>();
+                x = state_sherpa->getX();
+                y = state_sherpa->getY();
+                break;
+            }
             default: {
-                throw std::runtime_error("TravMapValidator received an unknown environment");
+                throw std::runtime_error("TravGridObjective received an unknown environment");
                 break;
             }
         }
         
         // TODO Assuming: only valid states are passed?
-        if(x < 0 || x >= mGridWidth || 
-                y < 0 || y >= mGridHeight) {
+        if(x < 0 || x >= mpTravGrid->getCellSizeX() || 
+                y < 0 || y >= mpTravGrid->getCellSizeY()) {
             LOG_WARN("Invalid state (%4.2f, %4.2f) has been passed and will be ignored", 
                    x, y); 
             throw std::runtime_error("Invalid state received");
             //return ompl::base::Cost(0);
         }
     
-        // Uses the driveability which creates costs from 0 to OMPL_MAX_COST.
+        // Estimate time to traverse the cell using forward speed and driveability.
         double class_value = (double)(*mpTravData)[y][x];
         double driveability = (mpTravGrid->getTraversabilityClass(class_value)).getDrivability();
-        return ompl::base::Cost(OMPL_MAX_COST - (driveability * (double)OMPL_MAX_COST + 0.5));        
+        if(driveability == 0 || mConfig.mRobotForwardVelocity == 0) {
+            return ompl::base::Cost(std::numeric_limits<double>::max());
+        } else {
+            return ompl::base::Cost((mpTravGrid->getScaleX() / mConfig.mRobotForwardVelocity) /  driveability);
+        }
+        //return ompl::base::Cost(OMPL_MAX_COST - (driveability * (double)OMPL_MAX_COST + 0.5));        
+    }
+    
+    ompl::base::Cost motionCost(const ompl::base::State *s1, const ompl::base::State *s2) const {
+        // Uses the base motionCost() to calculate the cost to traverse from s1 to s2 
+        // (mean costs of s1 and s2 and the distance (x,y,theta/2.0) between the states).
+        ompl::base::Cost cost = ompl::base::StateCostIntegralObjective::motionCost(s1, s2);
+        
+         
+        switch(mConfig.mEnvType) {
+            
+            case ENV_SHERPA: {
+                // Add high additional costs if the length and width of the system have been changed.
+                
+                double footprint_cost = 0;
+                
+                const SherpaStateSpace::StateType* st_s1 = s1->as<SherpaStateSpace::StateType>();
+                const SherpaStateSpace::StateType* st_s2 = s2->as<SherpaStateSpace::StateType>();
+                
+                int length_s1 = (int)(st_s1->getLength() * 10.0);
+                int width_s1  = (int)(st_s1->getWidth() * 10.0);
+                
+                int length_s2 = (int)(st_s2->getLength() * 10.0);
+                int width_s2  = (int)(st_s2->getWidth() * 10.0);
+                
+                int sum_changes = abs(length_s1 - length_s2) + abs(width_s1 - width_s2);
+                if(sum_changes > 0) {
+                    footprint_cost = sum_changes * TIME_TO_ADAPT_FOOTPRINT + PENALTY_TO_ADAPT_FOOTPRINT;
+                }
+                                           
+                //double footprint_cost = fabs(st_s1->getLength() - st_s2->getLength()) * TIME_TO_ADAPT_FOOTPRINT +
+                //        fabs(st_s1->getWidth() - st_s2->getWidth()) * TIME_TO_ADAPT_FOOTPRINT;
+                //std::cout << "(" << st_s1->getX() << ", " << st_s1->getY() << ", " << st_s1->getYaw() << ") Width: " << st_s1->getWidth() << " to (" << 
+                //        st_s2->getX() << ", " << st_s2->getY() << ", " << st_s2->getYaw() << ") Width: " << st_s2->getWidth() << ". Movement cost " << cost.v << " Footprint cost " << footprint_cost << std::endl;
+                cost.v += footprint_cost;
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+        return cost;
     }
 };
 

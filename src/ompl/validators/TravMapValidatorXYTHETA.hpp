@@ -25,12 +25,14 @@ namespace motion_planning_libraries
     
 typedef envire::TraversabilityGrid::ArrayType TravData;
 
+/**
+ * Checks for obstacles, uses the width and length of the robot.
+ * TODO Back to one TravMapValidator file..?
+ */
 class TravMapValidatorXYTHETA :  public ompl::base::StateValidityChecker {
  
  private:
     ompl::base::SpaceInformationPtr mpSpaceInformation;
-    size_t mGridWidth;
-    size_t mGridHeight;
     envire::TraversabilityGrid* mpTravGrid; // To request the driveability values.
     boost::shared_ptr<TravData> mpTravData;
     Config mConfig;
@@ -38,8 +40,6 @@ class TravMapValidatorXYTHETA :  public ompl::base::StateValidityChecker {
     
  public:
     TravMapValidatorXYTHETA(const ompl::base::SpaceInformationPtr& si,
-            size_t grid_width, 
-            size_t grid_height,
             envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data,
             Config config);

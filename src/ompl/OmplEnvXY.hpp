@@ -13,10 +13,6 @@ class OmplEnvXY : public Ompl
     ompl::base::OptimizationObjectivePtr mpPathLengthOptimization;
     ompl::base::OptimizationObjectivePtr mpMultiOptimization;
     ompl::base::OptimizationObjectivePtr mpTravGridObjective;
-    
-    size_t mGridWidth;
-    size_t mGridHeight;
-    static double mCarWidth;
       
  public: 
     OmplEnvXY(Config config = Config());
@@ -24,9 +20,7 @@ class OmplEnvXY : public Ompl
     /**
      * (Re-)creates the complete ompl environment.
      */
-    virtual bool initialize(size_t grid_width, size_t grid_height, 
-            double scale_x, double scale_y, 
-            envire::TraversabilityGrid* trav_grid,
+    virtual bool initialize(envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data);
     
     /**

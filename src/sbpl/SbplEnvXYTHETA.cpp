@@ -72,13 +72,20 @@ bool SbplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height,
             // SBPL: time in sec for a 45° turn
             double time_to_turn_45_degree = fabs((M_PI / 4.0) / mConfig.mRobotRotationalVelocity);
            
+            double robot_width = std::max(mConfig.mRobotWidthMinMax.first, mConfig.mRobotWidthMinMax.second);
+            double robot_length = std::max(mConfig.mRobotLengthMinMax.first, mConfig.mRobotLengthMinMax.second);
+            
+            if(mConfig.mRobotWidthMinMax.first != mConfig.mRobotWidthMinMax.second ||
+                    mConfig.mRobotLengthMinMax.first != mConfig.mRobotLengthMinMax.second) {
+                LOG_WARN("SBPL does not support variable footprints, max width and length will be used");
+            }
             
             env_xytheta->InitializeEnv(grid_width, grid_height, 
                 mpSBPLMapData, // initial map
                 0,0,0, //mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
                 0,0,0, //mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw(),
                 0.1, 0.1, 0.1, // tolerance x,y,yaw, ignored
-                createFootprint(mConfig.mRobotWidth, mConfig.mRobotLength), 
+                createFootprint(robot_width, robot_length), 
                 scale_x,  // Size of a cell in meter => in SBPL cells have to be quadrats
                 speed, 
                 time_to_turn_45_degree, 

@@ -8,6 +8,7 @@
 #include <envire/maps/TraversabilityGrid.hpp>
 
 #include "Config.hpp"
+#include "State.hpp"
 #include "AbstractMotionPlanningLibrary.hpp"
 
 namespace motion_planning_libraries
@@ -82,8 +83,7 @@ class MotionPlanningLibraries
     bool plan(double max_time=1.0); 
     
     /**
-     * Returns the found path containing poses or joint angles (depending on the
-     * defined start states). Resulting poses are defined within the world frame.
+     * Returns the found states. Resulting poses are defined within the world frame.
      */
     std::vector<struct State> getPath();
     

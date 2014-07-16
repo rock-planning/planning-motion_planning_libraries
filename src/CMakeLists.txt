@@ -8,9 +8,10 @@ rock_library(motion_planning_libraries
         ompl/OmplEnvXY.cpp
         ompl/OmplEnvXYTHETA.cpp
         ompl/OmplEnvARM.cpp
-        ompl/validators/TravMapValidatorXY.cpp
-        ompl/validators/TravMapValidatorXYTHETA.cpp 
+        ompl/OmplEnvSHERPA.cpp
+        ompl/validators/TravMapValidator.cpp
         ompl/objectives/TravGridObjective.cpp
+        ompl/spaces/SherpaStateSpace.cpp
     HEADERS Config.hpp 
         State.hpp
         MotionPlanningLibraries.hpp 
@@ -23,9 +24,10 @@ rock_library(motion_planning_libraries
         ompl/OmplEnvXY.hpp
         ompl/OmplEnvXYTHETA.hpp
         ompl/OmplEnvARM.hpp
-        ompl/validators/TravMapValidatorXY.hpp 
-        ompl/validators/TravMapValidatorXYTHETA.hpp 
+        ompl/OmplEnvSHERPA.hpp
+        ompl/validators/TravMapValidator.hpp 
         ompl/objectives/TravGridObjective.hpp
+        ompl/spaces/SherpaStateSpace.hpp
     DEPS_PKGCONFIG envire
     DEPS_PKGCONFIG ompl
     DEPS_PKGCONFIG sbpl

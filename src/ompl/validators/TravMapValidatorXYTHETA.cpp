@@ -8,15 +8,11 @@ namespace motion_planning_libraries
 {
 
 TravMapValidatorXYTHETA::TravMapValidatorXYTHETA(const ompl::base::SpaceInformationPtr& si,
-            size_t grid_width, 
-            size_t grid_height,
             envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data,
             Config config) : 
             ompl::base::StateValidityChecker(si),
             mpSpaceInformation(si),
-            mGridWidth(grid_width), 
-            mGridHeight(grid_height),
             mpTravGrid(trav_grid),
             mpTravData(grid_data),
             mConfig(config), 
@@ -38,8 +34,10 @@ bool TravMapValidatorXYTHETA::isValid(const ompl::base::State* state) const
     double yaw_grid = state_se2->as<ompl::base::SO2StateSpace::StateType>(1)->value;
     
     mGridCalc.setFootprint(x_grid, y_grid, yaw_grid, 
-            ceil(mConfig.mRobotLength / (double)mpTravGrid->getScaleX()), 
-            ceil(mConfig.mRobotWidth / (double)mpTravGrid->getScaleY()));
+            ceil(std::max(mConfig.mRobotLengthMinMax.first, mConfig.mRobotLengthMinMax.second) / 
+                    (double)mpTravGrid->getScaleX()), 
+            ceil(std::max(mConfig.mRobotWidthMinMax.first, mConfig.mRobotWidthMinMax.second) / 
+                    (double)mpTravGrid->getScaleY()));
             
     return mGridCalc.isValid();
 }

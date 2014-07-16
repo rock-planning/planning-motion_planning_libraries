@@ -22,6 +22,8 @@ struct State {
     enum StateType mStateType;
     base::samples::RigidBodyState mPose;
     std::vector<double> mJointAngles;
+    double mLength;
+    double mWidth;
     
  public:
     State() {
@@ -29,9 +31,18 @@ struct State {
         // Invalid position is used to check if this state contains a rbs.
         mPose.invalidatePosition();
         mStateType = STATE_EMPTY;
+        mLength = 0.0;
+        mWidth = 0.0;
     }
 
     State(base::samples::RigidBodyState rbs) : mPose(rbs) {
+        mStateType = STATE_POSE;
+        mLength = 0.0;
+        mWidth = 0.0;
+    }
+    
+    State(base::samples::RigidBodyState rbs, double length, double width) : 
+            mPose(rbs), mLength(length), mWidth(width) {
         mStateType = STATE_POSE;
     }
     
@@ -40,6 +51,10 @@ struct State {
         // Invalid position is used to check if this state contains a rbs.
         mPose.invalidatePosition();        
         mStateType = STATE_ARM;
+    }
+    
+    enum StateType getStateType() {
+        return mStateType;
     }
     
     base::samples::RigidBodyState getPose() {
@@ -54,8 +69,12 @@ struct State {
         return mJointAngles.size();
     }
     
-    enum StateType getStateType() {
-        return mStateType;
+    double getLength() {
+        return mLength;
+    }
+
+    double getWidth() {
+        return mWidth;
     }
     
     void setPose(base::samples::RigidBodyState pose) {
@@ -67,6 +86,11 @@ struct State {
         mJointAngles = joint_angles;
         mStateType = STATE_ARM;
     }
+    
+    void setFootprint(double length, double width) {
+        mLength = length;
+        mWidth = width;
+    }
      
     // Returns a string of the contained data.
     std::string getString() {
@@ -77,10 +101,12 @@ struct State {
                 break;
             }   
             case STATE_POSE: {
-                ss << "x y z theta: " << mPose.position[0] << " " << 
+                ss << "x y z theta length width: " << mPose.position[0] << " " << 
                         mPose.position[1] << " " << 
                         mPose.position[2] << " " << 
-                        mPose.getYaw();
+                        mPose.getYaw() << " " << 
+                        mLength << " " <<
+                        mWidth;
                 break;
             }  
             case STATE_ARM: {

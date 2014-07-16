@@ -5,6 +5,7 @@
 #include <motion_planning_libraries/ompl/OmplEnvXY.hpp>
 #include <motion_planning_libraries/ompl/OmplEnvXYTHETA.hpp>
 #include <motion_planning_libraries/ompl/OmplEnvARM.hpp>
+#include <motion_planning_libraries/ompl/OmplEnvSHERPA.hpp>
 
 namespace motion_planning_libraries
 {
@@ -58,6 +59,11 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) :
                 case ENV_ARM: {
                     mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>
                             (new OmplEnvARM(config));    
+                    break;
+                }
+                case ENV_SHERPA: {
+                    mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>
+                            (new OmplEnvSHERPA(config));    
                     break;
                 }
                 //mpPlanningLib = boost::shared_ptr<AbstractMotionPlanningLibrary>(new Ompl(config));
@@ -115,7 +121,7 @@ bool MotionPlanningLibraries::setStartState(struct State start_state) {
             }
             
             mStartState = start_state; 
-            mStartStateGrid = State(start_grid_new); 
+            mStartStateGrid = State(start_grid_new, start_state.getLength(), start_state.getWidth()); 
             
             break;
         }
@@ -168,7 +174,7 @@ bool MotionPlanningLibraries::setGoalState(struct State goal_state) {
             }
             
             mGoalState = goal_state; 
-            mGoalStateGrid = State(goal_grid_new); 
+            mGoalStateGrid = State(goal_grid_new, goal_state.getLength(), goal_state.getWidth()); 
             break;
         }
         case STATE_ARM: {
@@ -227,12 +233,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
         if(mReceivedNewTravGrid) {
             LOG_INFO("Received a new trav grid, reinitializes the environment");
             
-            if(!mpPlanningLib->initialize(mpTravGrid->getCellSizeX(), 
-                    mpTravGrid->getCellSizeY(),
-                    mpTravGrid->getScaleX(), 
-                    mpTravGrid->getScaleY(),
-                    mpTravGrid, 
-                    mpTravData)) {
+            if(!mpPlanningLib->initialize(mpTravGrid, mpTravData)) {
                 LOG_WARN("Initialization (navigation) failed"); 
                 return false;
             } 
@@ -354,11 +355,29 @@ base::Trajectory MotionPlanningLibraries::getTrajectoryInWorld(double speed) {
 void MotionPlanningLibraries::printPathInWorld() {
     std::vector<base::Waypoint> waypoints = getPathInWorld();
     std::vector<base::Waypoint>::iterator it = waypoints.begin();
+    std::vector<State>::iterator it_state = mPlannedPath.begin();
+    
     int counter = 1;
-    printf("%s %s %s %s %s\n", "       #", "       X", "       Y", "       Z", "   THETA");
-    for(; it != waypoints.end(); it++, counter++) {
-        printf("%8d %8.2f %8.2f %8.2f %8.2f\n", counter, it->position[0], 
-                it->position[1], it->position[2], it->heading);
+
+    switch(mConfig.mEnvType) {
+        case ENV_SHERPA: {
+            printf("%s %s %s %s %s %s %s\n", "       #", "       X", "       Y",
+                    "       Z", "   THETA", "  LENGTH", "   WIDTH");
+            for(; it != waypoints.end(); it++, counter++, it_state++) {
+                printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f\n", counter, 
+                        it->position[0], it->position[1], it->position[2], 
+                        it->heading, it_state->getLength(), it_state->getLength());
+            }
+            break;
+        } 
+        default: {
+            printf("%s %s %s %s %s\n", "       #", "       X", "       Y", "       Z", "   THETA");
+            for(; it != waypoints.end(); it++, counter++) {
+                printf("%8d %8.2f %8.2f %8.2f %8.2f\n", counter, it->position[0], 
+                        it->position[1], it->position[2], it->heading);
+            }
+            break;
+        }
     }
 }
 

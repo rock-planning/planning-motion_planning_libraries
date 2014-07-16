@@ -3,7 +3,7 @@
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/control/planners/rrt/RRT.h>
 
-#include <motion_planning_libraries/ompl/validators/TravMapValidatorXYTHETA.hpp>
+#include <motion_planning_libraries/ompl/validators/TravMapValidator.hpp>
 #include <motion_planning_libraries/ompl/objectives/TravGridObjective.hpp>
 
 namespace ob = ompl::base;
@@ -12,22 +12,15 @@ namespace og = ompl::geometric;
 namespace motion_planning_libraries
 { 
   
-double OmplEnvXYTHETA::mCarWidth = 2.0;   
+double OmplEnvXYTHETA::mCarLength = 2.0;   
     
 // PUBLIC
-OmplEnvXYTHETA::OmplEnvXYTHETA(Config config) : Ompl(config),
-        mGridWidth(0), 
-        mGridHeight(0) {
-    mCarWidth = mConfig.mRobotLength;
+OmplEnvXYTHETA::OmplEnvXYTHETA(Config config) : Ompl(config) {
+    mCarLength = std::max(mConfig.mRobotLengthMinMax.first, mConfig.mRobotLengthMinMax.second);
 }
  
-bool OmplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height, 
-            double scale_x, double scale_y, 
-            envire::TraversabilityGrid* trav_grid,
+bool OmplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data) {
-    
-    mGridWidth = grid_width;
-    mGridHeight = grid_height;
   
     // Will define a control problem in SE2 (X, Y, THETA).
     LOG_INFO("Create OMPL SE2 environment");
@@ -35,11 +28,11 @@ bool OmplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height,
     mpStateSpace = ompl::base::StateSpacePtr(new ob::SE2StateSpace());
     ob::RealVectorBounds bounds(2);
     bounds.setLow (0, 0);
-    bounds.setHigh(0, grid_width);
+    bounds.setHigh(0, trav_grid->getCellSizeX());
     bounds.setLow (1, 0);
-    bounds.setHigh(1, grid_height);
+    bounds.setHigh(1, trav_grid->getCellSizeY());
     mpStateSpace->as<ob::SE2StateSpace>()->setBounds(bounds);
-    mpStateSpace->setLongestValidSegmentFraction(1/(double)grid_width);
+    mpStateSpace->setLongestValidSegmentFraction(1/(double)trav_grid->getCellSizeX());
     
     mpControlSpace = ompl::control::ControlSpacePtr(
             new ompl::control::RealVectorControlSpace(mpStateSpace, 2));
@@ -66,8 +59,8 @@ bool OmplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height,
     mpControlSpaceInformation->setPropagationStepSize(4);
     mpControlSpaceInformation->setMinMaxControlDuration(1,10);
 
-    mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidatorXYTHETA(
-                mpControlSpaceInformation, grid_width, grid_height, trav_grid, grid_data, mConfig));
+    mpTravMapValidator = ob::StateValidityCheckerPtr(new TravMapValidator(
+                mpControlSpaceInformation, trav_grid, grid_data, mConfig));
     mpControlSpaceInformation->setStateValidityChecker(mpTravMapValidator);
     mpControlSpaceInformation->setup();
         
@@ -76,8 +69,8 @@ bool OmplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height,
     // Create optimizations and balance them in getBalancedObjective().
     mpPathLengthOptimization = ob::OptimizationObjectivePtr(
         new ob::PathLengthOptimizationObjective(mpControlSpaceInformation));
-    mpTravGridObjective = ob::OptimizationObjectivePtr(new TravGridObjective(mpControlSpaceInformation, 
-            trav_grid, grid_data, grid_width, grid_height, mConfig.mEnvType));
+    mpTravGridObjective = ob::OptimizationObjectivePtr(new TravGridObjective(mpControlSpaceInformation, false,
+            trav_grid, grid_data, mConfig));
     mpProblemDefinition->setOptimizationObjective(getBalancedObjective(mpControlSpaceInformation));
     
     // Control based planner, optimization is not supported by OMPL.

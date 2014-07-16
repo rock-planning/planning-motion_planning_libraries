@@ -22,10 +22,8 @@ class OmplEnvXYTHETA : public Ompl
     ompl::base::OptimizationObjectivePtr mpTravGridObjective;
     ompl::control::ODESolverPtr mpODESolver;
       
-    size_t mGridWidth;
-    size_t mGridHeight;
     // Used in static member functions.
-    static double mCarWidth;  
+    static double mCarLength;  
       
  public: 
     OmplEnvXYTHETA(Config config = Config());
@@ -33,9 +31,7 @@ class OmplEnvXYTHETA : public Ompl
     /**
      * (Re-)creates the complete ompl environment.
      */
-    virtual bool initialize(size_t grid_width, size_t grid_height, 
-            double scale_x, double scale_y, 
-            envire::TraversabilityGrid* trav_grid,
+    virtual bool initialize(envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data);
     
     /**
@@ -72,7 +68,7 @@ class OmplEnvXYTHETA : public Ompl
         // Calculates delta.
         qdot[0] = u[0] * cos(theta);
         qdot[1] = u[0] * sin(theta);
-        qdot[2] = u[0] * tan(u[1]) / mCarWidth;
+        qdot[2] = u[0] * tan(u[1]) / mCarLength;
     }
     
     // Just sets the delta using the velocities.
