@@ -316,6 +316,10 @@ std::vector<base::Waypoint> MotionPlanningLibraries::getPathInWorld() {
             base::Waypoint waypoint;
             waypoint.position = pose_in_world.position;
             waypoint.heading = pose_in_world.getYaw();
+            // use tolerance position to visualize the footprint just using the length.
+            waypoint.tol_position = mConfig.mRobotLengthMinMax.first + 
+                    fabs(mConfig.mRobotLengthMinMax.second - 
+                    mConfig.mRobotLengthMinMax.first) * it->getLength();
             path.push_back(waypoint);
         }
     }

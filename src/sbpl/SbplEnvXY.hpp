@@ -15,9 +15,7 @@ class SbplEnvXY : public Sbpl
     /**
      * 
      */
-    virtual bool initialize(size_t grid_width, size_t grid_height, 
-            double scale_x, double scale_y, 
-            envire::TraversabilityGrid* trav_grid,
+    virtual bool initialize(envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data);
     
     /**

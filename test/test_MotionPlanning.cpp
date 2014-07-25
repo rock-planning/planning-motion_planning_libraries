@@ -52,6 +52,24 @@ BOOST_FIXTURE_TEST_CASE(helper_rectangle, Fixture)
     calc.setValue(1); // obstacle
 }
 
+BOOST_FIXTURE_TEST_CASE(helper_rectangle_valid_test, Fixture)
+{
+    std::cout << std::endl << "HELPER RECTANGLES TESTS" << std::endl;
+    // Draw a rectangle in the center 
+    GridCalculations calc;
+    calc.setTravGrid(trav, trav_data);
+    
+    // x,y,theta,width,length
+    calc.setFootprint(50, 50, 0, 10, 10);
+    BOOST_CHECK(calc.isValid() == false);
+    
+    calc.setFootprint(55, 55, 0, 10, 10);
+    BOOST_CHECK(calc.isValid() == false);
+    
+    calc.setFootprint(60, 60, 0, 10, 10);
+    BOOST_CHECK(calc.isValid() == true);
+}
+
 BOOST_FIXTURE_TEST_CASE(sbpl_xy_planning, Fixture)
 {
     // SBPL
@@ -74,7 +92,7 @@ BOOST_FIXTURE_TEST_CASE(sbpl_xy_planning, Fixture)
 
 BOOST_FIXTURE_TEST_CASE(sbpl_xytheta_planning, Fixture)
 {
-    std::string path_primitives(getenv ("AUTOPROJ_PROJECT_BASE"));
+    std::string path_primitives(getenv ("AUTOPROJ_CURRENT_ROOT"));
     path_primitives += "/external/sbpl/matlab/mprim/pr2_10cm.mprim";
     conf.mSBPLMotionPrimitivesFile = path_primitives;
     

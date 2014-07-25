@@ -10,12 +10,13 @@ SbplEnvXY::SbplEnvXY(Config config) : Sbpl(config) {
     LOG_DEBUG("SBPLEnvXY constructor");
 }
 
-bool SbplEnvXY::initialize(size_t grid_width, size_t grid_height, 
-            double scale_x, double scale_y, 
-            envire::TraversabilityGrid* trav_grid,
+bool SbplEnvXY::initialize(envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data) { 
     
     LOG_DEBUG("SBPLEnvXY initialize");
+    
+    size_t grid_width = trav_grid->getCellSizeX();
+    size_t grid_height = trav_grid->getCellSizeY();
 
     mpSBPLEnv = boost::shared_ptr<EnvironmentNAV2D>(new EnvironmentNAV2D());
          

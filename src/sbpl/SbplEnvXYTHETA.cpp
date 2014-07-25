@@ -14,12 +14,15 @@ SbplEnvXYTHETA::SbplEnvXYTHETA(Config config) : Sbpl(config),
     LOG_DEBUG("SbplEnvXYTHETA constructor");
 }
 
-bool SbplEnvXYTHETA::initialize(size_t grid_width, size_t grid_height, 
-            double scale_x, double scale_y, 
-            envire::TraversabilityGrid* trav_grid,
+bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data) { 
     
     LOG_DEBUG("SBPLEnvXYTHETA initialize");
+    
+    size_t grid_width = trav_grid->getCellSizeX();
+    size_t grid_height = trav_grid->getCellSizeY();
+    double scale_x = trav_grid->getScaleX();
+    double scale_y = trav_grid->getScaleY();
     
     mSBPLScaleX = scale_x;
     mSBPLScaleY = scale_y;

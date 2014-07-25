@@ -17,6 +17,7 @@ int main(int argc, char** argv)
     boost::shared_ptr<TravData> trav_data = boost::shared_ptr<TravData>(new TravData(
             trav->getGridData(envire::TraversabilityGrid::TRAVERSABILITY)));
     trav->setTraversabilityClass(0, envire::TraversabilityClass(0.5)); // driveability of unknown
+    trav->setTraversabilityClass(1, envire::TraversabilityClass(0.0)); // driveability of obstacles
     trav->setUniqueId("/trav_map");
     env->attachItem(trav);
     envire::FrameNode* frame_node = new envire::FrameNode();
@@ -31,7 +32,7 @@ int main(int argc, char** argv)
     
     // Create conf file.
     Config conf;
-    std::string path_primitives(getenv ("AUTOPROJ_PROJECT_BASE"));
+    std::string path_primitives(getenv ("AUTOPROJ_CURRENT_ROOT"));
     path_primitives += "/external/sbpl/matlab/mprim/pr2_10cm.mprim";
     conf.mSBPLMotionPrimitivesFile = path_primitives;
     conf.mSearchUntilFirstSolution = true;
@@ -43,6 +44,16 @@ int main(int argc, char** argv)
     // x,y,theta,width,length
     calc.setFootprint(50, 50, 0, 10, 10);
     calc.setValue(1); // obstacle
+    
+
+    calc.setFootprint(50, 50, 0, 10, 10);
+    std::cout << "Footprint 1 " << (calc.isValid() ? "valid" : "not valid") << std::endl;
+    
+    calc.setFootprint(55, 55, 0, 10, 10);
+    std::cout << "Footprint 2 " << (calc.isValid() ? "valid" : "not valid") << std::endl;
+    
+    calc.setFootprint(60, 60, 0, 10, 10);
+    std::cout << "Footprint 3 " << (calc.isValid() ? "valid" : "not valid") << std::endl;
     
     // SBPL
     std::cout << std::endl << "SBPL XYTHETA PLANNING" << std::endl;
