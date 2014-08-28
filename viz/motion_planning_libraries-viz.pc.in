@@ -1,0 +1,12 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=@CMAKE_INSTALL_PREFIX@
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: motion_planning_libraries-viz
+Description: vizKit plugin for the motion_planning_libraries library
+Requires: motion_planning_libraries @PKGCONFIG_DEPS@
+Version: @PROJECT_VERSION@
+Libs: -L${libdir} -lmotion_planning_libraries-viz
+Cflags: -I${includedir}
+
