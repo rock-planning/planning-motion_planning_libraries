@@ -18,14 +18,13 @@ enum StateType {STATE_EMPTY, STATE_POSE, STATE_ARM};
  */
 struct State {
 
- private:
+ public:
     enum StateType mStateType;
     base::samples::RigidBodyState mPose;
     std::vector<double> mJointAngles;
     double mLength;
     double mWidth;
     
- public:
     State() {
         mPose.initUnknown();
         // Invalid position is used to check if this state contains a rbs.

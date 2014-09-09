@@ -114,7 +114,6 @@ bool OmplEnvSHERPA::fillPath(std::vector<struct State>& path) {
         const SherpaStateSpace::StateType* state = 
             (*it)->as<SherpaStateSpace::StateType>();
             
-        // Convert back to world coordinates.
         base::samples::RigidBodyState grid_pose;
         grid_pose.position[0] = state->getX();
         grid_pose.position[1] = state->getY();
@@ -122,6 +121,7 @@ bool OmplEnvSHERPA::fillPath(std::vector<struct State>& path) {
         grid_pose.orientation = Eigen::AngleAxis<double>(state->getYaw(), 
                 base::Vector3d(0,0,1));
         
+        // TODO Calc real footprint width and length
         path.push_back(State(grid_pose, state->getLength(), state->getWidth()));
         counter++;
     }

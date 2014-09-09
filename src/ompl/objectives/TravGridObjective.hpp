@@ -121,7 +121,8 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
     
     ompl::base::Cost motionCost(const ompl::base::State *s1, const ompl::base::State *s2) const {
         // Uses the base motionCost() to calculate the cost to traverse from s1 to s2 
-        // (mean costs of s1 and s2 and the distance (x,y,theta/2.0) between the states).
+        // (mean costs of s1 and s2 and the distance (x,y,theta/2.0) between the states,
+        // uses the above stateCost() implementation).
         ompl::base::Cost cost = ompl::base::StateCostIntegralObjective::motionCost(s1, s2);
         
          

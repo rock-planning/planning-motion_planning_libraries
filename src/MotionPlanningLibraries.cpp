@@ -303,8 +303,21 @@ bool MotionPlanningLibraries::plan(double max_time) {
     }
 }
 
-std::vector<struct State> MotionPlanningLibraries::getPath() {
+std::vector<struct State> MotionPlanningLibraries::getStates() {
     return mPlannedPath;
+}
+
+std::vector<struct State> MotionPlanningLibraries::getStatesInWorld() {
+    std::vector<struct State> states_world;
+    std::vector<State>::iterator it = mPlannedPath.begin();
+    struct State state_world;
+    for(;it != mPlannedPath.end(); it++) {
+        state_world = *it;
+        if (grid2world(mpTravGrid, it->getPose(), state_world.mPose)) {
+            states_world.push_back(state_world);
+        }
+    }
+    return states_world;
 }
 
 std::vector<base::Waypoint> MotionPlanningLibraries::getPathInWorld() {
@@ -316,10 +329,6 @@ std::vector<base::Waypoint> MotionPlanningLibraries::getPathInWorld() {
             base::Waypoint waypoint;
             waypoint.position = pose_in_world.position;
             waypoint.heading = pose_in_world.getYaw();
-            // use tolerance position to visualize the footprint just using the length.
-            waypoint.tol_position = mConfig.mRobotLengthMinMax.first + 
-                    fabs(mConfig.mRobotLengthMinMax.second - 
-                    mConfig.mRobotLengthMinMax.first) * it->getLength();
             path.push_back(waypoint);
         }
     }

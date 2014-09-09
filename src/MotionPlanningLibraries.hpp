@@ -85,7 +85,12 @@ class MotionPlanningLibraries
     /**
      * Returns the found states. Resulting poses are defined within the world frame.
      */
-    std::vector<struct State> getPath();
+    std::vector<struct State> getStates();
+    
+    /**
+     * Like getStates() but with world coordinates.
+     */
+    std::vector<struct State> getStatesInWorld();
     
     // POSE SPECIFIC METHODS.
     /** Returns the path stored in mPath as a list of waypoints. */
