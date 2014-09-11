@@ -88,6 +88,7 @@ void MotionPlanningLibrariesStateVisualization::drawState(osg::Group* group, mot
     geode->addDrawable(triangle_geometry);
     
     // Create footprint
+    /* Rectangle
     if(state.mWidth > 0 && state.mLength > 0) {
         osg::ref_ptr<osg::Geometry> fp_geometry = new osg::Geometry();
         osg::ref_ptr<osg::Vec3Array> fp_vertices = new osg::Vec3Array();
@@ -98,6 +99,27 @@ void MotionPlanningLibrariesStateVisualization::drawState(osg::Group* group, mot
         fp_vertices->push_back(osg::Vec3(-l_2, w_2, 0.0));
         fp_vertices->push_back(osg::Vec3(l_2, w_2, 0.0));
 
+        fp_geometry->setVertexArray(fp_vertices);
+        fp_geometry->setColorArray(colors);
+        fp_geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+        fp_geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,5));
+           
+        geode->addDrawable(fp_geometry);
+    }
+    */
+    if(state.getFootprintRadius() > 0) {
+        osg::ref_ptr<osg::Geometry> fp_geometry = new osg::Geometry();
+        osg::ref_ptr<osg::Vec3Array> fp_vertices = new osg::Vec3Array();
+        
+        int num_vertices = 32;
+        double rot = 2*M_PI/(double)num_vertices;
+        base::Vector3d vec(state.getFootprintRadius(), 0);
+        
+        for(int i=0; i<num_vertices; ++i) {
+            vec = Eigen::AngleAxisd(rot, Eigen::Vector3d::UnitZ()) * vec;
+            fp_vertices->push_back(osg::Vec3(vec[0], vec[1], 0.0));
+        }
+      
         fp_geometry->setVertexArray(fp_vertices);
         fp_geometry->setColorArray(colors);
         fp_geometry->setColorBinding(osg::Geometry::BIND_OVERALL);

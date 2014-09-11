@@ -42,17 +42,18 @@ int main(int argc, char** argv)
     calc.setTravGrid(trav, trav_data);
     
     // x,y,theta,width,length
-    calc.setFootprint(50, 50, 0, 10, 10);
+    calc.setFootprintRectangleInGrid(10, 10); // length, width
+    calc.setFootprintPoseInGrid(50, 50, 0); // x, y, theta
     calc.setValue(1); // obstacle
     
 
-    calc.setFootprint(50, 50, 0, 10, 10);
+    calc.setFootprintPoseInGrid(50, 50, 0);
     std::cout << "Footprint 1 " << (calc.isValid() ? "valid" : "not valid") << std::endl;
     
-    calc.setFootprint(55, 55, 0, 10, 10);
+    calc.setFootprintPoseInGrid(55, 55, 0);
     std::cout << "Footprint 2 " << (calc.isValid() ? "valid" : "not valid") << std::endl;
     
-    calc.setFootprint(60, 60, 0, 10, 10);
+    calc.setFootprintPoseInGrid(60, 60, 0);
     std::cout << "Footprint 3 " << (calc.isValid() ? "valid" : "not valid") << std::endl;
     
     // SBPL

@@ -4,14 +4,20 @@
 #include <ompl/base/StateSpace.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/base/spaces/SO2StateSpace.h>
+#include <ompl/base/spaces/DiscreteStateSpace.h>
+
+#include <motion_planning_libraries/Config.hpp>
 
 namespace motion_planning_libraries {
 
 class SherpaStateSpace : public ompl::base::CompoundStateSpace
 {
+protected: 
+    Config mConfig;
+    
 public:
 
-    /** \brief A state in SherpaStateSpace: (x, y, yaw, length, width) */
+    /** \brief A state in SherpaStateSpace: (x, y, yaw, footprint_radius) */
     class StateType : public ompl::base::CompoundStateSpace::StateType
     {
     public:
@@ -39,14 +45,9 @@ public:
             return as<ompl::base::SO2StateSpace::StateType>(1)->value;
         }
         
-        double getLength(void) const
+        unsigned int getFootprintClass(void) const
         {
-            return as<ompl::base::RealVectorStateSpace::StateType>(2)->values[0];
-        }
-        
-        double getWidth(void) const
-        {
-            return as<ompl::base::RealVectorStateSpace::StateType>(2)->values[1];
+            return as<ompl::base::DiscreteStateSpace::StateType>(2)->value;
         }
 
         /** \brief Set the X component of the state */
@@ -75,40 +76,26 @@ public:
         {
             as<ompl::base::SO2StateSpace::StateType>(1)->value = yaw;
         }
-        
-        void setLength(double length)
-        {
-            as<ompl::base::RealVectorStateSpace::StateType>(2)->values[0] = length;
-        }
-        
-        void setWidth(double width)
-        {
-            as<ompl::base::RealVectorStateSpace::StateType>(2)->values[1] = width;
-        }
 
-        void setFootprint(double width, double length)
+        void setFootprintClass(unsigned int footprint_class)
         {
-            setWidth(width);
-            setLength(length);
+            as<ompl::base::DiscreteStateSpace::StateType>(2)->value = footprint_class;
         }
     };
 
     /**
-     * TODO Set longest valid freaction?
+     * TODO Set longest valid fraction?
      */
-    SherpaStateSpace(void) : ompl::base::CompoundStateSpace()
+    SherpaStateSpace(Config config = Config()) : ompl::base::CompoundStateSpace(),
+            mConfig(config)
     {
         setName("Sherpa" + getName());
         type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 1;
         addSubspace(ompl::base::StateSpacePtr(new ompl::base::RealVectorStateSpace(2)), 1.0);
         addSubspace(ompl::base::StateSpacePtr(new ompl::base::SO2StateSpace()), 0.5);
-        // Width and length, which should not be regarded in the distance calculation.
-        addSubspace(ompl::base::StateSpacePtr(new ompl::base::RealVectorStateSpace(2)), 0.0);
-        // 0 means min length/width, 1.0 max.
-        ompl::base::RealVectorBounds bound(2);
-        bound.setLow (0.0);
-        bound.setHigh(1.0);
-        as<ompl::base::RealVectorStateSpace>(2)->setBounds(bound);
+        // Width and length, which should not be regarded in the distance calculation (?).
+        addSubspace(ompl::base::StateSpacePtr(new ompl::base::DiscreteStateSpace(
+                0, config.mNumFootprintClasses)), 0.0);
         lock();
     }
 

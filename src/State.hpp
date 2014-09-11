@@ -19,36 +19,36 @@ enum StateType {STATE_EMPTY, STATE_POSE, STATE_ARM};
 struct State {
 
  public:
+    // Has to be public to be used in ROCK, should not be modified directly.
     enum StateType mStateType;
     base::samples::RigidBodyState mPose;
     std::vector<double> mJointAngles;
-    double mLength;
-    double mWidth;
+    // Currently used to represent width and length.
+    double mFootprintRadius;
     
     State() {
         mPose.initUnknown();
         // Invalid position is used to check if this state contains a rbs.
         mPose.invalidatePosition();
         mStateType = STATE_EMPTY;
-        mLength = 0.0;
-        mWidth = 0.0;
+        mFootprintRadius = 0.0;
     }
 
     State(base::samples::RigidBodyState rbs) : mPose(rbs) {
         mStateType = STATE_POSE;
-        mLength = 0.0;
-        mWidth = 0.0;
+        mFootprintRadius = 0.0;
     }
     
-    State(base::samples::RigidBodyState rbs, double length, double width) : 
-            mPose(rbs), mLength(length), mWidth(width) {
+    State(base::samples::RigidBodyState rbs, double footprint_radius) : 
+            mPose(rbs), mFootprintRadius(footprint_radius) {
         mStateType = STATE_POSE;
     }
     
     State(std::vector<double> joint_angles) : mJointAngles(joint_angles) {
         mPose.initUnknown();
         // Invalid position is used to check if this state contains a rbs.
-        mPose.invalidatePosition();        
+        mPose.invalidatePosition();
+        mFootprintRadius = 0.0;
         mStateType = STATE_ARM;
     }
     
@@ -68,12 +68,16 @@ struct State {
         return mJointAngles.size();
     }
     
-    double getLength() {
-        return mLength;
+    double getFootprintRadius() {
+        return mFootprintRadius;
     }
-
-    double getWidth() {
-        return mWidth;
+    
+    unsigned int getFootprintClass(double fp_radius_min, double fp_radius_max, 
+            unsigned int num_fp_classes) {
+        assert (fp_radius_min <= fp_radius_max);
+        assert (num_fp_classes > 0);
+        return ((mFootprintRadius - fp_radius_min) / (fp_radius_max - fp_radius_min)) *  
+                (num_fp_classes - 1) + 0.5; 
     }
     
     void setPose(base::samples::RigidBodyState pose) {
@@ -86,9 +90,16 @@ struct State {
         mStateType = STATE_ARM;
     }
     
-    void setFootprint(double length, double width) {
-        mLength = length;
-        mWidth = width;
+    void setFootprintRadius(double radius) {
+        mFootprintRadius = radius;
+    }
+    
+    void setFootprintClass(double fp_radius_min, double fp_radius_max, 
+            unsigned int num_fp_classes, unsigned int fp_class) {
+        assert (fp_radius_min <= fp_radius_max);
+        assert (num_fp_classes > 0);
+        mFootprintRadius = fp_radius_min + (fp_radius_max - fp_radius_min) * 
+                fp_class / (num_fp_classes - 1);
     }
      
     // Returns a string of the contained data.
@@ -100,12 +111,11 @@ struct State {
                 break;
             }   
             case STATE_POSE: {
-                ss << "x y z theta length width: " << mPose.position[0] << " " << 
+                ss << "x y z theta footprint-radius: " << mPose.position[0] << " " << 
                         mPose.position[1] << " " << 
                         mPose.position[2] << " " << 
                         mPose.getYaw() << " " << 
-                        mLength << " " <<
-                        mWidth;
+                        mFootprintRadius;
                 break;
             }  
             case STATE_ARM: {

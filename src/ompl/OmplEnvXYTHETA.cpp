@@ -16,7 +16,8 @@ double OmplEnvXYTHETA::mCarLength = 2.0;
     
 // PUBLIC
 OmplEnvXYTHETA::OmplEnvXYTHETA(Config config) : Ompl(config) {
-    mCarLength = std::max(mConfig.mRobotLengthMinMax.first, mConfig.mRobotLengthMinMax.second);
+    mCarLength = std::max(mConfig.mFootprintRadiusMinMax.first, 
+            mConfig.mFootprintRadiusMinMax.second);
 }
  
 bool OmplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,

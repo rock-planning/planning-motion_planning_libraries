@@ -33,8 +33,10 @@ struct Config {
             mSearchUntilFirstSolution(false),
             mReplanDuringEachUpdate(false),
             mReplanOnNewStartPose(false),
-            mRobotWidthMinMax(0.5,0.5), 
-            mRobotLengthMinMax(0.5,0.5), 
+            mFootprintRadiusMinMax(0.5,0.5),  
+            mNumFootprintClasses(10),
+            mTimeToAdaptFootprint(40.0),
+            mAdaptFootprintPenalty(20.0),
             mRobotForwardVelocity(0.4), 
             mRobotBackwardVelocity(0.4),
             mRobotRotationalVelocity(1.0),
@@ -56,8 +58,14 @@ struct Config {
     bool mReplanOnNewStartPose;
     
     // NAVIGATION
-    std::pair<double,double> mRobotWidthMinMax; // along the y-axis, sideward, meter, min and max width
-    std::pair<double,double> mRobotLengthMinMax; // along the x-axis, forward, meter, min and max length
+    std::pair<double,double> mFootprintRadiusMinMax; // Minimal / maximal footprint radius.
+    // Defines number of different footprint radii from min to max, used to discretize the search space.
+    unsigned int mNumFootprintClasses;
+    // Time in seconds to change the footprint from min to max.
+    double mTimeToAdaptFootprint;
+    // If the footprint is changed this time (sec) will be added to the costs.
+    double mAdaptFootprintPenalty;
+    
     double mRobotForwardVelocity; // m/sec.
     double mRobotBackwardVelocity; // m/sec. positive value
     double mRobotRotationalVelocity; // rad/sec. positive value 

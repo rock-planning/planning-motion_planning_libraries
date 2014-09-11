@@ -22,7 +22,7 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
 
  public:   
      static const unsigned char OMPL_MAX_COST = 100;
-     static const double TIME_TO_ADAPT_FOOTPRINT = 40; // Time to move from min to max
+     static const double TIME_TO_ADAPT_FOOTPRINT = 40; // Time to move from min to max in sec.
      static const double PENALTY_TO_ADAPT_FOOTPRINT = 20;
     
  private:
@@ -34,6 +34,7 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
     /**
      * \param enable_motion_cost_interpolation Defines if only start and end state
      * are used for cost calculations or smaller intermediate steps. By default false.
+     * TODO Currently only the cost of the center of the robot is used.
      */
     TravGridObjective(const ompl::base::SpaceInformationPtr& si, 
                         bool enable_motion_cost_interpolation,
@@ -129,29 +130,24 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
         switch(mConfig.mEnvType) {
             
             case ENV_SHERPA: {
-                // Add high additional costs if the length and width of the system have been changed.
-                
-                double footprint_cost = 0;
-                
+                // Add high additional costs if the footprint of the system have been changed.
                 const SherpaStateSpace::StateType* st_s1 = s1->as<SherpaStateSpace::StateType>();
                 const SherpaStateSpace::StateType* st_s2 = s2->as<SherpaStateSpace::StateType>();
                 
-                int length_s1 = (int)(st_s1->getLength() * 10.0);
-                int width_s1  = (int)(st_s1->getWidth() * 10.0);
-                
-                int length_s2 = (int)(st_s2->getLength() * 10.0);
-                int width_s2  = (int)(st_s2->getWidth() * 10.0);
-                
-                int sum_changes = abs(length_s1 - length_s2) + abs(width_s1 - width_s2);
-                if(sum_changes > 0) {
-                    footprint_cost = sum_changes * TIME_TO_ADAPT_FOOTPRINT + PENALTY_TO_ADAPT_FOOTPRINT;
+                double footprint_cost = (abs(st_s1->getFootprintClass() - st_s2->getFootprintClass()) / 
+                        (double)mConfig.mNumFootprintClasses) * 
+                        mConfig.mTimeToAdaptFootprint;
+                if(footprint_cost > 0) {
+                    footprint_cost += mConfig.mAdaptFootprintPenalty;
+                    
+                    std::cout << "Moving from state (" << st_s1->getX() << "," << st_s1->getY() << ") fp class " << st_s1->getFootprintClass() << 
+                            " to (" << st_s2->getX() << "," << st_s2->getY() << ") fp class " << st_s2->getFootprintClass() << 
+                            " changes the footprint, increases cost from " << cost.v << " to " << cost.v + footprint_cost << std::endl;
                 }
-                                           
-                //double footprint_cost = fabs(st_s1->getLength() - st_s2->getLength()) * TIME_TO_ADAPT_FOOTPRINT +
-                //        fabs(st_s1->getWidth() - st_s2->getWidth()) * TIME_TO_ADAPT_FOOTPRINT;
-                //std::cout << "(" << st_s1->getX() << ", " << st_s1->getY() << ", " << st_s1->getYaw() << ") Width: " << st_s1->getWidth() << " to (" << 
-                //        st_s2->getX() << ", " << st_s2->getY() << ", " << st_s2->getYaw() << ") Width: " << st_s2->getWidth() << ". Movement cost " << cost.v << " Footprint cost " << footprint_cost << std::endl;
+                
+                
                 cost.v += footprint_cost;
+
                 break;
             }
             default: {

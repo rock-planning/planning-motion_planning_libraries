@@ -2,6 +2,7 @@
 #define _PLANNING_HELPERS_HPP_
 
 #include <boost/shared_ptr.hpp>
+//#include <CGAL/Point_2.h>
 
 #include <envire/maps/TraversabilityGrid.hpp>
 
@@ -13,23 +14,18 @@ typedef envire::TraversabilityGrid::ArrayType TravData;
 class GridCalculations {
  
  private:
-    Eigen::Affine3d mFootprint2Grid;
-    double mFootprintLengthGrid;
-    double mFootprintWidthGrid;
-    double mFootprintLengthGrid2;
-    double mFootprintWidthGrid2;
     envire::TraversabilityGrid* mpTravGrid;
     boost::shared_ptr<TravData> mpTravData;
+    Eigen::Affine3d mFootprint2Grid;
+    // Contains all coordinates within the local frame.
+    std::vector< base::Vector3d > mFootprintLocal;
     
  public:    
  
-    GridCalculations() : mFootprint2Grid(),
-            mFootprintLengthGrid(0),
-            mFootprintWidthGrid(0),
-            mFootprintLengthGrid2(0),
-            mFootprintWidthGrid2(0),
-            mpTravGrid(NULL),
-            mpTravData() {
+    GridCalculations() : mpTravGrid(NULL),
+            mpTravData(),
+            mFootprint2Grid(),
+            mFootprintLocal() {
     }
  
     void setTravGrid(envire::TraversabilityGrid* trav_grid, boost::shared_ptr<TravData> trav_data) {
@@ -37,18 +33,45 @@ class GridCalculations {
         mpTravData = trav_data;
     }
     
-    void setFootprint(double footprint_x_grid, 
-            double footprint_y_grid, 
-            double footprint_theta_grid, 
-            double footprint_length_grid, 
-            double footprint_width_grid) {
-        mFootprintLengthGrid = footprint_length_grid;
-        mFootprintWidthGrid = footprint_width_grid;
-        mFootprintLengthGrid2 = footprint_length_grid / 2.0;
-        mFootprintWidthGrid2 = footprint_width_grid / 2.0;
+    void setFootprintRectangleInGrid(int rectangle_lenth_x, int rectangle_width_y) {
+        if(mpTravGrid == NULL) {
+            throw std::runtime_error("Trav Grid not set");
+        }
+        
+        mFootprintLocal.clear();
+        for(int y=-rectangle_width_y/2.0; y < std::ceil(rectangle_width_y/2.0); ++y) {
+            for(int x=-rectangle_lenth_x/2.0; x < std::ceil(rectangle_lenth_x/2.0); ++x) {
+                mFootprintLocal.push_back(base::Vector3d(x,y,0));
+            }
+        }
+    }
+    
+    void setFootprintCircleInGrid(int radius_grid) {
+        if(mpTravGrid == NULL) {
+            throw std::runtime_error("Trav Grid not set");
+        }
+        
+        mFootprintLocal.clear();
+        base::Vector3d vec;
+        int squared_radius = radius_grid * radius_grid;
+        for(int y=-radius_grid/2.0; y < std::ceil(radius_grid/2.0) ; ++y) {
+            for(int x=-radius_grid/2.0; x < std::ceil(radius_grid/2.0); ++x) {
+                vec[0] = x;
+                vec[1] = y;
+                vec[2] = 0.0;
+                if(vec.squaredNorm() <= squared_radius) {
+                    mFootprintLocal.push_back(base::Vector3d(x,y,0));
+                }
+            }
+        }
+    }
+    
+    void setFootprintPoseInGrid(int footprint_x_grid, 
+            int footprint_y_grid, 
+            int footprint_theta_grid) {
         mFootprint2Grid.setIdentity();
         mFootprint2Grid.rotate(Eigen::AngleAxis<double>(footprint_theta_grid, base::Vector3d(0.0, 0.0, 1.0)));
-        mFootprint2Grid.translation() = base::Vector3d(footprint_x_grid, footprint_y_grid, 0.0);    
+        mFootprint2Grid.translation() = base::Vector3d(footprint_x_grid, footprint_y_grid, 0.0);   
     }
     
     /**
@@ -60,39 +83,44 @@ class GridCalculations {
         if(mpTravGrid == NULL) {
             throw std::runtime_error("Trav Grid not set");
         }
-    
+        
+        if(mFootprintLocal.empty()) {
+            throw std::runtime_error("No footprint has been set.");
+        }
+        
         int fp_x = 0;
         int fp_y = 0;
         base::Vector3d result;
-        int class_value = 0.0;
-        double driveability = 0.0;
+        uint8_t class_value = 0;
+        double driveability = 0;
         
-        for(double x = 0; x < mFootprintLengthGrid; ++x) {
-            for(double y = 0; y < mFootprintWidthGrid; ++y) {
-                result = mFootprint2Grid * base::Vector3d(x-mFootprintLengthGrid2, y-mFootprintWidthGrid2, 0.0);
-                fp_x = result[0];
-                fp_y = result[1];
-                
-                // Check borders.
-                if(     fp_x < 0 || fp_x >= (int)mpTravGrid->getCellSizeX() ||
-                        fp_y < 0 || fp_y >= (int)mpTravGrid->getCellSizeY()) {
-                    base::Vector3d vec = mFootprint2Grid.translation();
-                    LOG_DEBUG("State (%d,%d) is invalid (footprint (%4.2f,%4.2f) not within the grid)", 
-                            vec[0], vec[1], fp_x, fp_y);
-                    return false;
-                } 
-                
-                // Check obstacle.
-                class_value = (*mpTravData)[fp_y][fp_x];
-                driveability = (mpTravGrid->getTraversabilityClass(class_value)).getDrivability();
+        std::vector<base::Vector3d>::iterator it = mFootprintLocal.begin(); 
+        for(;it != mFootprintLocal.end(); ++it) {
             
-                if(driveability == 0.0) {
-                    base::Vector3d vec = mFootprint2Grid.translation();
-                    LOG_DEBUG("State (%d,%d) is invalid (footprint (%4.2f,%4.2f) lies on an obstacle)", 
-                            vec[0], vec[1], fp_x, fp_y);
-                    return false;
-                }  
-            }
+            // Transform to grid frame.
+            result = mFootprint2Grid * *it;
+            fp_x = result[0];
+            fp_y = result[1];
+             
+            // Check borders.
+            if(     fp_x < 0 || fp_x >= (int)mpTravGrid->getCellSizeX() ||
+                    fp_y < 0 || fp_y >= (int)mpTravGrid->getCellSizeY()) {
+                base::Vector3d vec = mFootprint2Grid.translation();
+                LOG_DEBUG("State (%d,%d) is invalid (footprint (%4.2f,%4.2f) not within the grid)", 
+                        vec[0], vec[1], fp_x, fp_y);
+                return false;
+            } 
+            
+            // Check obstacle.
+            class_value = (*mpTravData)[fp_y][fp_x];
+            driveability = (mpTravGrid->getTraversabilityClass(class_value)).getDrivability();
+        
+            if(driveability == 0.0) {
+                base::Vector3d vec = mFootprint2Grid.translation();
+                LOG_DEBUG("State (%d,%d) is invalid (footprint (%4.2f,%4.2f) lies on an obstacle)", 
+                        vec[0], vec[1], fp_x, fp_y);
+                return false;
+            }  
         }
         return true;
     }
@@ -106,26 +134,31 @@ class GridCalculations {
         if(mpTravGrid == NULL) {
             throw std::runtime_error("Trav Grid not set");
         }
+        
+        if(mFootprintLocal.empty()) {
+            throw std::runtime_error("No footprint has been set.");
+        }
             
         int fp_x = 0;
         int fp_y = 0;
         base::Vector3d result;
-    
-        for(double x = 0; x < mFootprintLengthGrid; x+=0.5) {
-            for(double y = 0; y < mFootprintWidthGrid; y+=0.5) {
-                result = mFootprint2Grid * base::Vector3d(x-mFootprintLengthGrid2, y-mFootprintWidthGrid2, 0.0);
-                fp_x = result[0];
-                fp_y = result[1];
-                
-                // Check borders.
-                if(     fp_x < 0 || fp_x >= (int)mpTravGrid->getCellSizeX() ||
-                        fp_y < 0 || fp_y >= (int)mpTravGrid->getCellSizeY()) {
-                    continue;
-                } 
-                
-                (*mpTravData)[fp_y][fp_x] = cost_class;
-                mpTravGrid->setProbability(1.0, fp_x, fp_y);
-            }
+
+        std::vector<base::Vector3d>::iterator it = mFootprintLocal.begin(); 
+        for(;it != mFootprintLocal.end(); ++it) {
+            
+            // Transform to grid frame.
+            result = mFootprint2Grid * *it;
+            fp_x = result[0];
+            fp_y = result[1];
+            
+            // Check borders.
+            if(     fp_x < 0 || fp_x >= (int)mpTravGrid->getCellSizeX() ||
+                    fp_y < 0 || fp_y >= (int)mpTravGrid->getCellSizeY()) {
+                continue;
+            }     
+            
+            (*mpTravData)[fp_y][fp_x] = cost_class;
+            mpTravGrid->setProbability(1.0, fp_x, fp_y);
         }
     }
 };

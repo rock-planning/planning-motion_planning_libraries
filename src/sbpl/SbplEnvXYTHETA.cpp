@@ -75,12 +75,11 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             // SBPL: time in sec for a 45° turn
             double time_to_turn_45_degree = fabs((M_PI / 4.0) / mConfig.mRobotRotationalVelocity);
            
-            double robot_width = std::max(mConfig.mRobotWidthMinMax.first, mConfig.mRobotWidthMinMax.second);
-            double robot_length = std::max(mConfig.mRobotLengthMinMax.first, mConfig.mRobotLengthMinMax.second);
+            double robot_width = std::max(mConfig.mFootprintRadiusMinMax.first, mConfig.mFootprintRadiusMinMax.second);
+            double robot_length = robot_width;
             
-            if(mConfig.mRobotWidthMinMax.first != mConfig.mRobotWidthMinMax.second ||
-                    mConfig.mRobotLengthMinMax.first != mConfig.mRobotLengthMinMax.second) {
-                LOG_WARN("SBPL does not support variable footprints, max width and length will be used");
+            if(mConfig.mFootprintRadiusMinMax.first != mConfig.mFootprintRadiusMinMax.second) {
+                LOG_WARN("SBPL does not support variable footprints, max radius will be used");
             }
             
             env_xytheta->InitializeEnv(grid_width, grid_height, 

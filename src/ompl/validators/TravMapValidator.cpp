@@ -5,6 +5,7 @@
 #include <base/Logging.hpp>
 
 #include <motion_planning_libraries/ompl/spaces/SherpaStateSpace.hpp>
+#include <motion_planning_libraries/State.hpp>
 
 namespace motion_planning_libraries
 {
@@ -83,12 +84,14 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
             double y_grid = state_se2->as<ompl::base::RealVectorStateSpace::StateType>(0)->values[1];
             double yaw_grid = state_se2->as<ompl::base::SO2StateSpace::StateType>(1)->value;
             
-            mGridCalc.setFootprint(x_grid, y_grid, yaw_grid, 
-                    ceil(std::max(mConfig.mRobotLengthMinMax.first, mConfig.mRobotLengthMinMax.second) / 
-                            (double)mpTravGrid->getScaleX()), 
-                    ceil(std::max(mConfig.mRobotWidthMinMax.first, mConfig.mRobotWidthMinMax.second) / 
-                            (double)mpTravGrid->getScaleY()));
-                    
+            double max_fp = std::max(mConfig.mFootprintRadiusMinMax.first, mConfig.mFootprintRadiusMinMax.second);
+            // We use the smaller scale value to check a larger area (actually they should be the same).
+            double min_scale = std::min(mpTravGrid->getScaleX(), mpTravGrid->getScaleY());              
+            
+            mGridCalc.setFootprintCircleInGrid(0);
+            mGridCalc.setFootprintCircleInGrid((int)std::ceil(max_fp / min_scale));
+            mGridCalc.setFootprintPoseInGrid(x_grid, y_grid, yaw_grid);
+                   
             return mGridCalc.isValid();
         }
         case ENV_SHERPA: {
@@ -98,20 +101,20 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
             double x_grid = state_sherpa->as<ompl::base::RealVectorStateSpace::StateType>(0)->values[0];
             double y_grid = state_sherpa->as<ompl::base::RealVectorStateSpace::StateType>(0)->values[1];
             double yaw_grid = state_sherpa->as<ompl::base::SO2StateSpace::StateType>(1)->value;
-            double length_factor = state_sherpa->as<ompl::base::RealVectorStateSpace::StateType>(2)->values[0];
-            double width_factor = state_sherpa->as<ompl::base::RealVectorStateSpace::StateType>(2)->values[1];            
+            int fp_class = state_sherpa->getFootprintClass();            
             
-            // Calculate the current width/length.
-            double length = mConfig.mRobotLengthMinMax.first + 
-                    fabs(mConfig.mRobotLengthMinMax.second - mConfig.mRobotLengthMinMax.first) * length_factor;
-            double width = mConfig.mRobotWidthMinMax.first + 
-                    fabs(mConfig.mRobotWidthMinMax.second - mConfig.mRobotWidthMinMax.first) * width_factor;
+            // Use method in State to calculate the radius.
+            State state;
+            state.setFootprintClass(mConfig.mFootprintRadiusMinMax.first,
+                mConfig.mFootprintRadiusMinMax.second,
+                mConfig.mNumFootprintClasses,
+                fp_class);
+            // Used to calculate the number of grids.
+            double min_scale = std::min(mpTravGrid->getScaleX(), mpTravGrid->getScaleY());
             
-            mGridCalc.setFootprint(x_grid, y_grid, yaw_grid, length, width);
-                    
+            mGridCalc.setFootprintCircleInGrid(std::ceil(state.getFootprintRadius()/min_scale));
+            mGridCalc.setFootprintPoseInGrid(x_grid, y_grid, yaw_grid);
             return mGridCalc.isValid();
-            
-            break;
         }
         default: {
             throw std::runtime_error("TravMapValidator received an unknown environment");

@@ -24,13 +24,13 @@ bool OmplEnvSHERPA::initialize(envire::TraversabilityGrid* trav_grid,
 
     LOG_INFO("Create OMPL SHERPA environment");
     
-    SherpaStateSpace* sherpa_state_space = new SherpaStateSpace();
+    SherpaStateSpace* sherpa_state_space = new SherpaStateSpace(mConfig);
     ob::RealVectorBounds bounds(2);
     bounds.setLow (0, 0);
     bounds.setHigh(0, trav_grid->getCellSizeX());
     bounds.setLow (1, 0);
     bounds.setHigh(1, trav_grid->getCellSizeY());
-    sherpa_state_space->setBounds(bounds);
+    sherpa_state_space->setBounds(bounds); // Sets bounds for the position.
     mpStateSpace = ob::StateSpacePtr(sherpa_state_space);
     
     //mpStateSpace->setLongestValidSegmentFraction(1/100.0);
@@ -75,13 +75,14 @@ bool OmplEnvSHERPA::setStartGoal(struct State start_state, struct State goal_sta
     double start_x = start_state.getPose().position[0];
     double start_y = start_state.getPose().position[1];
     double start_yaw = start_state.getPose().getYaw();
-    double start_length = start_state.getLength();
-    double start_width = start_state.getLength();
+    unsigned int start_fp_class = start_state.getFootprintClass(mConfig.mFootprintRadiusMinMax.first, 
+            mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses);
+
     double goal_x = goal_state.getPose().position[0];
     double goal_y = goal_state.getPose().position[1];
     double goal_yaw = start_state.getPose().getYaw();
-    double goal_length = goal_state.getLength();
-    double goal_width = goal_state.getLength();
+    unsigned int goal_fp_class = goal_state.getFootprintClass(mConfig.mFootprintRadiusMinMax.first, 
+            mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses);
     
     ob::ScopedState<> start_ompl(mpStateSpace);
     ob::ScopedState<> goal_ompl(mpStateSpace);
@@ -89,14 +90,12 @@ bool OmplEnvSHERPA::setStartGoal(struct State start_state, struct State goal_sta
     start_ompl->as<SherpaStateSpace::StateType>()->setX(start_x);
     start_ompl->as<SherpaStateSpace::StateType>()->setY(start_y);
     start_ompl->as<SherpaStateSpace::StateType>()->setYaw(start_yaw);
-    start_ompl->as<SherpaStateSpace::StateType>()->setLength(start_length);
-    start_ompl->as<SherpaStateSpace::StateType>()->setWidth(start_width);
+    start_ompl->as<SherpaStateSpace::StateType>()->setFootprintClass(start_fp_class);
     
     goal_ompl->as<SherpaStateSpace::StateType>()->setX(goal_x);
     goal_ompl->as<SherpaStateSpace::StateType>()->setY(goal_y);
     goal_ompl->as<SherpaStateSpace::StateType>()->setYaw(goal_yaw);
-    goal_ompl->as<SherpaStateSpace::StateType>()->setLength(goal_length);
-    goal_ompl->as<SherpaStateSpace::StateType>()->setWidth(goal_width);
+    goal_ompl->as<SherpaStateSpace::StateType>()->setFootprintClass(goal_fp_class);
             
     mpProblemDefinition->setStartAndGoalStates(start_ompl, goal_ompl);
      
@@ -111,18 +110,22 @@ bool OmplEnvSHERPA::fillPath(std::vector<struct State>& path) {
 
     int counter = 0;
     for(;it != path_states.end(); ++it) { 
-        const SherpaStateSpace::StateType* state = 
+        const SherpaStateSpace::StateType* state_ompl = 
             (*it)->as<SherpaStateSpace::StateType>();
             
         base::samples::RigidBodyState grid_pose;
-        grid_pose.position[0] = state->getX();
-        grid_pose.position[1] = state->getY();
+        grid_pose.position[0] = state_ompl->getX();
+        grid_pose.position[1] = state_ompl->getY();
         grid_pose.position[2] = 0;
-        grid_pose.orientation = Eigen::AngleAxis<double>(state->getYaw(), 
+        grid_pose.orientation = Eigen::AngleAxis<double>(state_ompl->getYaw(), 
                 base::Vector3d(0,0,1));
         
-        // TODO Calc real footprint width and length
-        path.push_back(State(grid_pose, state->getLength(), state->getWidth()));
+        State state(grid_pose);
+        // Calculates from the footprint class the footprint radius.
+        state.setFootprintClass(mConfig.mFootprintRadiusMinMax.first, 
+                mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses, 
+                state_ompl->getFootprintClass());
+        path.push_back(state);
         counter++;
     }
     LOG_INFO("Trajectory contains %d states", counter); 

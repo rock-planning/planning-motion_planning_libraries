@@ -121,7 +121,7 @@ bool MotionPlanningLibraries::setStartState(struct State start_state) {
             }
             
             mStartState = start_state; 
-            mStartStateGrid = State(start_grid_new, start_state.getLength(), start_state.getWidth()); 
+            mStartStateGrid = State(start_grid_new, start_state.getFootprintRadius()); 
             
             break;
         }
@@ -174,7 +174,7 @@ bool MotionPlanningLibraries::setGoalState(struct State goal_state) {
             }
             
             mGoalState = goal_state; 
-            mGoalStateGrid = State(goal_grid_new, goal_state.getLength(), goal_state.getWidth()); 
+            mGoalStateGrid = State(goal_grid_new, goal_state.getFootprintRadius()); 
             break;
         }
         case STATE_ARM: {
@@ -375,11 +375,11 @@ void MotionPlanningLibraries::printPathInWorld() {
     switch(mConfig.mEnvType) {
         case ENV_SHERPA: {
             printf("%s %s %s %s %s %s %s\n", "       #", "       X", "       Y",
-                    "       Z", "   THETA", "  LENGTH", "   WIDTH");
+                    "       Z", "   THETA", "  RADIUS");
             for(; it != waypoints.end(); it++, counter++, it_state++) {
-                printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f\n", counter, 
+                printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2f\n", counter, 
                         it->position[0], it->position[1], it->position[2], 
-                        it->heading, it_state->getLength(), it_state->getLength());
+                        it->heading, it_state->getFootprintRadius());
             }
             break;
         } 
