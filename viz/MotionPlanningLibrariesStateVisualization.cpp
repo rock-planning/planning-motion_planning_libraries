@@ -113,9 +113,9 @@ void MotionPlanningLibrariesStateVisualization::drawState(osg::Group* group, mot
         
         int num_vertices = 32;
         double rot = 2*M_PI/(double)num_vertices;
-        base::Vector3d vec(state.getFootprintRadius(), 0);
+        base::Vector3d vec(state.getFootprintRadius(), 0.0, 0.0);
         
-        for(int i=0; i<num_vertices; ++i) {
+        for(int i=0; i<num_vertices+1; ++i) {
             vec = Eigen::AngleAxisd(rot, Eigen::Vector3d::UnitZ()) * vec;
             fp_vertices->push_back(osg::Vec3(vec[0], vec[1], 0.0));
         }
@@ -123,7 +123,7 @@ void MotionPlanningLibrariesStateVisualization::drawState(osg::Group* group, mot
         fp_geometry->setVertexArray(fp_vertices);
         fp_geometry->setColorArray(colors);
         fp_geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
-        fp_geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,5));
+        fp_geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,num_vertices+1));
            
         geode->addDrawable(fp_geometry);
     }

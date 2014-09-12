@@ -374,7 +374,7 @@ void MotionPlanningLibraries::printPathInWorld() {
 
     switch(mConfig.mEnvType) {
         case ENV_SHERPA: {
-            printf("%s %s %s %s %s %s %s\n", "       #", "       X", "       Y",
+            printf("%s %s %s %s %s %s\n", "       #", "       X", "       Y",
                     "       Z", "   THETA", "  RADIUS");
             for(; it != waypoints.end(); it++, counter++, it_state++) {
                 printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2f\n", counter, 

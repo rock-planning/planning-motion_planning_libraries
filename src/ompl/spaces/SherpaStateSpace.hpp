@@ -95,7 +95,7 @@ public:
         addSubspace(ompl::base::StateSpacePtr(new ompl::base::SO2StateSpace()), 0.5);
         // Width and length, which should not be regarded in the distance calculation (?).
         addSubspace(ompl::base::StateSpacePtr(new ompl::base::DiscreteStateSpace(
-                0, config.mNumFootprintClasses)), 0.0);
+                0, config.mNumFootprintClasses-1)), 0.0);
         lock();
     }
 

@@ -40,6 +40,9 @@ class OmplEnvSHERPA : public Ompl
      */ 
     ompl::base::OptimizationObjectivePtr getBalancedObjective(
         const ompl::base::SpaceInformationPtr& si);
+    
+    static ompl::base::ValidStateSamplerPtr allocOBValidStateSampler(
+        const ompl::base::SpaceInformation *si);
 };
 
 } // end namespace motion_planning_libraries

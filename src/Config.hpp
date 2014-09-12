@@ -33,6 +33,7 @@ struct Config {
             mSearchUntilFirstSolution(false),
             mReplanDuringEachUpdate(false),
             mReplanOnNewStartPose(false),
+            mMaxAllowedSampleDist(-1),
             mFootprintRadiusMinMax(0.5,0.5),  
             mNumFootprintClasses(10),
             mTimeToAdaptFootprint(40.0),
@@ -56,6 +57,10 @@ struct Config {
     // the solution.
     bool mReplanDuringEachUpdate;
     bool mReplanOnNewStartPose;
+    // If mSearchUntilFirstSolution is set to false this parameter can be used to 
+    // define the maximal allowed distance between two samples.
+    // If it is set to a negative value or nan ot will be ignored.
+    double mMaxAllowedSampleDist;
     
     // NAVIGATION
     std::pair<double,double> mFootprintRadiusMinMax; // Minimal / maximal footprint radius.

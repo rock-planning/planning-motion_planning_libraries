@@ -54,8 +54,8 @@ class GridCalculations {
         mFootprintLocal.clear();
         base::Vector3d vec;
         int squared_radius = radius_grid * radius_grid;
-        for(int y=-radius_grid/2.0; y < std::ceil(radius_grid/2.0) ; ++y) {
-            for(int x=-radius_grid/2.0; x < std::ceil(radius_grid/2.0); ++x) {
+        for(int y=-radius_grid; y < std::ceil(radius_grid) ; ++y) {
+            for(int x=-radius_grid; x < std::ceil(radius_grid); ++x) {
                 vec[0] = x;
                 vec[1] = y;
                 vec[2] = 0.0;

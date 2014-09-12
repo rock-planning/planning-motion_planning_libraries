@@ -4,6 +4,7 @@
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
+#include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
 
 #include <motion_planning_libraries/ompl/validators/TravMapValidator.hpp>
 #include <motion_planning_libraries/ompl/objectives/TravGridObjective.hpp>
@@ -43,6 +44,7 @@ bool OmplEnvSHERPA::initialize(envire::TraversabilityGrid* trav_grid,
     mpSpaceInformation->setStateValidityChecker(mpTravMapValidator);
     // 1/mpStateSpace->getMaximumExtent() (max dist between two states) -> resolution of one meter.
     mpSpaceInformation->setStateValidityCheckingResolution (1/mpStateSpace->getMaximumExtent());
+    mpSpaceInformation->setValidStateSamplerAllocator(allocOBValidStateSampler);
     mpSpaceInformation->setup();
         
     // Create problem definition.        
@@ -59,8 +61,12 @@ bool OmplEnvSHERPA::initialize(envire::TraversabilityGrid* trav_grid,
     } else { // Optimizing planners use all the available time to improve the solution.
         mpPlanner = ob::PlannerPtr(new og::RRTstar(mpSpaceInformation));
         // Allows to configure the max allowed dist between two samples.
-        ompl::base::ParamSet param_set = mpPlanner->params();
-        param_set.setParam("range", "1.0");
+        /* If e.g. 1.0 is used to footprint radius will not be changed anymore. TODO Why?
+        if(mConfig.mMaxAllowedSampleDist > 0 && mConfig.mMaxAllowedSampleDist != nan) {
+            ompl::base::ParamSet param_set = mpPlanner->params();
+            param_set.setParam("range", mConfig.mMaxAllowedSampleDist);
+        }
+        */
     }
 
     // Set the problem instance for our planner to solve
@@ -142,6 +148,14 @@ ompl::base::OptimizationObjectivePtr OmplEnvSHERPA::getBalancedObjective(
     mpMultiOptimization = ompl::base::OptimizationObjectivePtr(opt);
 
     return mpMultiOptimization;
+}
+
+ompl::base::ValidStateSamplerPtr OmplEnvSHERPA::allocOBValidStateSampler(const ompl::base::SpaceInformation *si) {
+    // we can perform any additional setup / configuration of a sampler here,
+    // but there is nothing to tweak in case of the ObstacleBasedValidStateSampler.
+    ob::ValidStateSamplerPtr sampler_ptr = ob::ValidStateSamplerPtr(new ob::ObstacleBasedValidStateSampler(si));
+    std::cout << "Sampler: Number of attempts to find a valid sample: " << sampler_ptr->getNrAttempts() << std::endl;
+    return sampler_ptr;
 }
 
 } // namespace motion_planning_libraries
