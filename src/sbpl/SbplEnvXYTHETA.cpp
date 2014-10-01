@@ -74,20 +74,21 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             }
             // SBPL: time in sec for a 45° turn
             double time_to_turn_45_degree = fabs((M_PI / 4.0) / mConfig.mRobotRotationalVelocity);
-           
-            double robot_width = std::max(mConfig.mFootprintRadiusMinMax.first, mConfig.mFootprintRadiusMinMax.second);
+            double robot_width = 2 * std::max(mConfig.mFootprintRadiusMinMax.first, mConfig.mFootprintRadiusMinMax.second);
             double robot_length = robot_width;
             
             if(mConfig.mFootprintRadiusMinMax.first != mConfig.mFootprintRadiusMinMax.second) {
                 LOG_WARN("SBPL does not support variable footprints, max radius will be used");
             }
             
+            std::vector<sbpl_2Dpt_t> fp_vec = createFootprint(robot_width, robot_length);
+            
             env_xytheta->InitializeEnv(grid_width, grid_height, 
                 mpSBPLMapData, // initial map
                 0,0,0, //mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
                 0,0,0, //mGoalGrid.position.x(), mGoalGrid.position.y(), mGoalGrid.getYaw(),
                 0.1, 0.1, 0.1, // tolerance x,y,yaw, ignored
-                createFootprint(robot_width, robot_length), 
+                fp_vec, 
                 scale_x,  // Size of a cell in meter => in SBPL cells have to be quadrats
                 speed, 
                 time_to_turn_45_degree, 
@@ -97,6 +98,7 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             LOG_ERROR("EnvironmentNAVXYTHETAMLEVLAT could not be initialized");
             return false;
         }
+        std::cout << "SBPL Init done!" << std::endl;
     }
  
     // Create planner.

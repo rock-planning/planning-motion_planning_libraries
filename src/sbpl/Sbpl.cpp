@@ -67,7 +67,7 @@ void Sbpl::createSBPLMap(envire::TraversabilityGrid* trav_grid,
     for(uint8_t* p = trav_data->origin(); p < stop_p; p++, sbpl_map_p++) {
         uint8_t class_value = *p;
         driveability = (trav_grid->getTraversabilityClass(class_value)).getDrivability();
-        sbpl_cost = SBPL_MAX_COST - (int)(driveability * (double)SBPL_MAX_COST + 0.5);
+        sbpl_cost = SBPL_MAX_COST - (int)(driveability * (double)SBPL_MAX_COST + 0.5) + 1.0;
         *sbpl_map_p = sbpl_cost;
     }
 }

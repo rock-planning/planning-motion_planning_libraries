@@ -46,22 +46,37 @@ class GridCalculations {
         }
     }
     
-    void setFootprintCircleInGrid(int radius_grid) {
+    void setFootprintCircleInGrid(int radius_grid, bool  filled=true) {
         if(mpTravGrid == NULL) {
             throw std::runtime_error("Trav Grid not set");
         }
         
         mFootprintLocal.clear();
-        base::Vector3d vec;
-        int squared_radius = radius_grid * radius_grid;
-        for(int y=-radius_grid; y < std::ceil(radius_grid) ; ++y) {
-            for(int x=-radius_grid; x < std::ceil(radius_grid); ++x) {
-                vec[0] = x;
-                vec[1] = y;
-                vec[2] = 0.0;
-                if(vec.squaredNorm() <= squared_radius) {
-                    mFootprintLocal.push_back(base::Vector3d(x,y,0));
+        
+        if(filled) {
+            base::Vector3d vec;
+            int squared_radius = radius_grid * radius_grid;
+            for(int y=-radius_grid; y < std::ceil(radius_grid) ; ++y) {
+                for(int x=-radius_grid; x < std::ceil(radius_grid); ++x) {
+                    vec[0] = x;
+                    vec[1] = y;
+                    vec[2] = 0.0;
+                    if(vec.squaredNorm() <= squared_radius) {
+                        mFootprintLocal.push_back(vec);
+                    }
                 }
+            }
+        } else {
+            // Just draw the outline, should be used for footprint-planning.
+            int num_vertices = 32;
+            double rot = 2*M_PI/(double)num_vertices;
+            base::Vector3d vec(radius_grid, 0.0, 0.0);
+            // Add circle center
+            mFootprintLocal.push_back(base::Vector3d(0.0, 0.0, 0.0));
+            
+            for(int i=0; i<num_vertices; ++i) {
+                mFootprintLocal.push_back(vec);
+                vec = Eigen::AngleAxisd(rot, Eigen::Vector3d::UnitZ()) * vec;
             }
         }
     }

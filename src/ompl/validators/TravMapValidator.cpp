@@ -112,7 +112,7 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
             // Used to calculate the number of grids.
             double min_scale = std::min(mpTravGrid->getScaleX(), mpTravGrid->getScaleY());
             
-            mGridCalc.setFootprintCircleInGrid(std::ceil(state.getFootprintRadius()/min_scale));
+            mGridCalc.setFootprintCircleInGrid(std::ceil(state.getFootprintRadius()/min_scale), false);
             mGridCalc.setFootprintPoseInGrid(x_grid, y_grid, yaw_grid);
             return mGridCalc.isValid();
         }

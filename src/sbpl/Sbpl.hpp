@@ -54,6 +54,9 @@ class Sbpl : public AbstractMotionPlanningLibrary
     void createSBPLMap(envire::TraversabilityGrid* trav_grid, 
             boost::shared_ptr<TravData> trav_data);
     
+    /**
+     * The footprint has to be defined in meter.
+     */
     std::vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
 };
     

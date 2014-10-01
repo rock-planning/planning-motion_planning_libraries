@@ -5,6 +5,7 @@
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
+#include <ompl/base/samplers/GaussianValidStateSampler.h>
 
 #include <motion_planning_libraries/ompl/validators/TravMapValidator.hpp>
 #include <motion_planning_libraries/ompl/objectives/TravGridObjective.hpp>
@@ -61,12 +62,13 @@ bool OmplEnvSHERPA::initialize(envire::TraversabilityGrid* trav_grid,
     } else { // Optimizing planners use all the available time to improve the solution.
         mpPlanner = ob::PlannerPtr(new og::RRTstar(mpSpaceInformation));
         // Allows to configure the max allowed dist between two samples.
-        /* If e.g. 1.0 is used to footprint radius will not be changed anymore. TODO Why?
-        if(mConfig.mMaxAllowedSampleDist > 0 && mConfig.mMaxAllowedSampleDist != nan) {
+        /// If e.g. 1.0 is used to footprint radius will not be changed anymore. TODO Why?
+        if(mConfig.mMaxAllowedSampleDist > 0 && !isnan(mConfig.mMaxAllowedSampleDist)) {
             ompl::base::ParamSet param_set = mpPlanner->params();
-            param_set.setParam("range", mConfig.mMaxAllowedSampleDist);
+            std::stringstream ss;
+            ss << mConfig.mMaxAllowedSampleDist;
+            param_set.setParam("range", ss.str().c_str());
         }
-        */
     }
 
     // Set the problem instance for our planner to solve
@@ -154,6 +156,7 @@ ompl::base::ValidStateSamplerPtr OmplEnvSHERPA::allocOBValidStateSampler(const o
     // we can perform any additional setup / configuration of a sampler here,
     // but there is nothing to tweak in case of the ObstacleBasedValidStateSampler.
     ob::ValidStateSamplerPtr sampler_ptr = ob::ValidStateSamplerPtr(new ob::ObstacleBasedValidStateSampler(si));
+    //ob::ValidStateSamplerPtr sampler_ptr = ob::ValidStateSamplerPtr(new ob::GaussianValidStateSampler(si));
     std::cout << "Sampler: Number of attempts to find a valid sample: " << sampler_ptr->getNrAttempts() << std::endl;
     return sampler_ptr;
 }

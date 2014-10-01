@@ -47,6 +47,7 @@ class MotionPlanningLibraries
     bool mReceivedNewStart;
     bool mReceivedNewGoal;
     bool mArmInitialized;
+    bool mReplanRequired;
     
  public: 
     MotionPlanningLibraries(Config config = Config());
