@@ -43,11 +43,10 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
                     boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
             mSBPLScaleX = mSBPLScaleY = env_xytheta->GetEnvNavConfig()->cellsize_m;
-        } catch (SBPL_Exception& e) {
-            LOG_ERROR("EnvironmentNAVXYTHETAMLEVLAT could not be initialized");
+        } catch (SBPL_Exception* e) {
+            LOG_ERROR("EnvironmentNAVXYTHETAMLEVLAT could not be initialized using %s (%s)", mConfig.mSBPLEnvFile.c_str(), e->what());
             return false;
-        }
-        
+        }        
     // Create an sbpl-environment.
     } else {
         createSBPLMap(trav_grid, grid_data);
@@ -94,8 +93,11 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
                 time_to_turn_45_degree, 
                 SBPL_MAX_COST, // cost threshold
                 mConfig.mSBPLMotionPrimitivesFile.c_str()); // motion primitives file
-        } catch (SBPL_Exception& e) {
-            LOG_ERROR("EnvironmentNAVXYTHETAMLEVLAT could not be initialized");
+        } catch (SBPL_Exception* e) {
+            
+            LOG_ERROR("EnvironmentNAVXYTHETAMLEVLAT could not be created using the motion primitive file %s (%s)", 
+                    mConfig.mSBPLMotionPrimitivesFile.c_str(),
+                    e->what());
             return false;
         }
         std::cout << "SBPL Init done!" << std::endl;

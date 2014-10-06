@@ -34,9 +34,10 @@ bool SbplEnvXY::initialize(envire::TraversabilityGrid* trav_grid,
                     boost::dynamic_pointer_cast<EnvironmentNAV2D>(mpSBPLEnv);
             env_xy->InitializeEnv(grid_width, grid_height, mpSBPLMapData, SBPL_MAX_COST);
         }
-    } catch (SBPL_Exception& e) {
-        LOG_ERROR("SBPL environment '%s' could not be loaded", 
-                mConfig.mSBPLEnvFile.c_str());
+    } catch (SBPL_Exception* e) {
+        LOG_ERROR("SBPL environment '%s' could not be loaded (%s)", 
+                mConfig.mSBPLEnvFile.c_str(),
+                e->what());
         mpSBPLEnv.reset();
         return false;
     } 
