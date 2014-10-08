@@ -4,6 +4,7 @@ rock_library(motion_planning_libraries
         sbpl/Sbpl.cpp 
         sbpl/SbplEnvXY.cpp
         sbpl/SbplEnvXYTHETA.cpp
+        sbpl/SbplMotionPrimitives.cpp
         ompl/Ompl.cpp 
         ompl/OmplEnvXY.cpp
         ompl/OmplEnvXYTHETA.cpp
@@ -20,6 +21,7 @@ rock_library(motion_planning_libraries
         sbpl/Sbpl.hpp 
         sbpl/SbplEnvXY.hpp
         sbpl/SbplEnvXYTHETA.hpp
+        sbpl/SbplMotionPrimitives.hpp
         ompl/Ompl.hpp 
         ompl/OmplEnvXY.hpp
         ompl/OmplEnvXYTHETA.hpp
