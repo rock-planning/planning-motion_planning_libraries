@@ -47,6 +47,7 @@ void MotionPlanningLibrariesStateVisualization::updateMainNode ( osg::Node* node
     for(;it != p->data.end(); ++it) {
         drawState(group, *it);
     }
+    drawLineBetweenStates(group);
 }
 
 void MotionPlanningLibrariesStateVisualization::updateDataIntern(std::vector<motion_planning_libraries::State> const& data)
@@ -136,12 +137,34 @@ void MotionPlanningLibrariesStateVisualization::drawState(osg::Group* group, mot
     position[2] += 0.01; // Moves the waypoints a little bit above the z=0 plane.
     transform->setPosition(position);
     // osg::Quat(0,0,1,heading) != osg::Quat(heading, Vec(0,0,1)).. why?
-    // -M_PI/2.0 because rock defines x to be the front axis.
     transform->setAttitude(osg::Quat(state.mPose.getYaw(), osg::Vec3f(0,0,1)));
     transform->addChild(geode);
     
     // Adds the waypoints to the main node.
     group->addChild(transform);
+}
+
+void MotionPlanningLibrariesStateVisualization::drawLineBetweenStates(osg::Group* group) {
+    osg::ref_ptr<osg::Geode> geode = new osg::Geode();
+    osg::ref_ptr<osg::Geometry> line_geometry = new osg::Geometry();
+    osg::ref_ptr<osg::Vec3Array> line_vertices = new osg::Vec3Array();
+    
+    std::vector <motion_planning_libraries::State>::iterator it = p->data.begin();
+    base::Position pos;
+    for(;it != p->data.end(); ++it) {
+        pos = it->getPose().position;
+        line_vertices->push_back(osg::Vec3(pos[0], pos[1], 0.01));
+    }
+    
+    line_geometry->setVertexArray(line_vertices);
+    osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
+    colors->push_back( color );
+    line_geometry->setColorArray(colors);
+    line_geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+    line_geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,p->data.size()));
+    geode->addDrawable(line_geometry);
+    
+    group->addChild(geode);
 }
 
 void MotionPlanningLibrariesStateVisualization::setColor(QColor q_color)

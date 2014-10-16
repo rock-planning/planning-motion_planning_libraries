@@ -40,6 +40,7 @@ namespace vizkit3d
         virtual void updateDataIntern(motion_planning_libraries::State const& data);
         virtual void updateDataIntern(std::vector<motion_planning_libraries::State> const& data);
         void drawState(osg::Group* group, motion_planning_libraries::State& state);
+        void drawLineBetweenStates(osg::Group* group) ;
         
     private:
         struct Data;

@@ -140,9 +140,9 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
                 if(footprint_cost > 0) {
                     footprint_cost += mConfig.mAdaptFootprintPenalty;
                     
-                    std::cout << "Moving from state (" << st_s1->getX() << "," << st_s1->getY() << ") fp class " << st_s1->getFootprintClass() << 
-                            " to (" << st_s2->getX() << "," << st_s2->getY() << ") fp class " << st_s2->getFootprintClass() << 
-                            " changes the footprint, increases cost from " << cost.v << " to " << cost.v + footprint_cost << std::endl;
+                    //std::cout << "Moving from state (" << st_s1->getX() << "," << st_s1->getY() << ") fp class " << st_s1->getFootprintClass() << 
+                    //        " to (" << st_s2->getX() << "," << st_s2->getY() << ") fp class " << st_s2->getFootprintClass() << 
+                    //        " changes the footprint, increases cost from " << cost.v << " to " << cost.v + footprint_cost << std::endl;
                 }
                 
                 

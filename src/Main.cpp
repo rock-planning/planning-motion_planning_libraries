@@ -3,6 +3,7 @@
 
 #include <motion_planning_libraries/MotionPlanningLibraries.hpp>
 #include <motion_planning_libraries/Helpers.hpp>
+#include <motion_planning_libraries/sbpl/SbplMotionPrimitives.hpp>
 
 #include <envire/core/Environment.hpp>
 #include <envire/maps/TraversabilityGrid.hpp>
@@ -10,6 +11,33 @@
 int main(int argc, char** argv)
 {
     using namespace motion_planning_libraries;
+    
+    struct MotionPrimitivesConfig config;
+    config.mSpeedForward = 1.0;
+    config.mSpeedBackward = 1.0;
+    config.mSpeedLateral = 0.0;
+    config.mSpeedTurn = 0.1;
+    config.mSpeedPointTurn = 0.1;
+    
+    config.mMultiplierForward = 1;
+    config.mMultiplierBackward = 2;
+    config.mMultiplierLateral = 3;
+    config.mMultiplierTurn = 4;
+    config.mMultiplierPointTurn = 5;
+    
+    config.mNumTurnPrimitives = 2;
+    config.mNumIntermediatePoses = 10;
+    config.mNumAngles = 16;
+    
+    config.mMapWidth = 100;
+    config.mMapHeight = 100;
+    config.mGridSize = 0.1;
+    
+    SbplMotionPrimitives mprims(config);
+    mprims.createPrimitives();
+    mprims.storeToFile("test.mprim");
+    
+    return 0;
     
     // Create the trav map.
     envire::Environment* env = new  envire::Environment();

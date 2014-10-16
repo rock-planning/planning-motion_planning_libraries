@@ -1,6 +1,9 @@
 #ifndef _MOTION_PLANNING_LIBRARIES_SBPL_MOTION_PRIMITIVES_HPP_
 #define _MOTION_PLANNING_LIBRARIES_SBPL_MOTION_PRIMITIVES_HPP_
 
+#include <fstream>
+#include <iomanip> // std::setprecision
+#include <iostream>
 #include <vector>
 
 #include <base/Eigen.hpp>
@@ -89,7 +92,7 @@ struct Primitive {
 class SbplMotionPrimitives {
  public:
     
-    SbplMotionPrimitives(struct MotionPrimitivesConfig config) {
+    SbplMotionPrimitives(struct MotionPrimitivesConfig config) : mConfig(config) {
     }
     
     ~SbplMotionPrimitives() {
@@ -106,13 +109,37 @@ class SbplMotionPrimitives {
     }
     
     void storeToFile(std::string path) {
+        std::ofstream mprim_file;
+        mprim_file.open(path.c_str());
+        
+        mprim_file << "resolution_m: " << mConfig.mGridSize << std::endl;
+        mprim_file << "numberofangles: " << mConfig.mNumAngles << std::endl;
+        mprim_file << "totalnumberofprimitives: " << mListPrimitives.size() << std::endl;
+        
+        
+        struct Primitive mprim;
+        for(unsigned int i=0; i < mListPrimitives.size(); ++i) {
+            mprim =  mListPrimitives[i];
+            mprim_file << "primID: " << mprim.mId << std::endl;
+            mprim_file << "startangle_c: " << mprim.mStartAngle << std::endl;
+            mprim_file << "endpose_c: " << mprim.mEndPose[0] << " " << 
+                    mprim.mEndPose[1] << " " << mprim.mEndPose[2] << std::endl;
+            mprim_file << "additionalactioncostmult: " << mprim.mCostMultiplier << std::endl;
+            mprim_file << "intermediateposes: " << mprim.mIntermediatePoses.size() << std::endl;
+            base::Vector3d v3d;
+            for(unsigned int i=0; i < mprim.mIntermediatePoses.size(); ++i) {
+                v3d = mprim.mIntermediatePoses[i];
+                mprim_file << std::fixed << std::setprecision(4) << 
+                        v3d[0] << " " << v3d[1] << " " << v3d[2] << std::endl;
+            }
+        }
+        
+        mprim_file.close();
     }
     
  private:
      struct MotionPrimitivesConfig mConfig;
      std::vector<struct Primitive> mListPrimitives;
-     std::vector<base::Vector3d> mListEndposes; // x_m, y_m, theta_rad
-     std::vector<Vector3i> mListDiscreteEndposes; // x_grid, y_grid, theta_step
      double mScaleFactor;
      
      /**
@@ -128,44 +155,60 @@ class SbplMotionPrimitives {
          // Scaling: Each movement has to reach a new discrete state, so we have
          // to find the min scale factor. This represents the required movement time
          // to create these primitives.
-         mScaleFactor = mConfig.mGridSize / mConfig.mSpeedForward;
-         mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeedBackward);
-         mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeedLateral);
-         mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeedPointTurn);
-         mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeedTurn);
+         mScaleFactor = 1.0;
+         if(mConfig.mSpeedForward > 0)
+            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeedForward);
+         if(mConfig.mSpeedBackward > 0)
+            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeedBackward);
+         if(mConfig.mSpeedLateral > 0)
+            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeedLateral);
+         if(mConfig.mSpeedPointTurn > 0)
+            mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeedPointTurn);
+         if(mConfig.mSpeedTurn > 0)
+            mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeedTurn);
          
          // Forward
-         poses_zero_rad.push_back(endpose(base::Vector3d(mConfig.mSpeedForward * mScaleFactor, 0, 0), mConfig.mMultiplierForward));
-         //mListEndposes.push_back(base::Vector3d(mConfig.mSpeedForward / 2.0, 0, 0));
+         if(mConfig.mSpeedForward > 0) {
+            poses_zero_rad.push_back(endpose(base::Vector3d(mConfig.mGridSize, 0, 0), mConfig.mMultiplierForward));
+            poses_zero_rad.push_back(endpose(base::Vector3d(mConfig.mSpeedForward * mScaleFactor, 0, 0), mConfig.mMultiplierForward));
+         }
          // Backward
-         poses_zero_rad.push_back(endpose(base::Vector3d(mConfig.mSpeedBackward * mScaleFactor, 0, 0), mConfig.mMultiplierBackward));
+         if(mConfig.mSpeedBackward > 0) {
+            poses_zero_rad.push_back(endpose(base::Vector3d(mConfig.mSpeedBackward * mScaleFactor, 0, 0), mConfig.mMultiplierBackward));
+         }
          // Lateral
-         poses_zero_rad.push_back(endpose(base::Vector3d(0.0, mConfig.mSpeedLateral * mScaleFactor, 0.0), mConfig.mMultiplierLateral));
-         poses_zero_rad.push_back(endpose(base::Vector3d(0.0, -mConfig.mSpeedLateral * mScaleFactor, 0.0), mConfig.mMultiplierLateral));
+         if(mConfig.mSpeedLateral > 0) {
+            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, mConfig.mSpeedLateral * mScaleFactor, 0.0), mConfig.mMultiplierLateral));
+            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, -mConfig.mSpeedLateral * mScaleFactor, 0.0), mConfig.mMultiplierLateral));
+         }
          // Point turn
-         poses_zero_rad.push_back(endpose(base::Vector3d(0.0, 0.0, mConfig.mSpeedPointTurn * mScaleFactor), mConfig.mMultiplierPointTurn));
-         poses_zero_rad.push_back(endpose(base::Vector3d(0.0, 0.0, -mConfig.mSpeedPointTurn * mScaleFactor), mConfig.mMultiplierPointTurn));
+         if(mConfig.mSpeedPointTurn > 0) {
+            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, 0.0, mConfig.mSpeedPointTurn * mScaleFactor), mConfig.mMultiplierPointTurn));
+            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, 0.0, -mConfig.mSpeedPointTurn * mScaleFactor), mConfig.mMultiplierPointTurn));
+         }
          // Forward + negative turn
          // Calculates end pose driving with full forward and turn speeds.
-         double turning_radius = mConfig.mSpeedForward / mConfig.mSpeedTurn;
-         base::Vector3d turned_start = Eigen::AngleAxis<double>(-mConfig.mSpeedTurn * mScaleFactor, Eigen::Vector3d::UnitZ()) * 
-                base::Vector3d(0.0, turning_radius, 0.0);
-         turned_start[1] += turning_radius;
-         turned_start[2] = -mConfig.mSpeedTurn * mScaleFactor;
-         poses_zero_rad.push_back(endpose(turned_start, mConfig.mMultiplierTurn));
-         // Forward + positive turn, just mirror positive turn
-         turned_start[1] *= -1;
-         turned_start[2] *= -1;
-         poses_zero_rad.push_back(endpose(turned_start, mConfig.mMultiplierTurn));
+         if(mConfig.mSpeedForward > 0 && mConfig.mSpeedTurn > 0) {
+            double turning_radius = mConfig.mSpeedForward / mConfig.mSpeedTurn;
+            base::Vector3d turned_start = Eigen::AngleAxis<double>(-mConfig.mSpeedTurn * mScaleFactor, Eigen::Vector3d::UnitZ()) * 
+                    base::Vector3d(0.0, turning_radius, 0.0);
+            turned_start[1] += turning_radius;
+            turned_start[2] = -mConfig.mSpeedTurn * mScaleFactor;
+            poses_zero_rad.push_back(endpose(turned_start, mConfig.mMultiplierTurn));
+            // Forward + positive turn, just mirror negative turn
+            turned_start[1] *= -1;
+            turned_start[2] *= -1;
+            poses_zero_rad.push_back(endpose(turned_start, mConfig.mMultiplierTurn));
+         }
          
          // Creates discrete end poses for all angles.
          mListPrimitives.clear();
-         std::vector< std::pair<base::Vector3d, int> >::iterator it = poses_zero_rad.begin();
          base::Vector3d vec_tmp;
          Vector3i discrete_pose_tmp;
          double turn_step_rad = (M_PI*2.0) / (double)mConfig.mNumAngles; 
          assert(mConfig.mNumAngles != 0);
          for(unsigned int angle=0; angle<mConfig.mNumAngles; ++angle) {
+             std::vector< std::pair<base::Vector3d, int> >::iterator it = poses_zero_rad.begin();
              for(int id=0; it != poses_zero_rad.end(); ++it, ++id) {
                 vec_tmp = Eigen::AngleAxis<double>(angle * turn_step_rad, Eigen::Vector3d::UnitZ()) * it->first;
                 // Adapt z component. SBPL orientation uses the range [0, 2*M_PI).
@@ -179,9 +222,11 @@ class SbplMotionPrimitives {
                 discrete_pose_tmp[1] = (int)(vec_tmp[1] / mConfig.mGridSize);
                 discrete_pose_tmp[2] = (int)(vec_tmp[2] / turn_step_rad);
                 // Scale factor should prevent unwanted (same state) values?
-                assert(discrete_pose_tmp[0] != 0);
-                assert(discrete_pose_tmp[1] != 0);
-                assert((unsigned int)discrete_pose_tmp[2] != angle);
+                if(discrete_pose_tmp[0] == 0 && 
+                        discrete_pose_tmp[1] == 0 && 
+                        (unsigned int)discrete_pose_tmp[2] == mConfig.mNumAngles) {
+                    std::cout << "Vector " << vec_tmp.transpose() << " does not lead to another end state for angle " << angle << std::endl;
+                }
                 mListPrimitives.push_back(Primitive(id, angle, discrete_pose_tmp, it->second));
              }
          }

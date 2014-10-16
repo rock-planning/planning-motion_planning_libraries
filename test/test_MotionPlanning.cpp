@@ -5,6 +5,7 @@
 
 #include <motion_planning_libraries/MotionPlanningLibraries.hpp>
 #include <motion_planning_libraries/Helpers.hpp>
+#include <motion_planning_libraries/sbpl/SbplMotionPrimitives.hpp>
 
 #include <envire/core/Environment.hpp>
 #include <envire/maps/TraversabilityGrid.hpp>
@@ -44,6 +45,36 @@ struct Fixture {
 };
 
 BOOST_FIXTURE_TEST_SUITE( s, Fixture )
+
+BOOST_AUTO_TEST_CASE(sbpl_mprims)
+{
+    struct MotionPrimitivesConfig config;
+    config.mSpeedForward = 1.0;
+    config.mSpeedBackward = 1.0;
+    config.mSpeedLateral = 0.0;
+    config.mSpeedTurn = 0.1;
+    config.mSpeedPointTurn = 0.1;
+    
+    config.mMultiplierForward = 1;
+    config.mMultiplierBackward = 2;
+    config.mMultiplierLateral = 3;
+    config.mMultiplierTurn = 4;
+    config.mMultiplierPointTurn = 5;
+    
+    config.mNumTurnPrimitives = 2;
+    config.mNumIntermediatePoses = 10;
+    config.mNumAngles = 16;
+    
+    config.mMapWidth = 100;
+    config.mMapHeight = 100;
+    config.mGridSize = 0.1;
+    
+    SbplMotionPrimitives mprims(config);
+    mprims.createPrimitives();
+    mprims.storeToFile("test.mprim");
+}
+    
+#if 0
 
 BOOST_AUTO_TEST_CASE(helper_rectangle)
 {
@@ -167,7 +198,7 @@ BOOST_AUTO_TEST_CASE(ompl_xy_planning)
     }
 }
 
-BOOST_AUTO_TEST_CASE(ompl_xytheta_planning)
+BOOST_AUTO_TEST_CASE(omBOOST_AUTO_TEST_CASEpl_xytheta_planning)
 {
     std::cout << std::endl << "OMPL XYTHETA PLANNING" << std::endl;
     conf.mPlanningLibType = LIB_OMPL;
@@ -199,5 +230,7 @@ BOOST_AUTO_TEST_CASE(ompl_xytheta_planning)
         std::cout << "OMPL problem could not be improved" << std::endl;
     }   
 }
+
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()
