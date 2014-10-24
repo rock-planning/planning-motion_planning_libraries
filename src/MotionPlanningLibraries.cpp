@@ -297,6 +297,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
         LOG_INFO("Replanning not required");
         return true;
     }
+    mReplanRequired = false;
     
     if (solved)
     {
