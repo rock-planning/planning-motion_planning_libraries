@@ -34,6 +34,7 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
     /**
      * \param enable_motion_cost_interpolation Defines if only start and end state
      * are used for cost calculations or smaller intermediate steps. By default false.
+     * Not required for correct collision detection.
      * TODO Currently only the cost of the center of the robot is used.
      */
     TravGridObjective(const ompl::base::SpaceInformationPtr& si, 
@@ -71,6 +72,7 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
         }
     
         double x = 0, y = 0;
+        int footprint_class = 0;
         
         switch(mConfig.mEnvType) {
             case ENV_XY: {
@@ -92,6 +94,7 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
                         s->as<SherpaStateSpace::StateType>();
                 x = state_sherpa->getX();
                 y = state_sherpa->getY();
+                footprint_class = state_sherpa->getFootprintClass();
                 break;
             }
             default: {
@@ -112,12 +115,21 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
         // Estimate time to traverse the cell using forward speed and driveability.
         double class_value = (double)(*mpTravData)[y][x];
         double driveability = (mpTravGrid->getTraversabilityClass(class_value)).getDrivability();
+        double cost = 0;
         if(driveability == 0 || mConfig.mRobotForwardVelocity == 0) {
-            return ompl::base::Cost(std::numeric_limits<double>::max());
+            cost = std::numeric_limits<double>::max();
         } else {
-            return ompl::base::Cost((mpTravGrid->getScaleX() / mConfig.mRobotForwardVelocity) /  driveability);
+            // Calculate time to traverse the cell. Driveability of 1.0 means, that the cell can
+            // be traversed with full speed.
+            cost = (mpTravGrid->getScaleX() / mConfig.mRobotForwardVelocity) /  driveability;
+            // Increases cost regarding the footprint. Max footprint means full speed,
+            // min footprint increases the cost by the number of footprint classes.
+            if(mConfig.mEnvType == ENV_SHERPA) {
+                cost /= (footprint_class+1) / ((double)mConfig.mNumFootprintClasses+1);
+            }
         }
         //return ompl::base::Cost(OMPL_MAX_COST - (driveability * (double)OMPL_MAX_COST + 0.5));        
+        return ompl::base::Cost(cost);
     }
     
     ompl::base::Cost motionCost(const ompl::base::State *s1, const ompl::base::State *s2) const {
@@ -125,10 +137,10 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
         // (mean costs of s1 and s2 and the distance (x,y,theta/2.0) between the states,
         // uses the above stateCost() implementation).
         ompl::base::Cost cost = ompl::base::StateCostIntegralObjective::motionCost(s1, s2);
-        
          
         switch(mConfig.mEnvType) {
-            
+                
+            // Adds cost for changing the footprint.
             case ENV_SHERPA: {
                 // Add high additional costs if the footprint of the system have been changed.
                 const SherpaStateSpace::StateType* st_s1 = s1->as<SherpaStateSpace::StateType>();
@@ -144,8 +156,7 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
                     //        " to (" << st_s2->getX() << "," << st_s2->getY() << ") fp class " << st_s2->getFootprintClass() << 
                     //        " changes the footprint, increases cost from " << cost.v << " to " << cost.v + footprint_cost << std::endl;
                 }
-                
-                
+   
                 cost.v += footprint_cost;
 
                 break;
