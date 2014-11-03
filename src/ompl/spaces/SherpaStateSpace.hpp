@@ -17,7 +17,7 @@ protected:
     
 public:
 
-    /** \brief A state in SherpaStateSpace: (x, y, yaw, footprint_radius) */
+    /** \brief A state in SherpaStateSpace: (x, y, footprint_radius) */
     class StateType : public ompl::base::CompoundStateSpace::StateType
     {
     public:
@@ -36,18 +36,10 @@ public:
         {
             return as<ompl::base::RealVectorStateSpace::StateType>(0)->values[1];
         }
-
-        /** \brief Get the yaw component of the state. This is
-            the rotation in plane, with respect to the Z
-            axis. */
-        double getYaw(void) const
-        {
-            return as<ompl::base::SO2StateSpace::StateType>(1)->value;
-        }
         
         unsigned int getFootprintClass(void) const
         {
-            return as<ompl::base::DiscreteStateSpace::StateType>(2)->value;
+            return as<ompl::base::DiscreteStateSpace::StateType>(1)->value;
         }
 
         /** \brief Set the X component of the state */
@@ -69,17 +61,9 @@ public:
             setY(y);
         }
 
-        /** \brief Set the yaw component of the state. This is
-            the rotation in plane, with respect to the Z
-            axis. */
-        void setYaw(double yaw)
-        {
-            as<ompl::base::SO2StateSpace::StateType>(1)->value = yaw;
-        }
-
         void setFootprintClass(unsigned int footprint_class)
         {
-            as<ompl::base::DiscreteStateSpace::StateType>(2)->value = footprint_class;
+            as<ompl::base::DiscreteStateSpace::StateType>(1)->value = footprint_class;
         }
     };
 
@@ -92,10 +76,9 @@ public:
         setName("Sherpa" + getName());
         type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 1;
         addSubspace(ompl::base::StateSpacePtr(new ompl::base::RealVectorStateSpace(2)), 1.0);
-        addSubspace(ompl::base::StateSpacePtr(new ompl::base::SO2StateSpace()), 0.5);
-        // Width and length, which should not be regarded in the distance calculation (?).
+        // Radius, which should not be regarded in the distance calculation (?).
         addSubspace(ompl::base::StateSpacePtr(new ompl::base::DiscreteStateSpace(
-                0, config.mNumFootprintClasses-1)), 1.0);
+                0, config.mNumFootprintClasses-1)), 0.0);
         lock();
     }
 

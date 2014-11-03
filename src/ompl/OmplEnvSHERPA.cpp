@@ -35,7 +35,10 @@ bool OmplEnvSHERPA::initialize(envire::TraversabilityGrid* trav_grid,
     sherpa_state_space->setBounds(bounds); // Sets bounds for the position.
     mpStateSpace = ob::StateSpacePtr(sherpa_state_space);
     
-    //mpStateSpace->setLongestValidSegmentFraction(1/100.0);
+    // E.g. max extend/distance 1204 grids (1200x100map), min radius * 2: 10 grid -> 0.008 longest segment 
+    mpStateSpace->setLongestValidSegmentFraction(
+            ((2*mConfig.mFootprintRadiusMinMax.first) / trav_grid->getScaleX()) / 
+            mpStateSpace->getMaximumExtent());
     
     mpSpaceInformation = ob::SpaceInformationPtr(
             new ob::SpaceInformation(mpStateSpace));
@@ -44,7 +47,7 @@ bool OmplEnvSHERPA::initialize(envire::TraversabilityGrid* trav_grid,
                 mpSpaceInformation, trav_grid, grid_data, mConfig));
     mpSpaceInformation->setStateValidityChecker(mpTravMapValidator);
     // 1/mpStateSpace->getMaximumExtent() (max dist between two states) -> resolution of one meter.
-    mpSpaceInformation->setStateValidityCheckingResolution (1/mpStateSpace->getMaximumExtent());
+    // mpSpaceInformation->setStateValidityCheckingResolution (1/mpStateSpace->getMaximumExtent());
     mpSpaceInformation->setValidStateSamplerAllocator(allocOBValidStateSampler);
     mpSpaceInformation->setup();
         
@@ -82,13 +85,13 @@ bool OmplEnvSHERPA::setStartGoal(struct State start_state, struct State goal_sta
     
     double start_x = start_state.getPose().position[0];
     double start_y = start_state.getPose().position[1];
-    double start_yaw = start_state.getPose().getYaw();
+    //double start_yaw = start_state.getPose().getYaw();
     unsigned int start_fp_class = start_state.getFootprintClass(mConfig.mFootprintRadiusMinMax.first, 
             mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses);
 
     double goal_x = goal_state.getPose().position[0];
     double goal_y = goal_state.getPose().position[1];
-    double goal_yaw = start_state.getPose().getYaw();
+    //double goal_yaw = start_state.getPose().getYaw();
     unsigned int goal_fp_class = goal_state.getFootprintClass(mConfig.mFootprintRadiusMinMax.first, 
             mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses);
     
@@ -97,12 +100,12 @@ bool OmplEnvSHERPA::setStartGoal(struct State start_state, struct State goal_sta
     
     start_ompl->as<SherpaStateSpace::StateType>()->setX(start_x);
     start_ompl->as<SherpaStateSpace::StateType>()->setY(start_y);
-    start_ompl->as<SherpaStateSpace::StateType>()->setYaw(start_yaw);
+    //start_ompl->as<SherpaStateSpace::StateType>()->setYaw(start_yaw);
     start_ompl->as<SherpaStateSpace::StateType>()->setFootprintClass(start_fp_class);
     
     goal_ompl->as<SherpaStateSpace::StateType>()->setX(goal_x);
     goal_ompl->as<SherpaStateSpace::StateType>()->setY(goal_y);
-    goal_ompl->as<SherpaStateSpace::StateType>()->setYaw(goal_yaw);
+    //goal_ompl->as<SherpaStateSpace::StateType>()->setYaw(goal_yaw);
     goal_ompl->as<SherpaStateSpace::StateType>()->setFootprintClass(goal_fp_class);
             
     mpProblemDefinition->setStartAndGoalStates(start_ompl, goal_ompl);
@@ -125,8 +128,8 @@ bool OmplEnvSHERPA::fillPath(std::vector<struct State>& path) {
         grid_pose.position[0] = state_ompl->getX();
         grid_pose.position[1] = state_ompl->getY();
         grid_pose.position[2] = 0;
-        grid_pose.orientation = Eigen::AngleAxis<double>(state_ompl->getYaw(), 
-                base::Vector3d(0,0,1));
+        //grid_pose.orientation = Eigen::AngleAxis<double>(state_ompl->getYaw(), 
+        //        base::Vector3d(0,0,1));
         
         State state(grid_pose);
         // Calculates from the footprint class the footprint radius.
