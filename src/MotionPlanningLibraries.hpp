@@ -15,6 +15,18 @@ namespace motion_planning_libraries
 {
 
 typedef envire::TraversabilityGrid::ArrayType TravData;
+
+enum MplErrors {
+    MPL_ERR_NONE,
+    MPL_ERR_UNDEFINED,
+    MPL_ERR_MISSING_START_STATE,
+    MPL_ERR_MISSING_GOAL_STATE,
+    MPL_ERR_MISSING_TRAV_GRID,
+    MPL_ERR_PLANNING_FAILED,
+    MPL_ERR_WRONG_STATE_TYPE,
+    MPL_ERR_INITIALIZE_MAP,
+    MPL_ERR_SET_STATES
+};
     
 /**
  * Allows x,y,theta path planning for navigation and motion planning for arm control.
@@ -48,6 +60,8 @@ class MotionPlanningLibraries
     bool mReceivedNewGoal;
     bool mArmInitialized;
     bool mReplanRequired;
+    
+    enum MplErrors mError;
     
  public: 
     MotionPlanningLibraries(Config config = Config());
@@ -108,6 +122,11 @@ class MotionPlanningLibraries
     
     /** Returns the goal pose within the grid. */
     base::samples::RigidBodyState getGoalPoseInGrid();
+    
+    /** If an error occurred during planning this can be used to get more informations. */
+    inline enum MplErrors getError() {
+        return mError;
+    }
     
     /**
      * Converts the world pose to grid coordinates including the transformed orientation.

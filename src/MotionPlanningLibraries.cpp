@@ -22,7 +22,8 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) :
         mReceivedNewStart(false),
         mReceivedNewGoal(false),
         mArmInitialized(false),
-        mReplanRequired(false) {
+        mReplanRequired(false),
+        mError(MPL_ERR_NONE) {
 
     // Creates the requested planning library.  
     switch(config.mPlanningLibType) {
@@ -204,14 +205,18 @@ bool MotionPlanningLibraries::setGoalState(struct State goal_state) {
 }
 
 bool MotionPlanningLibraries::plan(double max_time) {
+    
+    mError = MPL_ERR_NONE;
   
     if(mStartState.getStateType() == STATE_EMPTY) {
         LOG_WARN("Start states have not been set yet, planning can not be executed"); 
+        mError = MPL_ERR_MISSING_START_STATE;
         return false;
     }
     
     if(mGoalState.getStateType() == STATE_EMPTY) {
         LOG_WARN("Goal states have not been set yet, planning can not be executed"); 
+        mError = MPL_ERR_MISSING_GOAL_STATE;
         return false;
     }
 
@@ -221,12 +226,14 @@ bool MotionPlanningLibraries::plan(double max_time) {
     if(mStartState.getStateType() == STATE_POSE) {
         if(mpTravGrid == NULL) {
             LOG_WARN("No traversability map available, planning cannot be executed");
+            mError = MPL_ERR_MISSING_TRAV_GRID;
             return false;
         } 
         
         if(mStartStateGrid.getStateType() != STATE_POSE || 
                 mGoalStateGrid.getStateType() != STATE_POSE) {
             LOG_WARN("Start/Goal (grid) contains no pose, planning can not be executed"); 
+            mError = MPL_ERR_WRONG_STATE_TYPE;
             return false;
         }
         
@@ -237,6 +244,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
             
             if(!mpPlanningLib->initialize(mpTravGrid, mpTravData)) {
                 LOG_WARN("Initialization (navigation) failed"); 
+                mError = MPL_ERR_INITIALIZE_MAP;
                 return false;
             } else {
                 mReplanRequired = true;
@@ -246,6 +254,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
             // Reset current start and goal state within the new environment!
             if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
                 LOG_WARN("Start/goal state could not be set after reinitialization");
+                mError = MPL_ERR_SET_STATES;
                 return false;
             }
         }
@@ -258,6 +267,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
         if(!mArmInitialized) {
             if(!mpPlanningLib->initialize_arm()) {
                 LOG_WARN("Initialization (arm motion planning) failed"); 
+                mError = MPL_ERR_UNDEFINED;
                 return false;
             } else {
                 mArmInitialized = true;   
@@ -269,6 +279,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
     if(mReceivedNewStart || mReceivedNewGoal) {       
         if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
             LOG_WARN("Start/goal state could not be set");
+            mError = MPL_ERR_SET_STATES;
             return false;
         } else {
             if(mReceivedNewGoal ||
@@ -308,7 +319,8 @@ bool MotionPlanningLibraries::plan(double max_time) {
         mReceivedNewTravGrid = false;
         return true;
     } else {
-        LOG_WARN("No solution found");        
+        LOG_WARN("No solution found");     
+        mError = MPL_ERR_PLANNING_FAILED;
         return false;
     }
 }
