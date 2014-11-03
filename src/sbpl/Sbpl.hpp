@@ -31,7 +31,7 @@ class Sbpl : public AbstractMotionPlanningLibrary
  protected:
     // Driveability 0.0 to 1.0 will be mapped to SBPL_MAX_COST to 0 
     // with obstacle threshold of SBPL_MAX_COST.
-    static const unsigned char SBPL_MAX_COST = 100;
+    static const unsigned char SBPL_MAX_COST = 20;
     
     boost::shared_ptr<DiscreteSpaceInformation> mpSBPLEnv;
     boost::shared_ptr<SBPLPlanner> mpSBPLPlanner;

@@ -43,13 +43,13 @@ UNICYCLE_MPRIM_16DEGS = 1;
 if UNICYCLE_MPRIM_16DEGS == 1
     resolution = 0.1;
     numberofangles = 16; %preferably a power of 2, definitely multiple of 8
-    numberofprimsperangle = 7;
+    numberofprimsperangle = 6;
 
     %multipliers (multiplier is used as costmult*cost)
     forwardcostmult = 1;
     backwardcostmult = 2;
     forwardandturncostmult = 3;
-    turninplacecostmult = 5;
+    turninplacecostmult = 3;
     
     %note, what is shown x,y,theta changes (not absolute numbers)
     
@@ -60,13 +60,13 @@ if UNICYCLE_MPRIM_16DEGS == 1
     %0 theta change
     basemprimendpts0_c(1,:) = [1 0 0 forwardcostmult];
     basemprimendpts0_c(2,:) = [8 0 0 forwardcostmult];
-    basemprimendpts0_c(3,:) = [-1 0 0 backwardcostmult];    
+    %basemprimendpts0_c(3,:) = [-1 0 0 backwardcostmult];    
     %1/16 theta change
-    basemprimendpts0_c(4,:) = [8 1 1 forwardandturncostmult];
-    basemprimendpts0_c(5,:) = [8 -1 -1 forwardandturncostmult];
+    basemprimendpts0_c(3,:) = [8 1 1 forwardandturncostmult];
+    basemprimendpts0_c(4,:) = [8 -1 -1 forwardandturncostmult];
     %turn in place
-    basemprimendpts0_c(6,:) = [0 0 1 turninplacecostmult];
-    basemprimendpts0_c(7,:) = [0 0 -1 turninplacecostmult];
+    basemprimendpts0_c(5,:) = [0 0 1 turninplacecostmult];
+    basemprimendpts0_c(6,:) = [0 0 -1 turninplacecostmult];
     
     %45 degrees
     basemprimendpts45_c = zeros(numberofprimsperangle, 4); %x,y,theta,costmult (multiplier is used as costmult*cost)
@@ -75,13 +75,13 @@ if UNICYCLE_MPRIM_16DEGS == 1
     %0 theta change 
     basemprimendpts45_c(1,:) = [1 1 0 forwardcostmult];
     basemprimendpts45_c(2,:) = [6 6 0 forwardcostmult];
-    basemprimendpts45_c(3,:) = [-1 -1 0 backwardcostmult];    
+    %basemprimendpts45_c(3,:) = [-1 -1 0 backwardcostmult];    
     %1/16 theta change
-    basemprimendpts45_c(4,:) = [5 7 1 forwardandturncostmult];
-    basemprimendpts45_c(5,:) = [7 5 -1 forwardandturncostmult];    
+    basemprimendpts45_c(3,:) = [5 7 1 forwardandturncostmult];
+    basemprimendpts45_c(4,:) = [7 5 -1 forwardandturncostmult];    
     %turn in place
-    %basemprimendpts45_c(6,:) = [0 0 1 turninplacecostmult];
-    %basemprimendpts45_c(7,:) = [0 0 -1 turninplacecostmult];
+    basemprimendpts45_c(5,:) = [0 0 1 turninplacecostmult];
+    basemprimendpts45_c(6,:) = [0 0 -1 turninplacecostmult];
     
     %22.5 degrees
     basemprimendpts22p5_c = zeros(numberofprimsperangle, 4); %x,y,theta,costmult (multiplier is used as costmult*cost)
@@ -90,13 +90,13 @@ if UNICYCLE_MPRIM_16DEGS == 1
     %0 theta change     
     basemprimendpts22p5_c(1,:) = [2 1 0 forwardcostmult];
     basemprimendpts22p5_c(2,:) = [6 3 0 forwardcostmult];    
-    basemprimendpts22p5_c(3,:) = [-2 -1 0 backwardcostmult];     
+    %basemprimendpts22p5_c(3,:) = [-2 -1 0 backwardcostmult];     
     %1/16 theta change
-    basemprimendpts22p5_c(4,:) = [5 4 1 forwardandturncostmult];
-    basemprimendpts22p5_c(5,:) = [7 2 -1 forwardandturncostmult];    
+    basemprimendpts22p5_c(3,:) = [5 4 1 forwardandturncostmult];
+    basemprimendpts22p5_c(4,:) = [7 2 -1 forwardandturncostmult];    
     %turn in place
-    %basemprimendpts22p5_c(6,:) = [0 0 1 turninplacecostmult];
-    %basemprimendpts22p5_c(7,:) = [0 0 -1 turninplacecostmult];
+    basemprimendpts22p5_c(5,:) = [0 0 1 turninplacecostmult];
+    basemprimendpts22p5_c(6,:) = [0 0 -1 turninplacecostmult];
         
 else
     fprintf(1, 'ERROR: undefined mprims type\n');
