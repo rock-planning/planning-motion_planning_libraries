@@ -5,6 +5,7 @@
 #include <vizkit3d/Vizkit3DPlugin.hpp>
 #include <osg/Geode>
 #include <motion_planning_libraries/State.hpp>
+#include <motion_planning_libraries/sbpl/SbplMotionPrimitives.hpp>
 
 namespace vizkit3d
 {

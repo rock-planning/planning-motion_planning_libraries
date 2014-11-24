@@ -128,6 +128,8 @@ class MotionPlanningLibraries
         return mError;
     }
     
+    bool getSbplMotionPrimitives(struct SbplMotionPrimitives& prims);
+    
     /**
      * Converts the world pose to grid coordinates including the transformed orientation.
      */        

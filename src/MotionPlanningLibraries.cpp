@@ -425,6 +425,24 @@ base::samples::RigidBodyState MotionPlanningLibraries::getGoalPoseInGrid() {
     return mGoalStateGrid.getPose();
 } 
 
+bool MotionPlanningLibraries::getSbplMotionPrimitives(struct SbplMotionPrimitives& prims) {
+
+    SbplEnvXYTHETA* sbpl_xytheta = dynamic_cast<SbplEnvXYTHETA*>(mpPlanningLib.get());
+    if(sbpl_xytheta) {
+        struct SbplMotionPrimitives* prims_ptr = sbpl_xytheta->getMotionPrimitives();
+        if(prims_ptr == NULL) {
+            LOG_WARN("Automatically generated motion primitives are not available");
+            return false;
+        } else { // Copy primitives and return.
+            prims = *prims_ptr;
+            return true;
+        }
+    } else {
+        LOG_WARN("Current environment is not SbplEnvXYTHETA");
+        return false;
+    }
+}
+
 bool MotionPlanningLibraries::world2grid(envire::TraversabilityGrid const* trav,
         base::samples::RigidBodyState const& world_pose, 
         base::samples::RigidBodyState& grid_pose) {

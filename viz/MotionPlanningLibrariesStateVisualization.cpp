@@ -182,5 +182,5 @@ QColor MotionPlanningLibrariesStateVisualization::getColor() const
 } 
 
 //Macro that makes this plugin loadable in ruby, this is optional.
-VizkitQtPlugin(MotionPlanningLibrariesStateVisualization)
+//VizkitQtPlugin(MotionPlanningLibrariesStateVisualization)
 

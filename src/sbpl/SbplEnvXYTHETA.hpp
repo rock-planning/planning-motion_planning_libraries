@@ -2,6 +2,7 @@
 #define _MOTION_PLANNING_LIBRARIES_SBPL_XYTHETA_HPP_
 
 #include "Sbpl.hpp"
+#include "SbplMotionPrimitives.hpp"
 
 namespace motion_planning_libraries
 {
@@ -12,6 +13,7 @@ class SbplEnvXYTHETA : public Sbpl
     // Required to set start/goal in ENV_XYTHETA 
     // (grid coordinates have to be converted back to meters) 
     double mSBPLScaleX, mSBPLScaleY; 
+    struct SbplMotionPrimitives* mPrims;
 
  public: 
     SbplEnvXYTHETA(Config config = Config());
@@ -33,6 +35,10 @@ class SbplEnvXYTHETA : public Sbpl
      * 
      */
     virtual bool fillPath(std::vector<struct State>& path);
+    
+    inline struct SbplMotionPrimitives* getMotionPrimitives() {
+        return mPrims;
+    }
 };
     
 } // end namespace motion_planning_libraries

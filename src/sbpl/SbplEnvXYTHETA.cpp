@@ -10,7 +10,7 @@ namespace motion_planning_libraries
 
 // PUBLIC
 SbplEnvXYTHETA::SbplEnvXYTHETA(Config config) : Sbpl(config), 
-        mSBPLScaleX(0), mSBPLScaleY(0) {
+        mSBPLScaleX(0), mSBPLScaleY(0), mPrims(NULL) {
     LOG_DEBUG("SbplEnvXYTHETA constructor");
 }
 
@@ -18,6 +18,8 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data) { 
     
     LOG_DEBUG("SBPLEnvXYTHETA initialize");
+    
+    mPrims = NULL;
     
     size_t grid_width = trav_grid->getCellSizeX();
     size_t grid_height = trav_grid->getCellSizeY();
@@ -49,6 +51,22 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
         }        
     // Create an sbpl-environment.
     } else {
+        
+        std::string mprim_file = mConfig.mSBPLMotionPrimitivesFile;
+        
+        // If no mprim file is specified it will be generated using the available
+        // speed informations.
+        // TODO test
+        if(mprim_file.empty()) {
+            LOG_INFO("No sbpl mprim file specified, it will be generated");
+            assert(scale_x == scale_y);
+            mprim_file = "sbpl_motion_primitives.mprim";
+            MotionPrimitivesConfig mprim_config(mConfig, grid_width, grid_height, scale_x);
+            mPrims = new struct SbplMotionPrimitives(mprim_config);
+            mPrims->createPrimitives();
+            mPrims->storeToFile(mprim_file);
+        }
+        
         createSBPLMap(trav_grid, grid_data);
        
         LOG_INFO("Create SBPL EnvironmentNAVXYTHETAMLEVLAT environment");
@@ -92,9 +110,9 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
                 speed, 
                 time_to_turn_45_degree, 
                 SBPL_MAX_COST, // cost threshold
-                mConfig.mSBPLMotionPrimitivesFile.c_str()); // motion primitives file
+                //mprim_file.c_str()); // motion primitives file
+                mConfig.mSBPLMotionPrimitivesFile.c_str());
         } catch (SBPL_Exception* e) {
-            
             LOG_ERROR("EnvironmentNAVXYTHETAMLEVLAT could not be created using the motion primitive file %s (%s)", 
                     mConfig.mSBPLMotionPrimitivesFile.c_str(),
                     e->what());
