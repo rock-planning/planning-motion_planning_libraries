@@ -41,6 +41,8 @@ struct Config {
             mRobotForwardVelocity(0.4), 
             mRobotBackwardVelocity(0.4),
             mRobotRotationalVelocity(1.0),
+            mRobotPointTurnVelocity(0.0),
+            mRobotLateralVelocity(0.0),
             mSBPLEnvFile(),
             mSBPLMotionPrimitivesFile(), 
             mSBPLForwardSearch(true),
@@ -74,6 +76,8 @@ struct Config {
     double mRobotForwardVelocity; // m/sec.
     double mRobotBackwardVelocity; // m/sec. positive value
     double mRobotRotationalVelocity; // rad/sec. positive value 
+    double mRobotPointTurnVelocity; // rad/sec. positive value
+    double mRobotLateralVelocity; // rad/sec. positive value 
     // Sbpl specific configuration
     std::string mSBPLEnvFile;
     std::string mSBPLMotionPrimitivesFile;

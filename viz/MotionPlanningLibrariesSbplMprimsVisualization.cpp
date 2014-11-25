@@ -15,9 +15,9 @@ struct MotionPlanningLibrariesSbplMprimsVisualization::Data {
     motion_planning_libraries::SbplMotionPrimitives data;
 };
 
-
+// PUBLIC
 MotionPlanningLibrariesSbplMprimsVisualization::MotionPlanningLibrariesSbplMprimsVisualization()
-    : p(new Data)
+    : mAllAnglesShown(false), mRadiusEndpoints(0.2), p(new Data)
 {
 }
 
@@ -26,6 +26,29 @@ MotionPlanningLibrariesSbplMprimsVisualization::~MotionPlanningLibrariesSbplMpri
     delete p;
 }
 
+// PUBLIC SLOTS
+bool MotionPlanningLibrariesSbplMprimsVisualization::allAnglesShown() const {
+    return mAllAnglesShown;
+}
+
+void MotionPlanningLibrariesSbplMprimsVisualization::setShowAllAngles(bool enabled) {
+    mAllAnglesShown = enabled;
+    emit propertyChanged("show_all_angles");
+}
+
+double  MotionPlanningLibrariesSbplMprimsVisualization::getRadiusEndpoints() const {
+    return mRadiusEndpoints;
+}
+
+void  MotionPlanningLibrariesSbplMprimsVisualization::setRadiusEndpoints(double radius) {
+    if(radius <= 0) {
+        radius = 0.2;
+    }
+    mRadiusEndpoints = radius;
+    emit propertyChanged("endpoint_radius_changed");
+}
+
+// PROTECTED
 osg::ref_ptr<osg::Node> MotionPlanningLibrariesSbplMprimsVisualization::createMainNode()
 {
     // Geode is a common node used for vizkit3d plugins. It allows to display
@@ -40,14 +63,14 @@ void MotionPlanningLibrariesSbplMprimsVisualization::updateMainNode ( osg::Node*
     osg::Group* group = node->asGroup();
     group->removeChildren(0, node->asGroup()->getNumChildren());
     
-    // Update the main node using the data in p->data
+    // Update the main node using the data in        double sphere_radius = mRadiusEndpoints; p->data
     addPrimitives(group, p->data);
 }
 
 void MotionPlanningLibrariesSbplMprimsVisualization::updateDataIntern(motion_planning_libraries::SbplMotionPrimitives const& data)
 {
     p->data = data;
-    std::cout << "got new sample data vector" << std::endl;
+    //std::cout << "got new sample data vector" << std::endl;
 }
 
 void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* group, 
@@ -60,16 +83,15 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
     double hue_step = 1.0 / (double)primitives.mConfig.mNumAngles;
     double hue = 0.0;
     float r=0, g=0, b=0;
-    bool just_show_angle_0 = false;
     osg::Vec4 color(r, g, b, 1.0f); 
     osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
     
     for(int i=0; it != prim_list.end(); it++, i++) {
         
         // Take a different color for each set of primitives.
-        std::cout << "Draw primitive " << i << std::endl;
+        //std::cout << "Draw primitive " << i << std::endl;
         if(i >= num_prims_per_angle) {
-            if(just_show_angle_0) {
+            if(!mAllAnglesShown) {
                 break;
             }
             i = 0;
@@ -82,16 +104,15 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
             colors->clear();
             colors->push_back( color );
             hue += hue_step;
-            std::cout << "Change color" << std::endl;
+            //std::cout << "Change color" << std::endl;
         }        
         
-        std::cout << "Set color to RGB: " << r << " " << g << " " << b << std::endl;
+        //std::cout << "Set color to RGB: " << r << " " << g << " " << b << std::endl;
     
         osg::ref_ptr<osg::Geode> geode = new osg::Geode();
         
         // Create sphere.
-        double sphere_radius = 0.2;
-        osg::ref_ptr<osg::Sphere> sp = new osg::Sphere(osg::Vec3d(0,0,0), sphere_radius);
+        osg::ref_ptr<osg::Sphere> sp = new osg::Sphere(osg::Vec3d(0,0,0), mRadiusEndpoints);
         osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(sp.get());
         sd->setColor(color);
         geode->addDrawable(sd.get());
@@ -99,9 +120,9 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
         // Create triangle.
         osg::ref_ptr<osg::Geometry> triangle_geometry = new osg::Geometry();
         osg::ref_ptr<osg::Vec3Array> triangle_vertices = new osg::Vec3Array();
-        triangle_vertices->push_back(osg::Vec3(0.0, 2*sphere_radius, 0));
-        triangle_vertices->push_back(osg::Vec3(4*2*sphere_radius, 0.0, 0));
-        triangle_vertices->push_back(osg::Vec3(0.0, -2*sphere_radius, 0));
+        triangle_vertices->push_back(osg::Vec3(0.0, 2*mRadiusEndpoints, 0));
+        triangle_vertices->push_back(osg::Vec3(4*2*mRadiusEndpoints, 0.0, 0));
+        triangle_vertices->push_back(osg::Vec3(0.0, -2*mRadiusEndpoints, 0));
         triangle_geometry->setVertexArray(triangle_vertices);
         osg::ref_ptr<osg::DrawElementsUInt> triangle_face = 
                 new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, 0);
@@ -116,13 +137,13 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
         // Move the sphere and the triangle to the endpose (converted from grid to world)
         // using a transform.
         base::Vector3d mEndPose = it->mEndPose;
-        std::cout << "Endpose " << mEndPose[0] << " " << mEndPose[1] << " scale factor " << primitives.mScaleFactor << std::endl;
+        //std::cout << "Endpose " << mEndPose[0] << " " << mEndPose[1] << " scale factor " << primitives.mScaleFactor << std::endl;
         double x = mEndPose[0] * primitives.mConfig.mGridSize;
         double y = mEndPose[1] * primitives.mConfig.mGridSize;
         double z = 0; // mEndPose[2] * primitives.mScaleFactor; // z is discrete orientation
         double theta = mEndPose[2] * ((2*M_PI)/primitives.mConfig.mNumAngles);
         
-        std::cout << "Draw sphere and triangle at XYZTHETA: " << x << " "  << y << " " << z << " " << theta << " " << std::endl; 
+        //std::cout << "Draw sphere and triangle at XYZTHETA: " << x << " "  << y << " " << z << " " << theta << " " << std::endl; 
         
         osg::ref_ptr<osg::PositionAttitudeTransform> transform = 
                 new osg::PositionAttitudeTransform();
@@ -143,12 +164,12 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
         osg::ref_ptr<osg::Geometry> fp_geometry = new osg::Geometry();
         osg::ref_ptr<osg::Vec3Array> fp_vertices = new osg::Vec3Array();
         base::Vector3d v_tmp;
-        std::cout << "Number of intermediate points: " << i_p.size() << std::endl;
+        //std::cout << "Number of intermediate points: " << i_p.size() << std::endl;
         for(unsigned int i = 0; i < i_p.size(); ++i) {
             v_tmp = i_p[i];
             fp_vertices->push_back(osg::Vec3(v_tmp[0], v_tmp[1], 0));
             if(i == i_p.size() - 1) {
-                std::cout << "Draw intermediate points to endpoint XY: " << v_tmp[0] << " " << v_tmp[1] << std::endl;
+                //std::cout << "Draw intermediate points to endpoint XY: " << v_tmp[0] << " " << v_tmp[1] << std::endl;
             }
         }
         

@@ -15,6 +15,9 @@ namespace vizkit3d
     {
     Q_OBJECT
     
+    Q_PROPERTY(bool showAllAngles READ allAnglesShown WRITE setShowAllAngles)
+    Q_PROPERTY(double radiusEndpoints READ getRadiusEndpoints WRITE setRadiusEndpoints)
+    
     public:
         MotionPlanningLibrariesSbplMprimsVisualization();
         ~MotionPlanningLibrariesSbplMprimsVisualization();
@@ -23,8 +26,17 @@ namespace vizkit3d
     {
         vizkit3d::Vizkit3DPlugin< motion_planning_libraries::SbplMotionPrimitives >::updateData(data);
     }
+    
+    public slots:
+        bool allAnglesShown() const;
+        void setShowAllAngles(bool enabled);
+        double getRadiusEndpoints() const;
+        void setRadiusEndpoints(double radius);
 
     protected:
+        bool mAllAnglesShown;
+        double mRadiusEndpoints;
+        
         virtual osg::ref_ptr<osg::Node> createMainNode();
         virtual void updateMainNode(osg::Node* node);
         virtual void updateDataIntern(motion_planning_libraries::SbplMotionPrimitives const& data);

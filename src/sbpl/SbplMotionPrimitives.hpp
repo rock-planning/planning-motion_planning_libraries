@@ -38,9 +38,9 @@ struct MotionPrimitivesConfig {
     MotionPrimitivesConfig(Config config, int trav_map_width, int trav_map_height, double grid_size) :
         mSpeedForward(config.mRobotForwardVelocity),
         mSpeedBackward(config.mRobotBackwardVelocity),
-        mSpeedLateral(0.0),
+        mSpeedLateral(config.mRobotLateralVelocity),
         mSpeedTurn(config.mRobotRotationalVelocity),
-        mSpeedPointTurn(0.0),
+        mSpeedPointTurn(config.mRobotPointTurnVelocity),
         mMultiplierForward(1),
         mMultiplierBackward(1),
         mMultiplierLateral(1),
@@ -139,7 +139,7 @@ struct SbplMotionPrimitives {
         std::ofstream mprim_file;
         mprim_file.open(path.c_str());
         
-        mprim_file << "resolution_m: " << mConfig.mGridSize << std::endl;
+        mprim_file << "resolution_m: " <<  std::fixed << std::setprecision(6) << mConfig.mGridSize << std::endl;
         mprim_file << "numberofangles: " << mConfig.mNumAngles << std::endl;
         mprim_file << "totalnumberofprimitives: " << mListPrimitives.size() << std::endl;
         
@@ -149,8 +149,8 @@ struct SbplMotionPrimitives {
             mprim =  mListPrimitives[i];
             mprim_file << "primID: " << mprim.mId << std::endl;
             mprim_file << "startangle_c: " << mprim.mStartAngle << std::endl;
-            mprim_file << "endpose_c: " << mprim.mEndPose[0] << " " << 
-                    mprim.mEndPose[1] << " " << mprim.mEndPose[2] << std::endl;
+            mprim_file << "endpose_c: " << (int)mprim.mEndPose[0] << " " << 
+                    (int)mprim.mEndPose[1] << " " << (int)mprim.mEndPose[2] << std::endl;
             mprim_file << "additionalactioncostmult: " << mprim.mCostMultiplier << std::endl;
             mprim_file << "intermediateposes: " << mprim.mIntermediatePoses.size() << std::endl;
             base::Vector3d v3d;
@@ -211,10 +211,12 @@ struct SbplMotionPrimitives {
         // Forward + negative turn
         // Calculates end pose driving with full forward and turn speeds.
         if(mConfig.mSpeedForward > 0 && mConfig.mSpeedTurn > 0) {
+            // This way of calculating the turning radius seems to be inaccurate.
             double turning_radius = mConfig.mSpeedForward / mConfig.mSpeedTurn;
+            // Vector3d: x y theta
             base::Vector3d turned_start = Eigen::AngleAxis<double>(-mConfig.mSpeedTurn * mScaleFactor, Eigen::Vector3d::UnitZ()) * 
                     base::Vector3d(0.0, turning_radius, 0.0);
-            turned_start[1] += turning_radius;
+            turned_start[1] -= turning_radius;
             turned_start[2] = -mConfig.mSpeedTurn * mScaleFactor;
             poses_zero_rad.push_back(endpose(turned_start, mConfig.mMultiplierTurn));
             // Forward + positive turn, just mirror negative turn
@@ -262,11 +264,12 @@ struct SbplMotionPrimitives {
         for(;it != mListPrimitives.end(); it++) {
             end_pose_world[0] = it->mEndPose[0] * mConfig.mGridSize;
             end_pose_world[1] = it->mEndPose[1] * mConfig.mGridSize;
-            end_pose_world[2] = 0; // it->mEndPose[2] contains theta
+            // Calculate theta (rad) in world.
+            end_pose_world[2] = it->mEndPose[2] * (M_PI*2 / (double)mConfig.mNumAngles);
             double x_step = end_pose_world[0] / ((double)mConfig.mNumIntermediatePoses-1);
             double y_step = end_pose_world[1] / ((double)mConfig.mNumIntermediatePoses-1);
-            double theta_step = it->mEndPose[2] / ((double)mConfig.mNumIntermediatePoses-1);
-            for(int i=0; i<mConfig.mNumIntermediatePoses; i++) {
+            double theta_step = end_pose_world[2] / ((double)mConfig.mNumIntermediatePoses-1);
+            for(unsigned int i=0; i<mConfig.mNumIntermediatePoses; i++) {
                 intermediate_pose[0] = i * x_step;
                 intermediate_pose[1] = i * y_step;
                 intermediate_pose[2] = i * theta_step;
