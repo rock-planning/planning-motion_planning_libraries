@@ -23,6 +23,36 @@ enum EnvType {
 };
 
 /**
+ * All speeds should be positive values, multipliers have to be >=1.
+ * 
+ */
+struct Speeds {
+    Speeds() : 
+           mSpeedForward(0.4),
+           mSpeedBackward(0.4),
+           mSpeedLateral(0.0),
+           mSpeedTurn(0.1),
+           mSpeedPointTurn(0.1),
+           mMultiplierForward(1),
+           mMultiplierBackward(1),
+           mMultiplierLateral(1),
+           mMultiplierTurn(1),
+           mMultiplierPointTurn(1) {
+    }
+            
+    double mSpeedForward; // m/sec.
+    double mSpeedBackward; // m/sec.
+    double mSpeedLateral; // m/sec.
+    double mSpeedTurn; // rad/sec.
+    double mSpeedPointTurn; // rad/sec.
+    unsigned int mMultiplierForward;
+    unsigned int mMultiplierBackward;
+    unsigned int mMultiplierLateral;
+    unsigned int mMultiplierTurn;
+    unsigned int mMultiplierPointTurn;
+};
+
+/**
  *  Contains the configuration for all planning libraries.
  *  Just ignore the non relevant parameters.
  * TODO: Split into PlanningConfig and RobotConfig
@@ -34,15 +64,11 @@ struct Config {
             mReplanDuringEachUpdate(false),
             mReplanOnNewStartPose(false),
             mMaxAllowedSampleDist(-1),
+            mSpeeds(),
             mFootprintRadiusMinMax(0.5,0.5),  
             mNumFootprintClasses(10),
             mTimeToAdaptFootprint(40.0),
             mAdaptFootprintPenalty(20.0),
-            mRobotForwardVelocity(0.4), 
-            mRobotBackwardVelocity(0.4),
-            mRobotRotationalVelocity(1.0),
-            mRobotPointTurnVelocity(0.0),
-            mRobotLateralVelocity(0.0),
             mSBPLEnvFile(),
             mSBPLMotionPrimitivesFile(), 
             mSBPLForwardSearch(true),
@@ -65,6 +91,9 @@ struct Config {
     double mMaxAllowedSampleDist;
     
     // NAVIGATION
+    struct Speeds mSpeeds;
+    
+    // FOOTPRINT
     std::pair<double,double> mFootprintRadiusMinMax; // Minimal / maximal footprint radius.
     // Defines number of different footprint radii from min to max, used to discretize the search space.
     unsigned int mNumFootprintClasses;
@@ -73,12 +102,7 @@ struct Config {
     // If the footprint is changed this time (sec) will be added to the costs.
     double mAdaptFootprintPenalty;
     
-    double mRobotForwardVelocity; // m/sec.
-    double mRobotBackwardVelocity; // m/sec. positive value
-    double mRobotRotationalVelocity; // rad/sec. positive value 
-    double mRobotPointTurnVelocity; // rad/sec. positive value
-    double mRobotLateralVelocity; // rad/sec. positive value 
-    // Sbpl specific configuration
+    // SBPL
     std::string mSBPLEnvFile;
     std::string mSBPLMotionPrimitivesFile;
     bool mSBPLForwardSearch;

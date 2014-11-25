@@ -39,11 +39,17 @@ bool OmplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             new ompl::control::RealVectorControlSpace(mpStateSpace, 2));
     ompl::base::RealVectorBounds cbounds(2);
     // Requires a control-planner.
-                
-    cbounds.setLow(0, -mConfig.mRobotBackwardVelocity);
-    cbounds.setHigh(0, mConfig.mRobotForwardVelocity);
-    cbounds.setLow(1, -mConfig.mRobotRotationalVelocity);
-    cbounds.setHigh(1, mConfig.mRobotRotationalVelocity);
+    
+    // Uses the average turning speed.
+    double turning_speed = (mConfig.mSpeeds.mSpeedTurn + mConfig.mSpeeds.mSpeedPointTurn) / 2.0;
+    if(turning_speed == 0) {
+        LOG_WARN("Rotational velocity of zero is not allowed, abort");
+        return false;
+    }
+    cbounds.setLow(0, -mConfig.mSpeeds.mSpeedBackward);
+    cbounds.setHigh(0, mConfig.mSpeeds.mSpeedForward);
+    cbounds.setLow(1, -turning_speed);
+    cbounds.setHigh(1, turning_speed);
     mpControlSpace->as<ompl::control::RealVectorControlSpace>()->setBounds(cbounds);
     
     // Control space information inherits from base space informartion.

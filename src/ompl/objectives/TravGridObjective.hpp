@@ -116,12 +116,12 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
         double class_value = (double)(*mpTravData)[y][x];
         double driveability = (mpTravGrid->getTraversabilityClass(class_value)).getDrivability();
         double cost = 0;
-        if(driveability == 0 || mConfig.mRobotForwardVelocity == 0) {
+        if(driveability == 0 || mConfig.mSpeeds.mSpeedForward == 0) {
             cost = std::numeric_limits<double>::max();
         } else {
             // Calculate time to traverse the cell. Driveability of 1.0 means, that the cell can
             // be traversed with full speed.
-            cost = (mpTravGrid->getScaleX() / mConfig.mRobotForwardVelocity) /  driveability;
+            cost = (mpTravGrid->getScaleX() / mConfig.mSpeeds.mSpeedForward) /  driveability;
             // Increases cost regarding the footprint. Max footprint means full speed,
             // min footprint increases the cost by the number of footprint classes.
             if(mConfig.mEnvType == ENV_SHERPA) {

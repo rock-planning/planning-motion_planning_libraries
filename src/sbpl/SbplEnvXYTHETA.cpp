@@ -74,9 +74,9 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
                 boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
         try {
             // SBPL does not allow the definition of forward AND backward velocity.
-            double speed = fabs(mConfig.mRobotForwardVelocity);
+            double speed = fabs(mConfig.mSpeeds.mSpeedForward);
             
-            if(mConfig.mRobotForwardVelocity != mConfig.mRobotBackwardVelocity) {
+            if(mConfig.mSpeeds.mSpeedForward != mConfig.mSpeeds.mSpeedBackward) {
                 LOG_WARN("SBPL does not use backward velocity, only forward velocity will be used");
             }
             
@@ -84,13 +84,17 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
                 LOG_WARN("Speed of zero is not allowed, abort");
                 return false;
             }
-           
-            if(mConfig.mRobotRotationalVelocity == 0.0) {
+          
+            // The average turning speed (forward-turn and point-turn) is used for the
+            // cost calculation.
+            double turning_speed = (mConfig.mSpeeds.mSpeedTurn + mConfig.mSpeeds.mSpeedPointTurn) / 2.0;
+            if(turning_speed == 0) {
                 LOG_WARN("Rotational velocity of zero is not allowed, abort");
                 return false;
             }
-            // SBPL: time in sec for a 45° turn
-            double time_to_turn_45_degree = fabs((M_PI / 4.0) / mConfig.mRobotRotationalVelocity);
+            
+            // SBPL: time in sec for a 45° turn  
+            double time_to_turn_45_degree = fabs((M_PI / 4.0) / turning_speed);
             double robot_width = 2 * std::max(mConfig.mFootprintRadiusMinMax.first, mConfig.mFootprintRadiusMinMax.second);
             double robot_length = robot_width;
             

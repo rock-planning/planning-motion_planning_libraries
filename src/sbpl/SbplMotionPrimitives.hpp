@@ -17,16 +17,7 @@ namespace motion_planning_libraries {
  */
 struct MotionPrimitivesConfig {
     MotionPrimitivesConfig() :
-            mSpeedForward(0.0),
-            mSpeedBackward(0.0),
-            mSpeedLateral(0.0),
-            mSpeedTurn(0.0),
-            mSpeedPointTurn(0.0),
-            mMultiplierForward(1),
-            mMultiplierBackward(1),
-            mMultiplierLateral(1),
-            mMultiplierTurn(1),
-            mMultiplierPointTurn(1),
+            mSpeeds(),
             mNumTurnPrimitives(0),
             mNumIntermediatePoses(0),
             mNumAngles(0),
@@ -36,16 +27,7 @@ struct MotionPrimitivesConfig {
     }
     
     MotionPrimitivesConfig(Config config, int trav_map_width, int trav_map_height, double grid_size) :
-        mSpeedForward(config.mRobotForwardVelocity),
-        mSpeedBackward(config.mRobotBackwardVelocity),
-        mSpeedLateral(config.mRobotLateralVelocity),
-        mSpeedTurn(config.mRobotRotationalVelocity),
-        mSpeedPointTurn(config.mRobotPointTurnVelocity),
-        mMultiplierForward(1),
-        mMultiplierBackward(1),
-        mMultiplierLateral(1),
-        mMultiplierTurn(1),
-        mMultiplierPointTurn(1),
+        mSpeeds(config.mSpeeds),
         mNumTurnPrimitives(2),
         mNumIntermediatePoses(10),
         mNumAngles(16),
@@ -55,16 +37,7 @@ struct MotionPrimitivesConfig {
     }   
     
   public:
-    double mSpeedForward;
-    double mSpeedBackward;
-    double mSpeedLateral;
-    double mSpeedTurn;
-    double mSpeedPointTurn;
-    unsigned int mMultiplierForward;
-    unsigned int mMultiplierBackward;
-    unsigned int mMultiplierLateral;
-    unsigned int mMultiplierTurn;
-    unsigned int mMultiplierPointTurn;
+    struct Speeds mSpeeds;
     unsigned int mNumTurnPrimitives;
     
     unsigned int mNumIntermediatePoses; // Number of points a primitive consists of.
@@ -178,51 +151,51 @@ struct SbplMotionPrimitives {
         // to find the min scale factor. This represents the required movement time
         // to create these primitives.
         mScaleFactor = 1.0;
-        if(mConfig.mSpeedForward > 0)
-        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeedForward);
-        if(mConfig.mSpeedBackward > 0)
-        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeedBackward);
-        if(mConfig.mSpeedLateral > 0)
-        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeedLateral);
-        if(mConfig.mSpeedPointTurn > 0)
-        mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeedPointTurn);
-        if(mConfig.mSpeedTurn > 0)
-        mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeedTurn);
+        if(mConfig.mSpeeds.mSpeedForward > 0)
+        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedForward);
+        if(mConfig.mSpeeds.mSpeedBackward > 0)
+        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedBackward);
+        if(mConfig.mSpeeds.mSpeedLateral > 0)
+        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedLateral);
+        if(mConfig.mSpeeds.mSpeedPointTurn > 0)
+        mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeeds.mSpeedPointTurn);
+        if(mConfig.mSpeeds.mSpeedTurn > 0)
+        mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeeds.mSpeedTurn);
         
         // Forward
-        if(mConfig.mSpeedForward > 0) {
-            poses_zero_rad.push_back(endpose(base::Vector3d(mConfig.mGridSize, 0, 0), mConfig.mMultiplierForward));
-            poses_zero_rad.push_back(endpose(base::Vector3d(mConfig.mSpeedForward * mScaleFactor, 0, 0), mConfig.mMultiplierForward));
+        if(mConfig.mSpeeds.mSpeedForward > 0) {
+            poses_zero_rad.push_back(endpose(base::Vector3d(mConfig.mGridSize, 0, 0), mConfig.mSpeeds.mMultiplierForward));
+            poses_zero_rad.push_back(endpose(base::Vector3d(mConfig.mSpeeds.mSpeedForward * mScaleFactor, 0, 0), mConfig.mSpeeds.mMultiplierForward));
         }
         // Backward
-        if(mConfig.mSpeedBackward > 0) {
-            poses_zero_rad.push_back(endpose(base::Vector3d(mConfig.mSpeedBackward * mScaleFactor, 0, 0), mConfig.mMultiplierBackward));
+        if(mConfig.mSpeeds.mSpeedBackward > 0) {
+            poses_zero_rad.push_back(endpose(base::Vector3d(-mConfig.mSpeeds.mSpeedBackward * mScaleFactor, 0, 0), mConfig.mSpeeds.mMultiplierBackward));
         }
         // Lateral
-        if(mConfig.mSpeedLateral > 0) {
-            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, mConfig.mSpeedLateral * mScaleFactor, 0.0), mConfig.mMultiplierLateral));
-            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, -mConfig.mSpeedLateral * mScaleFactor, 0.0), mConfig.mMultiplierLateral));
+        if(mConfig.mSpeeds.mSpeedLateral > 0) {
+            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, mConfig.mSpeeds.mSpeedLateral * mScaleFactor, 0.0), mConfig.mSpeeds.mMultiplierLateral));
+            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, -mConfig.mSpeeds.mSpeedLateral * mScaleFactor, 0.0), mConfig.mSpeeds.mMultiplierLateral));
         }
         // Point turn
-        if(mConfig.mSpeedPointTurn > 0) {
-            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, 0.0, mConfig.mSpeedPointTurn * mScaleFactor), mConfig.mMultiplierPointTurn));
-            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, 0.0, -mConfig.mSpeedPointTurn * mScaleFactor), mConfig.mMultiplierPointTurn));
+        if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
+            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, 0.0, mConfig.mSpeeds.mSpeedPointTurn * mScaleFactor), mConfig.mSpeeds.mMultiplierPointTurn));
+            poses_zero_rad.push_back(endpose(base::Vector3d(0.0, 0.0, -mConfig.mSpeeds.mSpeedPointTurn * mScaleFactor), mConfig.mSpeeds.mMultiplierPointTurn));
         }
         // Forward + negative turn
         // Calculates end pose driving with full forward and turn speeds.
-        if(mConfig.mSpeedForward > 0 && mConfig.mSpeedTurn > 0) {
+        if(mConfig.mSpeeds.mSpeedForward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
             // This way of calculating the turning radius seems to be inaccurate.
-            double turning_radius = mConfig.mSpeedForward / mConfig.mSpeedTurn;
+            double turning_radius = mConfig.mSpeeds.mSpeedForward / mConfig.mSpeeds.mSpeedTurn;
             // Vector3d: x y theta
-            base::Vector3d turned_start = Eigen::AngleAxis<double>(-mConfig.mSpeedTurn * mScaleFactor, Eigen::Vector3d::UnitZ()) * 
+            base::Vector3d turned_start = Eigen::AngleAxis<double>(-mConfig.mSpeeds.mSpeedTurn * mScaleFactor, Eigen::Vector3d::UnitZ()) * 
                     base::Vector3d(0.0, turning_radius, 0.0);
             turned_start[1] -= turning_radius;
-            turned_start[2] = -mConfig.mSpeedTurn * mScaleFactor;
-            poses_zero_rad.push_back(endpose(turned_start, mConfig.mMultiplierTurn));
+            turned_start[2] = -mConfig.mSpeeds.mSpeedTurn * mScaleFactor;
+            poses_zero_rad.push_back(endpose(turned_start, mConfig.mSpeeds.mMultiplierTurn));
             // Forward + positive turn, just mirror negative turn
             turned_start[1] *= -1;
             turned_start[2] *= -1;
-            poses_zero_rad.push_back(endpose(turned_start, mConfig.mMultiplierTurn));
+            poses_zero_rad.push_back(endpose(turned_start, mConfig.mSpeeds.mMultiplierTurn));
         }
         
         // Creates discrete end poses for all angles.
