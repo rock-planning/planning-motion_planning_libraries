@@ -30,7 +30,7 @@ struct MotionPrimitivesConfig {
         mSpeeds(config.mSpeeds),
         mNumTurnPrimitives(2),
         mNumIntermediatePoses(10),
-        mNumAngles(16),
+        mNumAngles(32),
         mMapWidth(trav_map_width),
         mMapHeight(trav_map_height),
         mGridSize(grid_size) {   
