@@ -149,18 +149,29 @@ struct SbplMotionPrimitives {
         
         // Scaling: Each movement has to reach a new discrete state, so we have
         // to find the min scale factor. This represents the required movement time
-        // to create these primitives.
+        // to create all these primitives.
         mScaleFactor = 1.0;
-        if(mConfig.mSpeeds.mSpeedForward > 0)
-        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedForward);
-        if(mConfig.mSpeeds.mSpeedBackward > 0)
-        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedBackward);
-        if(mConfig.mSpeeds.mSpeedLateral > 0)
-        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedLateral);
-        if(mConfig.mSpeeds.mSpeedPointTurn > 0)
-        mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeeds.mSpeedPointTurn);
-        if(mConfig.mSpeeds.mSpeedTurn > 0)
-        mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeeds.mSpeedTurn);
+        if(mConfig.mSpeeds.mSpeedForward > 0) {
+            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedForward);
+            LOG_INFO("Speed forward, new scale factor: %4.2f", mScaleFactor);
+        }
+        if(mConfig.mSpeeds.mSpeedBackward > 0) {
+            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedBackward);
+            LOG_INFO("Speed backward, new scale factor: %4.2f", mScaleFactor);
+        }
+        if(mConfig.mSpeeds.mSpeedLateral > 0) {
+            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedLateral);
+            LOG_INFO("Speed lateral, new scale factor: %4.2f", mScaleFactor);
+        }
+        if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
+            mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeeds.mSpeedPointTurn);
+            LOG_INFO("Speed point turn, new scale factor: %4.2f", mScaleFactor);
+        }
+        if(mConfig.mSpeeds.mSpeedTurn > 0) {
+            mScaleFactor = std::max(mScaleFactor, (2*M_PI/mConfig.mNumAngles) / mConfig.mSpeeds.mSpeedTurn);
+            LOG_INFO("Speed turn, new scale factor: %4.2f", mScaleFactor);
+        }
+        LOG_INFO("Overall primitives scale factor (movement time in seconds): %4.2f", mScaleFactor);
         
         // Forward
         if(mConfig.mSpeeds.mSpeedForward > 0) {
