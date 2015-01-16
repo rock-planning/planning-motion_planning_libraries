@@ -9,20 +9,51 @@ namespace motion_planning_libraries
 
 // PUBLIC
 Sbpl::Sbpl(Config config) : AbstractMotionPlanningLibrary(config),
+        mpSBPLEnv(),
+        mpSBPLPlanner(),
+        mSBPLWaypointIDs(),
         mpSBPLMapData(NULL),
-        mSBPLNumElementsMap(0) {
+        mSBPLNumElementsMap(0),
+        mReplanParams(0),
+        mLastSolutionCost(0) {
+            
     LOG_DEBUG("SBPL constructor");
+    
+    // Fill out replan params. Will be used for each new call to solve().
+    // mReplanParams.max_time will be added within solve(time).
+    mReplanParams.initial_eps = 100.0;
+    mReplanParams.final_eps = 1.0;
+    mReplanParams.dec_eps = 0.2;
+    mReplanParams.return_first_solution = config.mSearchUntilFirstSolution;
+    mReplanParams.repair_time = -1;
 }
 
 bool Sbpl::solve(double time) {
     
     LOG_DEBUG("SBPL solve()");
     
+    mReplanParams.max_time = time;
+    
     mSBPLWaypointIDs.clear();
+    
+    LOG_DEBUG("Initial epsilon: %4.2f\n \
+            Initial epsilon and planning time %4.2f\n \
+            Final epsilon: %4.2f\n \
+            Final epsilon and planning time: %4.2f\n \
+            Solution epsilon: %4.2f\n",
+            mpSBPLPlanner->get_initial_eps(), 
+            mpSBPLPlanner->get_initial_eps_planning_time(), 
+            mpSBPLPlanner->get_final_epsilon(),
+            mpSBPLPlanner->get_final_eps_planning_time(), 
+            mpSBPLPlanner->get_solution_eps());
     
     bool ret = false;
     try {
-        ret = mpSBPLPlanner->replan(time, &mSBPLWaypointIDs);
+        // TODO: Planner should use all the available time to plan
+        // and it should support optimal solutions. Current solutions seems to 
+        // be not optimal due to the strange rotated waypoints.
+        mpSBPLPlanner->force_planning_from_scratch(); // Required to reset epsilon?
+        ret = mpSBPLPlanner->replan(&mSBPLWaypointIDs, mReplanParams, &mLastSolutionCost);
     } catch (...) {
         LOG_ERROR("Replanning failed");
         return false;
