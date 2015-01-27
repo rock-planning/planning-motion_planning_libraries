@@ -32,7 +32,9 @@ class SbplEnvXYTHETA : public Sbpl
     virtual bool solve(double time);    
         
     /**
-     * 
+     * Currently just converts the found prim ids to x,y,theta.
+     * It does not use ConvertStateIDPathintoXYThetaPath()
+     * which would also add the intermediate points.
      */
     virtual bool fillPath(std::vector<struct State>& path);
     

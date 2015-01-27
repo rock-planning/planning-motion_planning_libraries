@@ -198,19 +198,54 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path) {
     
     base::samples::RigidBodyState rbs;
     
-    int x = 0, y = 0, theta = 0; // In SBPL theta is an integer as well.
+    // GetCoordFromState returns the discrete pposition and angle!!
+    int x_discrete = 0, y_discrete = 0, theta_discrete = 0; 
     
-    // Fill path with the found solution.
+    std::vector<int> path_ids;
+    std::vector<sbpl_xy_theta_pt_t> path_xytheta;
+    
     std::vector<int>::iterator it = mSBPLWaypointIDs.begin();
     for(; it != mSBPLWaypointIDs.end(); it++) {
-       
+        if(!mConfig.mUseIntermediatePoints) {
+            // Fill path with the found solution.
+            boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
+                    boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
+            env_xytheta->GetCoordFromState(*it, x_discrete, y_discrete, theta_discrete);
+
+            // MotionPlanningLibraries expects grid coordinates, but a real angle in rad,
+            // not the discrete one! (0-15), adapts to OMPL angles with (-PI,PI]
+            rbs.position = base::Vector3d(x_discrete, y_discrete, 0);
+            double theta_rad = DiscTheta2Cont(theta_discrete, NAVXYTHETALAT_THETADIRS) - 179.0;
+            rbs.orientation =  Eigen::AngleAxis<double>(theta_rad, base::Vector3d(0,0,1));
+            path.push_back(rbs);
+        } else {
+            // Just store the path ids.
+            path_ids.push_back(*it);
+        }
+    }
+    
+    // Use ConvertStateIDPathintoXYThetaPath to create the path in the world with
+    // intermediate points.
+    if(mConfig.mUseIntermediatePoints) {
         boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
                 boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
-        env_xytheta->GetCoordFromState(*it, x, y, theta);
-
-        rbs.position = base::Vector3d(x,y,0);
-        rbs.orientation =  Eigen::AngleAxis<double>(theta, base::Vector3d(0,0,1));
-        path.push_back(rbs);
+                
+        // Converts from discrete to meter and radians, but the
+        // MotionPlanningLibraries needs grid-coordinates, so we have to revert
+        // the position back using CONTXY2DISC.        
+        env_xytheta->ConvertStateIDPathintoXYThetaPath(&path_ids, &path_xytheta);
+        
+        int x_grid = 0;
+        int y_grid = 0;
+        sbpl_xy_theta_pt_t xyt_m_rad;
+        for(unsigned int i=0; i<path_xytheta.size(); ++i) {
+            xyt_m_rad = path_xytheta[i];
+            x_grid = CONTXY2DISC(xyt_m_rad.x, env_xytheta->GetEnvNavConfig()->cellsize_m);
+            y_grid = CONTXY2DISC(xyt_m_rad.y, env_xytheta->GetEnvNavConfig()->cellsize_m);
+            rbs.position = base::Vector3d(x_grid, y_grid, 0);
+            rbs.orientation =  Eigen::AngleAxis<double>(xyt_m_rad.theta, base::Vector3d(0,0,1));
+            path.push_back(rbs);
+        }
     }
     
     return true;

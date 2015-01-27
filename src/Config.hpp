@@ -22,6 +22,15 @@ enum EnvType {
     ENV_SHERPA
 };
 
+enum MovementType {
+    MOV_UNDEFINED,
+    MOV_FORWARD,
+    MOV_BACKWARD,
+    MOV_TURN,
+    MOV_POINTTURN,
+    MOV_LATERAL
+};
+
 /**
  * All speeds should be positive values, multipliers have to be >=1.
  * 
@@ -72,6 +81,7 @@ struct Config {
             mSBPLEnvFile(),
             mSBPLMotionPrimitivesFile(), 
             mSBPLForwardSearch(true),
+            mUseIntermediatePoints(false),
             mJointBorders() {
     }
     
@@ -106,6 +116,8 @@ struct Config {
     std::string mSBPLEnvFile;
     std::string mSBPLMotionPrimitivesFile;
     bool mSBPLForwardSearch;
+    // Use SBPL MPrims Intermediate Points (in general ten per motion primitive).
+    bool mUseIntermediatePoints;
     
     // ARM MOTION PLANNING
     // defines the number and borders of the joints.  <low,high> in rad
