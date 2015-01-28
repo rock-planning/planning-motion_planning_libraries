@@ -49,73 +49,64 @@ struct MotionPrimitivesConfig {
 };
 
 /**
- * Describes a single motion primitive.
+ * Describes a single motion primitive. This structure is used
+ * to collect the non discrete primitived for angle 0
+ * and the final discrete primitives for all the angles.
  */
 struct Primitive {
  public:
     int mId;
     int mStartAngle;
-    base::Vector3d mDiscreteEndPose;
+    /// Can receive non discrete and discrete endposes.
+    base::Vector3d mEndPose;
     unsigned int mCostMultiplier;
     std::vector<base::Vector3d> mIntermediatePoses; 
+    enum MovementType mMovType; // Type of movement.
+    // Will be used to calculate the orientation of the intermediate poses.
+    // This orientation is not truncated to 0 to 15.
+    int mDiscreteEndOrientationNotTruncated;
      
-    Primitive() : mId(0), mStartAngle(0), mDiscreteEndPose(), 
-            mCostMultiplier(0), mIntermediatePoses() 
+    Primitive() : mId(0), mStartAngle(0), mEndPose(), 
+            mCostMultiplier(0), mIntermediatePoses(), mMovType(MOV_UNDEFINED)
     {
     }
     
     /**
-     * Stores the passed discrete endpose with truncated orientation (0 to mNumAngles) to
-     * mDiscreteEndPose and stores the not-truncated orientation to 
+     * \param id Id of the motion primitive, is unique for each angle.
+     * \param start_angle Discrete starting angle.
+     * \param end_pose End pose with <x,y,theta>.
+     * \param cost_multiplier Cost multiplier of this kind of motion.
+     */
+    Primitive(int id, int start_angle, base::Vector3d end_pose, 
+            unsigned int cost_multiplier, enum MovementType mov_type) : 
+            mId(id), mStartAngle(start_angle), mEndPose(end_pose), 
+            mCostMultiplier(cost_multiplier), 
+            mIntermediatePoses(), mMovType(mov_type)
+    {
+    }
+    
+    /** 
+     * Stores the passed discrete orientation with truncated orientation (0 to mNumAngles) to
+     * mEndPose and stores the not-truncated orientation to 
      * mDiscreteEndOrientationNotTruncated.
      * The non truncated value will be used to calculate the orientation of the
      * intermediate poses.
-     * \param id Id of the motion primitive, is unique for each angle.
-     * \param start_angle Discrete starting angle.
-     * \param discrete_end_pose Discrete end pose with <x,y,theta> in grid coordinates and angles
-     * mapped from 0 to mNumAngles.
-     * \param cost_multiplier Cost multiplier of this kind of motion.
+     * \param discrete_theta Discrete orientation. One discrete angle 
+     * represents 2*M_PI/num_angles radians.
      * \param num_angles Number of discrete angles in SBPL, default: [0,16)
      */
-    Primitive(int id, int start_angle, base::Vector3d discrete_end_pose, 
-            unsigned int cost_multiplier, int num_angles) : 
-            mId(id), mStartAngle(start_angle), mCostMultiplier(cost_multiplier), 
-            mIntermediatePoses() 
-    {
-        mDiscreteEndOrientationNotTruncated = discrete_end_pose[2];
-        // Truncate theta from [0,num_angles)
-        double theta = discrete_end_pose[2];
-        while (theta >= num_angles)
-            theta -= num_angles;
-        while (theta < 0)
-            theta += num_angles;
-        discrete_end_pose[2] = theta;
-        mDiscreteEndPose = discrete_end_pose;
+    void setDiscreteEndOrientation(int discrete_theta, int num_angles) {
+        mDiscreteEndOrientationNotTruncated = discrete_theta;
+        while (discrete_theta >= num_angles)
+            discrete_theta -= num_angles;
+        while (discrete_theta < 0)
+            discrete_theta += num_angles;
+        mEndPose[2] = discrete_theta;
     }
-     
-   
-    double getNonTruncatedOrientation() {
+        
+    int getDiscreteEndOrientationNotTruncated() {
         return mDiscreteEndOrientationNotTruncated;
     }
-
- private:
-    // Used to calculate the orientation of the intermediate poses.
-    // This orientation is not truncated to 0 to 15.
-    double mDiscreteEndOrientationNotTruncated;
-};
-
-struct Endpose {
-    Endpose() : mPose(), mTheta(0.0), mMultiplier(0), mMovType(MOV_UNDEFINED) {
-    }
-    
-    Endpose(base::Vector3d pose, double theta, int multiplier, enum MovementType mov_type) :
-            mPose(pose), mTheta(theta), mMultiplier(multiplier), mMovType(mov_type) {
-    }
-            
-    base::Vector3d mPose; // x, y in meter
-    double mTheta; // theta in radians
-    int mMultiplier; // SBPL multiplier for this movement type
-    enum MovementType mMovType; // Type of movement.
 };
 
 /**
@@ -131,7 +122,7 @@ struct Endpose {
 struct SbplMotionPrimitives {
  public:
     struct MotionPrimitivesConfig mConfig;
-    std::vector< struct Endpose > mListPrimitives
+    std::vector<struct Primitive> mListPrimitivesAngle0; // Contains non discrete primitives for angle 0.
     std::vector<struct Primitive> mListPrimitives;
     // Scale factor used to scale all primitives to take sure that they reach a new state.
     double mScaleFactor; 
@@ -151,13 +142,262 @@ struct SbplMotionPrimitives {
     }
     
     /**
-     * First uses fillListEndposes() to calculate the end poses in the world for 
-     * all angles. These poses are discretized by rounding down (this should 
-     * take care that we do not exceed the max turning radius.
+     * Fills mListPrimitives.
      */
     void createPrimitives() {
-        fillListEndposes();
-        createIntermediatePoses();
+        std::vector<struct Primitive> prim_angle_0 = createMPrimsForAngle0();
+        createMPrims(prim_angle_0); // Stores to global prim list mListPrimitives as well.
+        createIntermediatePoses(mListPrimitives); // Adds intermediate poses.
+    }
+    
+    /**
+     * Uses the defined speeds of the system to create the motion primitives 
+     * for discrete angle 0.
+     */
+    std::vector<struct Primitive> createMPrimsForAngle0() { 
+        mListPrimitivesAngle0.clear();
+        
+        // Scaling: Each movement has to reach a new discrete state, so we have
+        // to find the min scale factor. This represents the required movement time
+        // to create all these primitives.
+        mScaleFactor = 1.0;
+        if(mConfig.mSpeeds.mSpeedForward > 0) {
+            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedForward);
+            LOG_INFO("Speed forward, new scale factor: %4.2f", mScaleFactor);
+        }
+        if(mConfig.mSpeeds.mSpeedBackward > 0) {
+            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedBackward);
+            LOG_INFO("Speed backward, new scale factor: %4.2f", mScaleFactor);
+        }
+        if(mConfig.mSpeeds.mSpeedLateral > 0) {
+            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedLateral);
+            LOG_INFO("Speed lateral, new scale factor: %4.2f", mScaleFactor);
+        }
+        if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
+            mScaleFactor = std::max(mScaleFactor, mRadPerDiscreteAngle / mConfig.mSpeeds.mSpeedPointTurn);
+            LOG_INFO("Speed point turn, new scale factor: %4.2f", mScaleFactor);
+        }
+        if(mConfig.mSpeeds.mSpeedTurn > 0) {
+            mScaleFactor = std::max(mScaleFactor, mRadPerDiscreteAngle / mConfig.mSpeeds.mSpeedTurn);
+            LOG_INFO("Speed turn, new scale factor: %4.2f", mScaleFactor);
+        }
+        LOG_INFO("Overall primitives scale factor (movement time in seconds): %4.2f", mScaleFactor);
+        
+        int primId = 0;
+        // Forward
+        if(mConfig.mSpeeds.mSpeedForward > 0) {
+            // TODO: Not optimal I guess: mConfig.mGridSize * 2 is used (independently of the scale factor)
+            // to improve goal-reaching. Grid size is multiplied by two to take sure that
+            // new x and y values are reached for all 16 angles.
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0, 
+                    base::Vector3d(mConfig.mGridSize * 2, 0.0, 0.0),
+                    mConfig.mSpeeds.mMultiplierForward, 
+                    MOV_FORWARD));
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0, 
+                    base::Vector3d(mConfig.mSpeeds.mSpeedForward * mScaleFactor, 0.0, 0.0),
+                    mConfig.mSpeeds.mMultiplierForward, 
+                    MOV_FORWARD));
+        }
+        // Backward
+        if(mConfig.mSpeeds.mSpeedBackward > 0) {
+            mListPrimitivesAngle0.push_back( Primitive(primId++,
+                    0,
+                    base::Vector3d(-mConfig.mSpeeds.mSpeedBackward * mScaleFactor, 0.0, 0.0),
+                    mConfig.mSpeeds.mMultiplierBackward, 
+                    MOV_BACKWARD));
+        }
+        // Lateral
+        if(mConfig.mSpeeds.mSpeedLateral > 0) {
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0,
+                    base::Vector3d(0.0, mConfig.mSpeeds.mSpeedLateral * mScaleFactor, 0.0),
+                    mConfig.mSpeeds.mMultiplierLateral,
+                    MOV_LATERAL));
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0,
+                    base::Vector3d(0.0, -mConfig.mSpeeds.mSpeedLateral * mScaleFactor, 0.0),
+                    mConfig.mSpeeds.mMultiplierLateral, 
+                    MOV_LATERAL));
+        }
+        // Point turn
+        if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
+            mListPrimitivesAngle0.push_back( Primitive(primId++,
+                    0,
+                    base::Vector3d(0.0, 0.0, mConfig.mSpeeds.mSpeedPointTurn * mScaleFactor),
+                    mConfig.mSpeeds.mMultiplierPointTurn,
+                    MOV_POINTTURN));
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0,
+                    base::Vector3d(0.0, 0.0, -mConfig.mSpeeds.mSpeedPointTurn * mScaleFactor),
+                    mConfig.mSpeeds.mMultiplierPointTurn,
+                    MOV_POINTTURN));
+        }
+        // Forward + negative turn
+        // Calculates end pose driving with full forward and turn speeds.
+        if(mConfig.mSpeeds.mSpeedForward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
+            // This way of calculating the turning radius seems to be inaccurate.
+            double turning_radius = mConfig.mSpeeds.mSpeedForward / mConfig.mSpeeds.mSpeedTurn;
+            // Vector3d: x y theta
+            base::Vector3d turned_start = Eigen::AngleAxis<double>(-mConfig.mSpeeds.mSpeedTurn * mScaleFactor, Eigen::Vector3d::UnitZ()) * 
+                    base::Vector3d(0.0, turning_radius, 0.0);
+            turned_start[1] -= turning_radius;
+            turned_start[2] = -mConfig.mSpeeds.mSpeedTurn * mScaleFactor;
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0,
+                    turned_start,  
+                    mConfig.mSpeeds.mMultiplierTurn, 
+                    MOV_TURN));
+            // Forward + positive turn, just mirror negative turn
+            turned_start[1] *= -1;
+            turned_start[2] *= -1;
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0,
+                    turned_start, 
+                    mConfig.mSpeeds.mMultiplierTurn, 
+                    MOV_TURN));
+        }
+        
+        return mListPrimitivesAngle0;
+    }
+
+    /**
+     * Uses the passed list of angle 0 non discrete motion primitives to
+     * calculate all primitives. This is done by rotating the angle 0 prims
+     * mNumAngles-1 times to cover the complete 2*M_PI and to find the discrete
+     * pose.
+     */
+    std::vector<struct Primitive> createMPrims(std::vector<struct Primitive> prims_angle_0) {
+
+        // Creates discrete end poses for all angles.
+        mListPrimitives.clear();
+        base::Vector3d vec_tmp;
+        base::Vector3d discrete_endpose_tmp;
+        double theta_tmp = 0.0;
+        assert(mConfig.mNumAngles != 0);
+        // Runs through all discrete angles (default 16)
+        for(unsigned int angle=0; angle < mConfig.mNumAngles; ++angle) {
+            std::vector< struct Primitive >::iterator it = prims_angle_0.begin();
+            
+            // Runs through all endposes in the world which have been defined for angle 0.
+            for(int id=0; it != prims_angle_0.end(); ++it, ++id) {
+                // Extract x,y,theta from the Vector3d.
+                vec_tmp = it->mEndPose;
+                theta_tmp = vec_tmp[2];
+                vec_tmp[2] = 0;
+                vec_tmp = Eigen::AngleAxis<double>(angle * mRadPerDiscreteAngle, Eigen::Vector3d::UnitZ()) * vec_tmp;
+                
+                // Calculates discrete pose.
+                // TODO How to round correctly? How much inaccuracy is acceptable?
+                discrete_endpose_tmp[0] = (int)(round(vec_tmp[0] / mConfig.mGridSize));
+                discrete_endpose_tmp[1] = (int)(round(vec_tmp[1] / mConfig.mGridSize));
+                        
+                // SBPL orientation uses the range [0, 2*M_PI), intermediate points should get (-PI,PI].
+                theta_tmp = theta_tmp + angle * mRadPerDiscreteAngle;
+                // Discrete value can be < 0 and > mNumAngles. Will be stored for intermediate point calculation.
+                discrete_endpose_tmp[2] = ((int)round(theta_tmp / mRadPerDiscreteAngle));
+                
+                // We have to reach another discrete state. So regarding to the
+                // movement type we have to reach another discrete grid coordinate
+                // or another discrete angle.
+                bool new_state = true;
+                int original_x_discrete = (int)(round(it->mEndPose[0] / mConfig.mGridSize));
+                int original_y_discrete = (int)(round(it->mEndPose[1] / mConfig.mGridSize));
+                int original_theta_discrete = (int)(round(it->mEndPose[2] / mRadPerDiscreteAngle));
+                switch(it->mMovType) {
+                    case MOV_POINTTURN: {
+                        if(discrete_endpose_tmp[2] == original_theta_discrete) {
+                            new_state = false;
+                        }
+                        break;
+                    } 
+                    case MOV_TURN: {
+                        // TODO Correct?
+                        if((discrete_endpose_tmp[0] == original_x_discrete &&
+                            discrete_endpose_tmp[1] == original_y_discrete) ||
+                            discrete_endpose_tmp[2] == original_theta_discrete) {
+                            new_state = false;
+                        }
+                        break;
+                    }
+                    default: {
+                        if(discrete_endpose_tmp[0] == original_x_discrete &&
+                            discrete_endpose_tmp[1] == original_y_discrete) {
+                            new_state = false;
+                        }
+                        break;
+                    }
+                }
+                if(!new_state) {
+                    LOG_WARN("Primitive %d of type %d for angle %d does not lead into a new state", 
+                            id, (int)it->mMovType, angle);
+                }
+                
+                Primitive prim_discrete(it->mId, angle, discrete_endpose_tmp, it->mCostMultiplier, it->mMovType);
+                // The orientation of the discrete endpose still can exceed the borders 0 to mNumAngles.
+                // We will store this for the intermediate point calculation, but the orientation
+                // of the discrete end pose will be truncated to [0,mNumAngles).
+                prim_discrete.setDiscreteEndOrientation(discrete_endpose_tmp[2], mConfig.mNumAngles);
+                mListPrimitives.push_back(prim_discrete);
+            }
+        }
+        return mListPrimitives;
+    }
+    
+    /**
+     * Runs through all the discrete motion primitives and adds the
+     * non discrete intermediate poses. This is done with the non truncated
+     * end orientation stored within the primitive structure.
+     */
+    void createIntermediatePoses(std::vector<struct Primitive>& discrete_mprims) {
+
+        std::vector<struct Primitive>::iterator it = discrete_mprims.begin();
+        base::Vector3d end_pose_world;
+        base::Vector3d intermediate_pose;
+        double x_step=0.0, y_step=0.0, theta_step=0.0;
+        int discrete_rot_diff = 0;
+        double start_orientation_world = 0.0;
+        
+        for(;it != discrete_mprims.end(); it++) {
+            start_orientation_world = it->mStartAngle * mRadPerDiscreteAngle;
+        
+            // Theta range is 0 to 15, have to be sure to use the shortest rotation.
+            // And of course the starting orientation has to be regarded!
+            
+            discrete_rot_diff = it->getDiscreteEndOrientationNotTruncated() - it->mStartAngle;
+            /*
+            if(discrete_rot_diff > (int)(mConfig.mNumAngles / 2)) {
+                discrete_rot_diff -= mConfig.mNumAngles;
+            }
+            */
+            
+            
+            end_pose_world[0] = it->mEndPose[0] * mConfig.mGridSize;
+            end_pose_world[1] = it->mEndPose[1] * mConfig.mGridSize;
+            
+            x_step = end_pose_world[0] / ((double)mConfig.mNumIntermediatePoses-1);
+            y_step = end_pose_world[1] / ((double)mConfig.mNumIntermediatePoses-1);
+            theta_step = (discrete_rot_diff * mRadPerDiscreteAngle) / ((double)mConfig.mNumIntermediatePoses-1);
+            
+            for(unsigned int i=0; i<mConfig.mNumIntermediatePoses; i++) {
+                intermediate_pose[0] = i * x_step;
+                intermediate_pose[1] = i * y_step;
+                // Forward, backward or lateral movement, orientation does not change.
+                if(it->mStartAngle == it->mEndPose[2]) {
+                    intermediate_pose[2] = start_orientation_world;
+                } else {
+                    intermediate_pose[2] = start_orientation_world + i * theta_step;
+                }
+                // Truncate orientation of intermediate poses to (-PI,PI] (according to OMPL).
+                while(intermediate_pose[2] <= -M_PI)
+                    intermediate_pose[2] += 2*M_PI;
+                while(intermediate_pose[2] > M_PI)
+                    intermediate_pose[2] -= 2*M_PI;
+                it->mIntermediatePoses.push_back(intermediate_pose);
+            }
+            //it->mIntermediatePoses.push_back(end_pose_world);
+        }
     }
     
     void storeToFile(std::string path) {
@@ -187,234 +427,6 @@ struct SbplMotionPrimitives {
         }
         
         mprim_file.close();
-    }
-    
-    void createMPrimsForAngle0
-
-    /**
-     * Calculates the end poses for 0 radians in x_m, y_m, theta_rad which can be 
-     * reached within 'mScaleFactor' seconds. After that these poses are rotated
-     * mNumAngles-1 times to cover the complete 2*M_PI.
-     */
-    void fillListEndposes() {
-        // end pose, multiplier and movement type
-        std::vector< struct Endpose > poses_zero_rad; // meter and rad
-        
-        // Scaling: Each movement has to reach a new discrete state, so we have
-        // to find the min scale factor. This represents the required movement time
-        // to create all these primitives.
-        mScaleFactor = 1.0;
-        if(mConfig.mSpeeds.mSpeedForward > 0) {
-            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedForward);
-            LOG_INFO("Speed forward, new scale factor: %4.2f", mScaleFactor);
-        }
-        if(mConfig.mSpeeds.mSpeedBackward > 0) {
-            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedBackward);
-            LOG_INFO("Speed backward, new scale factor: %4.2f", mScaleFactor);
-        }
-        if(mConfig.mSpeeds.mSpeedLateral > 0) {
-            mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedLateral);
-            LOG_INFO("Speed lateral, new scale factor: %4.2f", mScaleFactor);
-        }
-        if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
-            mScaleFactor = std::max(mScaleFactor, mRadPerDiscreteAngle / mConfig.mSpeeds.mSpeedPointTurn);
-            LOG_INFO("Speed point turn, new scale factor: %4.2f", mScaleFactor);
-        }
-        if(mConfig.mSpeeds.mSpeedTurn > 0) {
-            mScaleFactor = std::max(mScaleFactor, mRadPerDiscreteAngle / mConfig.mSpeeds.mSpeedTurn);
-            LOG_INFO("Speed turn, new scale factor: %4.2f", mScaleFactor);
-        }
-        LOG_INFO("Overall primitives scale factor (movement time in seconds): %4.2f", mScaleFactor);
-        
-        // Forward
-        if(mConfig.mSpeeds.mSpeedForward > 0) {
-            // TODO: Not optimal I guess: mConfig.mGridSize * 2 is used (independently of the scale factor)
-            // to improve goal-reaching. Grid size is multiplied by two to take sure that
-            // new x and y values are reached for all 16 angles.
-            poses_zero_rad.push_back( Endpose(base::Vector3d(mConfig.mGridSize * 2, 0.0, 0.0),
-                    0.0,
-                    mConfig.mSpeeds.mMultiplierForward, 
-                    MOV_FORWARD));
-            poses_zero_rad.push_back( Endpose(base::Vector3d(mConfig.mSpeeds.mSpeedForward * mScaleFactor, 0.0, 0.0),
-                    0.0,
-                    mConfig.mSpeeds.mMultiplierForward, 
-                    MOV_FORWARD));
-        }
-        // Backward
-        if(mConfig.mSpeeds.mSpeedBackward > 0) {
-            poses_zero_rad.push_back( Endpose(base::Vector3d(-mConfig.mSpeeds.mSpeedBackward * mScaleFactor, 0.0, 0.0),
-                    0.0,
-                    mConfig.mSpeeds.mMultiplierBackward, 
-                    MOV_BACKWARD));
-        }
-        // Lateral
-        if(mConfig.mSpeeds.mSpeedLateral > 0) {
-            poses_zero_rad.push_back( Endpose(base::Vector3d(0.0, mConfig.mSpeeds.mSpeedLateral * mScaleFactor, 0.0),
-                    0.0,
-                    mConfig.mSpeeds.mMultiplierLateral,
-                    MOV_LATERAL));
-            poses_zero_rad.push_back( Endpose(base::Vector3d(0.0, -mConfig.mSpeeds.mSpeedLateral * mScaleFactor, 0.0),
-                    0.0,
-                    mConfig.mSpeeds.mMultiplierLateral, 
-                    MOV_LATERAL));
-        }
-        // Point turn
-        if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
-            poses_zero_rad.push_back( Endpose(base::Vector3d(0.0, 0.0, 0.0),
-                    mConfig.mSpeeds.mSpeedPointTurn * mScaleFactor,
-                    mConfig.mSpeeds.mMultiplierPointTurn,
-                    MOV_POINTTURN));
-            poses_zero_rad.push_back( Endpose(base::Vector3d(0.0, 0.0, 0.0),
-                    -mConfig.mSpeeds.mSpeedPointTurn * mScaleFactor,
-                    mConfig.mSpeeds.mMultiplierPointTurn,
-                    MOV_POINTTURN));
-        }
-        // Forward + negative turn
-        // Calculates end pose driving with full forward and turn speeds.
-        if(mConfig.mSpeeds.mSpeedForward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
-            // This way of calculating the turning radius seems to be inaccurate.
-            double turning_radius = mConfig.mSpeeds.mSpeedForward / mConfig.mSpeeds.mSpeedTurn;
-            // Vector3d: x y theta
-            base::Vector3d turned_start = Eigen::AngleAxis<double>(-mConfig.mSpeeds.mSpeedTurn * mScaleFactor, Eigen::Vector3d::UnitZ()) * 
-                    base::Vector3d(0.0, turning_radius, 0.0);
-            turned_start[1] -= turning_radius;
-            turned_start[2] = 0.0;
-            double theta = -mConfig.mSpeeds.mSpeedTurn * mScaleFactor;
-            poses_zero_rad.push_back( Endpose(turned_start, 
-                    theta, 
-                    mConfig.mSpeeds.mMultiplierTurn, 
-                    MOV_TURN));
-            // Forward + positive turn, just mirror negative turn
-            turned_start[1] *= -1;
-            theta *= -1;
-            poses_zero_rad.push_back( Endpose(turned_start, 
-                    theta,
-                    mConfig.mSpeeds.mMultiplierTurn, 
-                    MOV_TURN));
-        }
-        
-        // Creates discrete end poses for all angles.
-        mListPrimitives.clear();
-        base::Vector3d vec_tmp;
-        base::Vector3d discrete_endpose_tmp;
-        double theta_tmp = 0.0;
-        assert(mConfig.mNumAngles != 0);
-        // Runs through all discrete angles (default 16)
-        for(unsigned int angle=0; angle < mConfig.mNumAngles; ++angle) {
-            std::vector< struct Endpose >::iterator it = poses_zero_rad.begin();
-            
-            // Runs through all endposes in the world which have been defined for angle 0.
-            for(int id=0; it != poses_zero_rad.end(); ++it, ++id) {
-                vec_tmp = Eigen::AngleAxis<double>(angle * mRadPerDiscreteAngle, Eigen::Vector3d::UnitZ()) * it->mPose;
-
-                // TODO How to round correctly? How much inaccuracy is acceptable?
-                discrete_endpose_tmp[0] = (int)(round(vec_tmp[0] / mConfig.mGridSize));
-                discrete_endpose_tmp[1] = (int)(round(vec_tmp[1] / mConfig.mGridSize));
-                        
-                // SBPL orientation uses the range [0, 2*M_PI), intermediate points should get (-PI,PI].
-                theta_tmp = it->mTheta + angle * mRadPerDiscreteAngle;    
-                //theta_tmp = map_to_2pi(theta_tmp); 
-                // Without modulo angles close to 2*M_PI are rounded to mConfig.mNumAngles.
-                discrete_pose_tmp[2] = ((int)round(theta_tmp / mRadPerDiscreteAngle));//%mConfig.mNumAngles;
-                
-                // We have to reach another discrete state. So regarding to the
-                // movement type we have to reach another discrete grid coordinate
-                // or another discrete angle.
-                bool new_state = true;
-                int original_x_discrete = (int)(round(it->mPose[0] / mConfig.mGridSize));
-                int original_y_discrete = (int)(round(it->mPose[2] / mConfig.mGridSize));
-                int original_theta_discrete = (int)(round(/*map_to_2pi*/(it->mTheta) / mRadPerDiscreteAngle));
-                switch(it->mMovType) {
-                    case MOV_POINTTURN: {
-                        if(discrete_endpose_tmp[2] == original_theta_discrete) {
-                            new_state = false;
-                        }
-                        break;
-                    }
-                    case MOV_TURN: {
-                        // TODO Correct?
-                        if((discrete_endpose_tmp[0] == original_x_discrete &&
-                            discrete_endpose_tmp[1] == original_y_discrete) ||
-                            discrete_endpose_tmp[2] == original_theta_discrete) {
-                            new_state = false;
-                        }
-                        break;
-                    }
-                    default: {
-                        if(discrete_endpose_tmp[0] == original_x_discrete &&
-                            discrete_endpose_tmp[1] == original_y_discrete) {
-                            new_state = false;
-                        }
-                        break;
-                    }
-                }
-                if(!new_state) {
-                    LOG_WARN("Primitive %d of type %d for angle %d does not lead into a new state", 
-                            id, (int)it->mMovType, angle);
-                }
-                
-                mListPrimitives.push_back(Primitive(id, angle, discrete_endpose_tmp, it->mMultiplier));
-            }
-        }
-    }
-    
-    void createIntermediatePoses() {
-        // Just for testing: just interpolation.
-        std::vector<struct Primitive>::iterator it = mListPrimitives.begin();
-        base::Vector3d end_pose_world;
-        base::Vector3d intermediate_pose;
-        double x_step=0.0, y_step=0.0, theta_step=0.0;
-        int discrete_rot_diff = 0;
-        double start_orientation_world = 0.0;
-        for(;it != mListPrimitives.end(); it++) {
-            start_orientation_world = it->mStartAngle * mRadPerDiscreteAngle;
-        
-            // Theta range is 0 to 15, have to be sure to use the shortest rotation.
-            // And of course the starting orientation has to be regarded!
-            
-            discrete_rot_diff = it->mEndPose[2] - it->mStartAngle;
-            /*
-            if(discrete_rot_diff > (int)(mConfig.mNumAngles / 2)) {
-                discrete_rot_diff -= mConfig.mNumAngles;
-            }
-            */
-            
-            
-            end_pose_world[0] = it->mEndPose[0] * mConfig.mGridSize;
-            end_pose_world[1] = it->mEndPose[1] * mConfig.mGridSize;
-            
-            x_step = end_pose_world[0] / ((double)mConfig.mNumIntermediatePoses-1);
-            y_step = end_pose_world[1] / ((double)mConfig.mNumIntermediatePoses-1);
-            theta_step = (discrete_rot_diff * mRadPerDiscreteAngle) / ((double)mConfig.mNumIntermediatePoses-1);
-            
-            for(unsigned int i=0; i<mConfig.mNumIntermediatePoses; i++) {
-                intermediate_pose[0] = i * x_step;
-                intermediate_pose[1] = i * y_step;
-                // Forward, backward or lateral movement, orientation does not change.
-                if(it->mStartAngle == it->mEndPose[2]) {
-                    intermediate_pose[2] = start_orientation_world;
-                } else {
-                    intermediate_pose[2] = start_orientation_world + i * theta_step;
-                }
-                it->mIntermediatePoses.push_back(intermediate_pose);
-            }
-            //it->mIntermediatePoses.push_back(end_pose_world);
-        }
-    }
-    
-    void 
-    
- private:     
-    /**
-     * Maps passed value to [lower_border, upper_border)
-     */
-    double map_to_borders(double value, double lower_border, double upper_border) {
-        double range = upper_border + lower_border + 1;
-        while(value < lower_border)
-             value += range;
-        while(value >= upper_border)
-            value -= range;  
-        return value;
     }
 };
 
