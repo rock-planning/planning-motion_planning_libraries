@@ -161,7 +161,7 @@ bool SbplEnvXYTHETA::setStartGoal(struct State start_state, struct State goal_st
     int start_id = 0;
     int goal_id = 0;
     
-    // Strat/goal have to be defined in meters!
+    // Start/goal have to be defined in meters!
     boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
             boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
     
@@ -215,7 +215,11 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path) {
             // MotionPlanningLibraries expects grid coordinates, but a real angle in rad,
             // not the discrete one! (0-15), adapts to OMPL angles with (-PI,PI]
             rbs.position = base::Vector3d(x_discrete, y_discrete, 0);
-            double theta_rad = DiscTheta2Cont(theta_discrete, NAVXYTHETALAT_THETADIRS) - 179.0;
+            double theta_rad = DiscTheta2Cont(theta_discrete, NAVXYTHETALAT_THETADIRS);
+            // Converts [0,2*M_PI) to (-PI,PI].
+            if(theta_rad > 180) {
+                theta_rad -= 2*M_PI;
+            }
             rbs.orientation =  Eigen::AngleAxis<double>(theta_rad, base::Vector3d(0,0,1));
             path.push_back(rbs);
         } else {

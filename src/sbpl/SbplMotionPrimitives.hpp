@@ -258,7 +258,7 @@ struct SbplMotionPrimitives {
                     mConfig.mSpeeds.mMultiplierTurn, 
                     MOV_TURN));
         }
-        
+
         return mListPrimitivesAngle0;
     }
 
