@@ -192,7 +192,7 @@ bool SbplEnvXYTHETA::solve(double time) {
     return Sbpl::solve(time);
 }
     
-bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path) {
+bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined_in_local_grid) {
     
     LOG_DEBUG("SBPL fillPath");
     
@@ -204,6 +204,7 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path) {
     std::vector<int> path_ids;
     std::vector<sbpl_xy_theta_pt_t> path_xytheta;
     
+    // Just fill the path with the motion primitive poses (in grid coordinates).
     std::vector<int>::iterator it = mSBPLWaypointIDs.begin();
     for(; it != mSBPLWaypointIDs.end(); it++) {
         if(!mConfig.mUseIntermediatePoints) {
@@ -228,25 +229,24 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path) {
         }
     }
     
-    // Use ConvertStateIDPathintoXYThetaPath to create the path in the world with
-    // intermediate points.
+    // Use ConvertStateIDPathintoXYThetaPath to create the path in the local grid frame
+    // using the intermediate points. In this case 'pos_defined_in_local_grid' has to be set to true.
+    // The intermediate poses already contain start and goal and their orientations
+    // are already adapted to (-PI,PI].
     if(mConfig.mUseIntermediatePoints) {
         boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
                 boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
                 
-        // Converts from discrete to meter and radians, but the
-        // MotionPlanningLibraries needs grid-coordinates, so we have to revert
-        // the position back using CONTXY2DISC.        
+        // The returned path is already transformed to grid-local.   
         env_xytheta->ConvertStateIDPathintoXYThetaPath(&path_ids, &path_xytheta);
+        pos_defined_in_local_grid = true;
         
         int x_grid = 0;
         int y_grid = 0;
         sbpl_xy_theta_pt_t xyt_m_rad;
         for(unsigned int i=0; i<path_xytheta.size(); ++i) {
             xyt_m_rad = path_xytheta[i];
-            x_grid = CONTXY2DISC(xyt_m_rad.x, env_xytheta->GetEnvNavConfig()->cellsize_m);
-            y_grid = CONTXY2DISC(xyt_m_rad.y, env_xytheta->GetEnvNavConfig()->cellsize_m);
-            rbs.position = base::Vector3d(x_grid, y_grid, 0);
+            rbs.position = base::Vector3d(xyt_m_rad.x, xyt_m_rad.y, 0);
             rbs.orientation =  Eigen::AngleAxis<double>(xyt_m_rad.theta, base::Vector3d(0,0,1));
             path.push_back(rbs);
         }

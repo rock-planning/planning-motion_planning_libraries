@@ -103,7 +103,7 @@ bool SbplEnvXY::solve(double time) {
     return Sbpl::solve(time);
 }
     
-bool SbplEnvXY::fillPath(std::vector<struct State>& path) {
+bool SbplEnvXY::fillPath(std::vector<struct State>& path, bool& pos_defined_in_local_grid) {
     
     LOG_DEBUG("SBPL fillPath");
     

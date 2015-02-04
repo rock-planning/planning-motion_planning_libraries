@@ -17,7 +17,7 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) :
         mpTravData(),
         mStartState(), mGoalState(), 
         mStartStateGrid(), mGoalStateGrid(), 
-        mPlannedPath(),
+        mPlannedPathInWorld(),
         mReceivedNewTravGrid(false),
         mReceivedNewStart(false),
         mReceivedNewGoal(false),
@@ -313,11 +313,35 @@ bool MotionPlanningLibraries::plan(double max_time) {
     if (solved)
     {
         LOG_INFO("Solution found");
-        mPlannedPath.clear();
-        mpPlanningLib->fillPath(mPlannedPath);
+        
         mReceivedNewStart = false;
         mReceivedNewGoal = false;
         mReceivedNewTravGrid = false;
+
+        // By default grid coordinates are expeted.
+        std::vector<State> planned_path;
+        bool pos_defined_in_local_grid = false;
+        mpPlanningLib->fillPath(planned_path, pos_defined_in_local_grid);
+        
+        if(planned_path.size() == 0) {
+            LOG_WARN("Planned path does not contain any states!");
+            mError = MPL_ERR_UNDEFINED;
+            return false;
+        }
+        
+        // Convert path from grid or grid-local to world.
+        mPlannedPathInWorld.clear();
+        std::vector<State>::iterator it = planned_path.begin();
+        base::samples::RigidBodyState rbs_world;
+        for(; it != planned_path.end(); it++) {
+            if(pos_defined_in_local_grid) {
+                gridlocal2world(mpTravGrid, it->getPose(), rbs_world);
+            } else {
+                grid2world(mpTravGrid, it->getPose(), rbs_world);
+            }
+            it->setPose(rbs_world);
+            mPlannedPathInWorld.push_back(*it);
+        }
         return true;
     } else {
         LOG_WARN("No solution found");     
@@ -326,34 +350,18 @@ bool MotionPlanningLibraries::plan(double max_time) {
     }
 }
 
-std::vector<struct State> MotionPlanningLibraries::getStates() {
-    return mPlannedPath;
-}
-
 std::vector<struct State> MotionPlanningLibraries::getStatesInWorld() {
-    std::vector<struct State> states_world;
-    std::vector<State>::iterator it = mPlannedPath.begin();
-    struct State state_world;
-    for(;it != mPlannedPath.end(); it++) {
-        state_world = *it;
-        if (grid2world(mpTravGrid, it->getPose(), state_world.mPose)) {
-            states_world.push_back(state_world);
-        }
-    }
-    return states_world;
+    return mPlannedPathInWorld;
 }
 
 std::vector<base::Waypoint> MotionPlanningLibraries::getPathInWorld() {
     std::vector<base::Waypoint> path;
-    std::vector<State>::iterator it = mPlannedPath.begin();
-    base::samples::RigidBodyState pose_in_world;
-    for(;it != mPlannedPath.end(); it++) {
-        if (grid2world(mpTravGrid, it->getPose(), pose_in_world)) {
-            base::Waypoint waypoint;
-            waypoint.position = pose_in_world.position;
-            waypoint.heading = pose_in_world.getYaw();
-            path.push_back(waypoint);
-        }
+    std::vector<State>::iterator it = mPlannedPathInWorld.begin();
+    base::Waypoint waypoint;
+    for(;it != mPlannedPathInWorld.end(); it++) {
+        waypoint.position = it->getPose().position;
+        waypoint.heading = it->getPose().getYaw();
+        path.push_back(waypoint);  
     }
     return path;
 }
@@ -367,18 +375,17 @@ base::Trajectory MotionPlanningLibraries::getTrajectoryInWorld(double speed) {
     base::Vector3d last_position;
     last_position[0] = last_position[1] = last_position[2] = nan("");
     std::vector<base::geometry::SplineBase::CoordinateType> coord_types;
-    std::vector<State>::iterator it = mPlannedPath.begin();
-    base::samples::RigidBodyState pose_in_world;    
-    for(;it != mPlannedPath.end(); it++) {
-        if (grid2world(mpTravGrid, it->getPose(), pose_in_world)) {
-            // Prevents to add the same position consecutively, otherwise
-            // the spline creation fails.
-            if(pose_in_world.position != last_position) {
-                path.push_back(pose_in_world.position);
-                coord_types.push_back(base::geometry::SplineBase::ORDINARY_POINT);
-            } 
-            last_position = pose_in_world.position;
-        }
+    std::vector<State>::iterator it = mPlannedPathInWorld.begin();  
+    base::samples::RigidBodyState rbs_world;
+    for(;it != mPlannedPathInWorld.end(); it++) {
+        rbs_world = it->getPose();
+        // Prevents to add the same position consecutively, otherwise
+        // the spline creation fails.
+        if(rbs_world.position != last_position) {
+            path.push_back(rbs_world.position);
+            coord_types.push_back(base::geometry::SplineBase::ORDINARY_POINT);
+        } 
+        last_position = rbs_world.position;
     }
     try {
         trajectory.spline.interpolate(path, parameters, coord_types);
@@ -391,7 +398,7 @@ base::Trajectory MotionPlanningLibraries::getTrajectoryInWorld(double speed) {
 void MotionPlanningLibraries::printPathInWorld() {
     std::vector<base::Waypoint> waypoints = getPathInWorld();
     std::vector<base::Waypoint>::iterator it = waypoints.begin();
-    std::vector<State>::iterator it_state = mPlannedPath.begin();
+    std::vector<State>::iterator it_state = mPlannedPathInWorld.begin();
     
     int counter = 1;
 
@@ -500,6 +507,24 @@ bool MotionPlanningLibraries::grid2world(envire::TraversabilityGrid const* trav,
         trav->getFrameNode(),
         trav->getEnvironment()->getRootNode());
     world_pose.setTransform(local2world * local_pose.getTransform() );
+    
+    return true;
+}
+
+bool MotionPlanningLibraries::gridlocal2world(envire::TraversabilityGrid const* trav,
+        base::samples::RigidBodyState const& grid_local_pose,
+        base::samples::RigidBodyState& world_pose) {
+        
+    if(trav == NULL) {
+        LOG_WARN("grid2world transformation requires a traversability map");
+        return false;
+    }
+        
+    // Transformation LOCAL2WOLRD
+    Eigen::Affine3d local2world = trav->getEnvironment()->relativeTransform(
+        trav->getFrameNode(),
+        trav->getEnvironment()->getRootNode());
+    world_pose.setTransform(local2world * grid_local_pose.getTransform() );
     
     return true;
 }

@@ -36,7 +36,7 @@ class OmplEnvARM : public Ompl
     /**
      * Converts the ompl path to an rigid body state path (both in grid coordinates).
      */
-    virtual bool fillPath(std::vector<struct State>& path);
+    virtual bool fillPath(std::vector<struct State>& path, bool& pos_defined_in_local_grid);
 };
 
 } // end namespace motion_planning_libraries

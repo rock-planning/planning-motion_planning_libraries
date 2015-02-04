@@ -36,7 +36,7 @@ class SbplEnvXYTHETA : public Sbpl
      * It does not use ConvertStateIDPathintoXYThetaPath()
      * which would also add the intermediate points.
      */
-    virtual bool fillPath(std::vector<struct State>& path);
+    virtual bool fillPath(std::vector<struct State>& path, bool& pos_defined_in_local_grid);
     
     inline struct SbplMotionPrimitives* getMotionPrimitives() {
         return mPrims;

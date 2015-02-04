@@ -54,7 +54,7 @@ class MotionPlanningLibraries
     boost::shared_ptr<TravData> mpTravData;
     struct State mStartState, mGoalState; // Pose in world coordinates.
     struct State mStartStateGrid, mGoalStateGrid;
-    std::vector<State> mPlannedPath; // Pose in grid coordinates.
+    std::vector<State> mPlannedPathInWorld; // Pose in world coordinates.
     bool mReceivedNewTravGrid;
     bool mReceivedNewStart;
     bool mReceivedNewGoal;
@@ -98,11 +98,6 @@ class MotionPlanningLibraries
     bool plan(double max_time=1.0); 
     
     /**
-     * Returns the found states. Resulting poses are defined within the world frame.
-     */
-    std::vector<struct State> getStates();
-    
-    /**
      * Like getStates() but with world coordinates.
      */
     std::vector<struct State> getStatesInWorld();
@@ -138,12 +133,21 @@ class MotionPlanningLibraries
         base::samples::RigidBodyState& grid_pose);
         
     /**
-     * Transforms the grid pose to a world pose.
+     * Transforms the grid-coordinates to grid local to world.
      */
     static bool grid2world(envire::TraversabilityGrid const* trav,
             base::samples::RigidBodyState const& grid_pose, 
             base::samples::RigidBodyState& world_pose);
      
+    /**
+     * Transforms the pose defined in the grid local frame to world.
+     * Poses within the grid local frame use meter and radians (-PI, PI] instead of
+     * discrete grid coordinates.
+     */
+    static bool gridlocal2world(envire::TraversabilityGrid const* trav,
+        base::samples::RigidBodyState const& grid_local_pose,
+        base::samples::RigidBodyState& world_pose);
+    
  private:
     /**
      * Extracts the traversability map \a trav_map_id from the passed environment.

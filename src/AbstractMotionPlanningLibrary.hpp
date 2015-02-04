@@ -56,9 +56,15 @@ class AbstractMotionPlanningLibrary
     virtual bool solve(double time) = 0;
     
     /**
-     * Fills the passed vector with the found path.
+     * Fill the passed vector with the found path. By default the 
+     * position have to be defined within the grid (grid-coordinates).
+     * If the positions have already been converted to meter (local_grid)
+     * the passed bolean has to be set to true.
+     * E.g. SBPL XYTHETA uses intermediate points which are defined
+     * in the local grid already.
+     * The orientation/theta should be (-PI,PI] (according to OMPL).
      */
-    virtual bool fillPath(std::vector<struct State>& path) = 0;
+    virtual bool fillPath(std::vector<struct State>& path, bool& pos_defined_in_local_grid) = 0;
 };
 
 } // end namespace motion_planning_libraries
