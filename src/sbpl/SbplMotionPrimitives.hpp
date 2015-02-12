@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <base/Eigen.hpp>
+#include <base/samples/RigidBodyState.hpp>
 
 #include <motion_planning_libraries/Config.hpp>
 
@@ -65,10 +66,16 @@ struct Primitive {
     // Will be used to calculate the orientation of the intermediate poses.
     // This orientation is not truncated to 0 to 15.
     int mDiscreteEndOrientationNotTruncated;
+    // Stores the center of rotation for curves (non discrete). 
+    // Used to calculate the intermediate poses.
+    base::Vector3d mCenterOfRotation;
      
     Primitive() : mId(0), mStartAngle(0), mEndPose(), 
-            mCostMultiplier(0), mIntermediatePoses(), mMovType(MOV_UNDEFINED)
+            mCostMultiplier(0), mIntermediatePoses(), mMovType(MOV_UNDEFINED), 
+            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation()
     {
+        mEndPose.setZero();
+        mCenterOfRotation.setZero();
     }
     
     /**
@@ -81,8 +88,10 @@ struct Primitive {
             unsigned int cost_multiplier, enum MovementType mov_type) : 
             mId(id), mStartAngle(start_angle), mEndPose(end_pose), 
             mCostMultiplier(cost_multiplier), 
-            mIntermediatePoses(), mMovType(mov_type)
+            mIntermediatePoses(), mMovType(mov_type),
+            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation()
     {
+        mCenterOfRotation.setZero();
     }
     
     /** 
@@ -106,6 +115,13 @@ struct Primitive {
         
     int getDiscreteEndOrientationNotTruncated() {
         return mDiscreteEndOrientationNotTruncated;
+    }
+    
+    std::string toString() {
+        std::stringstream ss;
+        ss << "starting angle: " << mStartAngle << ", id: " << mId << ", movement type: " << 
+                (int)mMovType << ", endpose: " << mEndPose.transpose();
+        return ss.str();
     }
 };
 
@@ -237,26 +253,21 @@ struct SbplMotionPrimitives {
         // Forward + negative turn
         // Calculates end pose driving with full forward and turn speeds.
         if(mConfig.mSpeeds.mSpeedForward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
-            // This way of calculating the turning radius seems to be inaccurate.
-            double turning_radius = mConfig.mSpeeds.mSpeedForward / mConfig.mSpeeds.mSpeedTurn;
-            // Vector3d: x y theta
-            base::Vector3d turned_start = Eigen::AngleAxis<double>(-mConfig.mSpeeds.mSpeedTurn * mScaleFactor, Eigen::Vector3d::UnitZ()) * 
-                    base::Vector3d(0.0, turning_radius, 0.0);
-            turned_start[1] -= turning_radius;
-            turned_start[2] = -mConfig.mSpeeds.mSpeedTurn * mScaleFactor;
-            mListPrimitivesAngle0.push_back( Primitive(primId++, 
-                    0,
-                    turned_start,  
-                    mConfig.mSpeeds.mMultiplierTurn, 
-                    MOV_TURN));
-            // Forward + positive turn, just mirror negative turn
-            turned_start[1] *= -1;
-            turned_start[2] *= -1;
-            mListPrimitivesAngle0.push_back( Primitive(primId++, 
-                    0,
-                    turned_start, 
-                    mConfig.mSpeeds.mMultiplierTurn, 
-                    MOV_TURN));
+            
+            // Create left hand bend.
+            mListPrimitivesAngle0.push_back(
+                createCurvePrimForAngle0(mConfig.mSpeeds.mSpeedForward * mScaleFactor, 
+                        mConfig.mSpeeds.mSpeedTurn * mScaleFactor, 
+                        primId++, 
+                        mConfig.mSpeeds.mMultiplierTurn));
+            
+            
+            // Create right hand bend.
+            mListPrimitivesAngle0.push_back(
+                createCurvePrimForAngle0(mConfig.mSpeeds.mSpeedForward * mScaleFactor, 
+                        -mConfig.mSpeeds.mSpeedTurn * mScaleFactor, 
+                        primId++, 
+                        mConfig.mSpeeds.mMultiplierTurn));
         }
 
         return mListPrimitivesAngle0;
@@ -274,19 +285,24 @@ struct SbplMotionPrimitives {
         mListPrimitives.clear();
         base::Vector3d vec_tmp;
         base::Vector3d discrete_endpose_tmp;
+        base::Vector3d turned_center_of_rotation;
         double theta_tmp = 0.0;
         assert(mConfig.mNumAngles != 0);
         // Runs through all discrete angles (default 16)
         for(unsigned int angle=0; angle < mConfig.mNumAngles; ++angle) {
             std::vector< struct Primitive >::iterator it = prims_angle_0.begin();
             
-            // Runs through all endposes in the world which have been defined for angle 0.
+            // Runs through all endposes in grid-local which have been defined for angle 0.
             for(int id=0; it != prims_angle_0.end(); ++it, ++id) {
                 // Extract x,y,theta from the Vector3d.
                 vec_tmp = it->mEndPose;
                 theta_tmp = vec_tmp[2];
                 vec_tmp[2] = 0;
                 vec_tmp = Eigen::AngleAxis<double>(angle * mRadPerDiscreteAngle, Eigen::Vector3d::UnitZ()) * vec_tmp;
+                
+                // Turn center of rotation vector as well
+                turned_center_of_rotation = Eigen::AngleAxis<double>(angle * mRadPerDiscreteAngle, Eigen::Vector3d::UnitZ()) * 
+                        it->mCenterOfRotation;
                 
                 // Calculates discrete pose.
                 // TODO How to round correctly? How much inaccuracy is acceptable?
@@ -302,9 +318,10 @@ struct SbplMotionPrimitives {
                 // movement type we have to reach another discrete grid coordinate
                 // or another discrete angle.
                 bool new_state = true;
-                int original_x_discrete = (int)(round(it->mEndPose[0] / mConfig.mGridSize));
-                int original_y_discrete = (int)(round(it->mEndPose[1] / mConfig.mGridSize));
-                int original_theta_discrete = (int)(round(it->mEndPose[2] / mRadPerDiscreteAngle));
+                int original_x_discrete = 0; //(int)(round(it->mEndPose[0] / mConfig.mGridSize));
+                int original_y_discrete = 0; //(int)(round(it->mEndPose[1] / mConfig.mGridSize));
+                int original_theta_discrete = angle; //(int)(round(it->mEndPose[2] / mRadPerDiscreteAngle));
+                
                 switch(it->mMovType) {
                     case MOV_POINTTURN: {
                         if(discrete_endpose_tmp[2] == original_theta_discrete) {
@@ -339,6 +356,7 @@ struct SbplMotionPrimitives {
                 // We will store this for the intermediate point calculation, but the orientation
                 // of the discrete end pose will be truncated to [0,mNumAngles).
                 prim_discrete.setDiscreteEndOrientation(discrete_endpose_tmp[2], mConfig.mNumAngles);
+                prim_discrete.mCenterOfRotation = turned_center_of_rotation;
                 mListPrimitives.push_back(prim_discrete);
             }
         }
@@ -353,51 +371,133 @@ struct SbplMotionPrimitives {
     void createIntermediatePoses(std::vector<struct Primitive>& discrete_mprims) {
 
         std::vector<struct Primitive>::iterator it = discrete_mprims.begin();
-        base::Vector3d end_pose_world;
+        base::Vector3d end_pose_local;
+        end_pose_local.setZero();
+        base::Vector3d center_of_rotation_local;
+        center_of_rotation_local.setZero();
         base::Vector3d intermediate_pose;
         double x_step=0.0, y_step=0.0, theta_step=0.0;
         int discrete_rot_diff = 0;
-        double start_orientation_world = 0.0;
+        double start_orientation_local = 0.0;
+        
+        // Turn variables.
+        base::samples::RigidBodyState rbs_cor;
+        base::Affine3d cor2base;
+        base::Affine3d base2cor;
+        double len_diff_theta = 0.0;
+        double angle_theta = 0.0;
+        double len_base_local = 0.0;
+        
+        std::stringstream ss;
         
         for(;it != discrete_mprims.end(); it++) {
-            start_orientation_world = it->mStartAngle * mRadPerDiscreteAngle;
+            ss << std::endl << "Create intermediate poses for prim " << it->toString() << std::endl;
+            
+            start_orientation_local = it->mStartAngle * mRadPerDiscreteAngle;
         
             // Theta range is 0 to 15, have to be sure to use the shortest rotation.
             // And of course the starting orientation has to be regarded!
-            
             discrete_rot_diff = it->getDiscreteEndOrientationNotTruncated() - it->mStartAngle;
-            /*
-            if(discrete_rot_diff > (int)(mConfig.mNumAngles / 2)) {
-                discrete_rot_diff -= mConfig.mNumAngles;
-            }
-            */
             
+            end_pose_local[0] = it->mEndPose[0] * mConfig.mGridSize;
+            end_pose_local[1] = it->mEndPose[1] * mConfig.mGridSize;
             
-            end_pose_world[0] = it->mEndPose[0] * mConfig.mGridSize;
-            end_pose_world[1] = it->mEndPose[1] * mConfig.mGridSize;
-            
-            x_step = end_pose_world[0] / ((double)mConfig.mNumIntermediatePoses-1);
-            y_step = end_pose_world[1] / ((double)mConfig.mNumIntermediatePoses-1);
+            x_step = end_pose_local[0] / ((double)mConfig.mNumIntermediatePoses-1);
+            y_step = end_pose_local[1] / ((double)mConfig.mNumIntermediatePoses-1);
             theta_step = (discrete_rot_diff * mRadPerDiscreteAngle) / ((double)mConfig.mNumIntermediatePoses-1);
             
-            for(unsigned int i=0; i<mConfig.mNumIntermediatePoses; i++) {
-                intermediate_pose[0] = i * x_step;
-                intermediate_pose[1] = i * y_step;
-                // Forward, backward or lateral movement, orientation does not change.
-                if(it->mStartAngle == it->mEndPose[2]) {
-                    intermediate_pose[2] = start_orientation_world;
-                } else {
-                    intermediate_pose[2] = start_orientation_world + i * theta_step;
+            if(it->mMovType == MOV_TURN) {
+                // Everything has to be transformed to local, center of rotation as well..
+                // TODO: Center of rotation is already in grid_local?
+                center_of_rotation_local[0] = it->mCenterOfRotation[0];// * mConfig.mGridSize;
+                center_of_rotation_local[1] = it->mCenterOfRotation[1];// * mConfig.mGridSize;
+                
+                ss << "center of rotation: " << center_of_rotation_local.transpose() << std::endl;
+                
+                // Create transformation center of rotation to base
+                rbs_cor.position = center_of_rotation_local;
+                rbs_cor.orientation = Eigen::AngleAxis<double>(start_orientation_local, Eigen::Vector3d::UnitZ());
+                cor2base = rbs_cor.getTransform();
+                base2cor = cor2base.inverse();
+                
+                // Transform base (0,0) and endpose_local into the center of rotation frame.
+                base::Vector3d base_local(0,0,0);
+                base_local = base2cor * base_local;
+                end_pose_local = base2cor * end_pose_local;
+                
+                ss << "base vector: " << base_local.transpose() << ", end vector: " << end_pose_local.transpose() << std::endl;  
+                
+                len_base_local = base_local.norm();
+                double len_end_pose_local = end_pose_local.norm();
+                double len_diff =  len_end_pose_local - len_base_local;
+                len_diff_theta = len_diff / ((double)mConfig.mNumIntermediatePoses-1);
+                
+                ss << "len base: " << len_base_local << ", len end pose local: " << 
+                        len_end_pose_local << ", len_theta: " << len_diff_theta << std::endl;
+                
+                // Calculate real (may changed because of the discretization) angle between both vectors.
+                double angle = acos(base_local.dot(end_pose_local) / (len_base_local * len_end_pose_local));
+                // Add the direction of rotation.
+                angle = discrete_rot_diff < 0 ? -angle : angle; 
+                angle_theta = angle / ((double)mConfig.mNumIntermediatePoses-1);
+                
+                ss << "Angle between vectors: " << angle << ", angle theta " << angle_theta << std::endl;
+            }
+            
+            for(unsigned int i=0; i<mConfig.mNumIntermediatePoses; i++) { 
+                switch(it->mMovType) {
+                    // Forward, backward or lateral movement, orientation does not change.
+                    case MOV_FORWARD:
+                    case MOV_BACKWARD:
+                    case MOV_LATERAL: {
+                        intermediate_pose[0] = i * x_step;
+                        intermediate_pose[1] = i * y_step;
+                        intermediate_pose[2] = start_orientation_local;
+                        break;
+                    }
+                    case MOV_POINTTURN: {
+                        intermediate_pose[0] = end_pose_local[0];
+                        intermediate_pose[1] = end_pose_local[1];
+                        intermediate_pose[2] = start_orientation_local + i * theta_step;
+                        break;
+                    }
+                    case MOV_TURN: {
+                        // Calculate each intermediate pose within the center of rotation frame.
+                        base::samples::RigidBodyState rbs_intermediate;
+                        base::Quaterniond cur_rot;
+                        cur_rot = Eigen::AngleAxis<double>(i * angle_theta, Eigen::Vector3d::UnitZ());
+                        rbs_intermediate.position = cur_rot * base::Vector3d(0,-(len_base_local + i * len_diff_theta), 0);
+                        rbs_intermediate.orientation = cur_rot;
+                        
+                        // Transform back into the base frame.
+                        rbs_intermediate.setTransform(cor2base * rbs_intermediate.getTransform() );
+                        intermediate_pose[0] = rbs_intermediate.position[0];
+                        intermediate_pose[1] = rbs_intermediate.position[1];
+                        intermediate_pose[2] = rbs_intermediate.getYaw();
+                        break;
+                    }
+                    default: {
+                        LOG_WARN("Unknown movement type %d during intermediate pose calculation", (int)it->mMovType);
+                        break;
+                    }
                 }
+               
                 // Truncate orientation of intermediate poses to (-PI,PI] (according to OMPL).
                 while(intermediate_pose[2] <= -M_PI)
                     intermediate_pose[2] += 2*M_PI;
                 while(intermediate_pose[2] > M_PI)
                     intermediate_pose[2] -= 2*M_PI;
+                
+                ss << "Intermediate pose (x,y,theta) has been added: " << 
+                        intermediate_pose[0] << ", " << 
+                        intermediate_pose[1] << ", " << 
+                        intermediate_pose[2] << std::endl;
+                
                 it->mIntermediatePoses.push_back(intermediate_pose);
             }
-            //it->mIntermediatePoses.push_back(end_pose_world);
+            //it->mIntermediatePoses.push_back(end_pose_local);
         }
+        printf("%s", ss.str().c_str());
     }
     
     void storeToFile(std::string path) {
@@ -427,6 +527,36 @@ struct SbplMotionPrimitives {
         }
         
         mprim_file.close();
+    }
+    
+    /**
+     * Forward and turning speed does already contain the scale factor.
+     * Uses grid_local.
+     */
+    Primitive createCurvePrimForAngle0(double forward_speed, double turning_speed, 
+            int prim_id, int multiplier) {
+        
+        // TODO Is this radius calculation correct?
+        double turning_radius = forward_speed / turning_speed;
+        
+        base::Vector3d center_of_rotation(0.0, turning_radius, 0.0);
+        base::Vector3d vec_endpos(0.0, 0.0, 0.0);
+        vec_endpos -= center_of_rotation;
+        vec_endpos = Eigen::AngleAxis<double>(turning_speed,          
+                Eigen::Vector3d::UnitZ()) * vec_endpos;
+        vec_endpos += center_of_rotation;
+        // Adds the end orientation.
+        vec_endpos[2] = turning_speed;
+        
+         Primitive prim(prim_id, 
+                0,
+                vec_endpos,  
+                multiplier, 
+                MOV_TURN);
+        // Store center of rotation.
+        prim.mCenterOfRotation = center_of_rotation;
+        
+        return prim;
     }
 };
 
