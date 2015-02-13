@@ -496,7 +496,11 @@ bool MotionPlanningLibraries::grid2world(envire::TraversabilityGrid const* trav,
     double x_local = 0, y_local = 0; 
     
     // Transformation GRID2LOCAL       
-    trav->fromGrid(x_grid, y_grid, x_local, y_local);
+    //trav->fromGrid(x_grid, y_grid, x_local, y_local);
+    // TODO Is it ok: Do not use fromGrid() to avoid shifting to the cell center.
+    x_local = x_grid * trav->getScaleX() + trav->getOffsetX();
+    y_local = y_grid * trav->getScaleY() + trav->getOffsetY();
+
     base::samples::RigidBodyState local_pose = grid_pose;
     local_pose.position[0] = x_local;
     local_pose.position[1] = y_local;

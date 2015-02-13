@@ -14,16 +14,16 @@ int main(int argc, char** argv)
     
     struct MotionPrimitivesConfig config;
     config.mSpeeds.mSpeedForward = 1.0;
-    config.mSpeeds.mSpeedBackward = 1.0;
+    config.mSpeeds.mSpeedBackward = 0.8;
     config.mSpeeds.mSpeedLateral = 0.0;
-    config.mSpeeds.mSpeedTurn = 0.1;
-    config.mSpeeds.mSpeedPointTurn = 0.1;
+    config.mSpeeds.mSpeedTurn = 0.4;
+    config.mSpeeds.mSpeedPointTurn = 0.0;
     
     config.mSpeeds.mMultiplierForward = 1;
-    config.mSpeeds.mMultiplierBackward = 2;
-    config.mSpeeds.mMultiplierLateral = 3;
-    config.mSpeeds.mMultiplierTurn = 4;
-    config.mSpeeds.mMultiplierPointTurn = 5;
+    config.mSpeeds.mMultiplierBackward = 5;
+    config.mSpeeds.mMultiplierLateral = 10;
+    config.mSpeeds.mMultiplierTurn = 2;
+    config.mSpeeds.mMultiplierPointTurn = 8;
     
     config.mNumTurnPrimitives = 2;
     config.mNumIntermediatePoses = 10;

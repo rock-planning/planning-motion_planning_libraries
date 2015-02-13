@@ -28,6 +28,8 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
     
     mSBPLScaleX = scale_x;
     mSBPLScaleY = scale_y;
+    
+    assert (scale_x == scale_y);
        
     // Create and fill SBPL environment.
     mpSBPLEnv = boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT>(
@@ -198,7 +200,7 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
     
     base::samples::RigidBodyState rbs;
     
-    // GetCoordFromState returns the discrete pposition and angle!!
+    // GetCoordFromState returns the discrete position and angle!!
     int x_discrete = 0, y_discrete = 0, theta_discrete = 0; 
     
     std::vector<int> path_ids;
@@ -215,7 +217,7 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
 
             // MotionPlanningLibraries expects grid coordinates, but a real angle in rad,
             // not the discrete one! (0-15), adapts to OMPL angles with (-PI,PI]
-            rbs.position = base::Vector3d(x_discrete, y_discrete, 0);
+            rbs.position = base::Vector3d((double)x_discrete, (double)y_discrete, 0);
             double theta_rad = DiscTheta2Cont(theta_discrete, NAVXYTHETALAT_THETADIRS);
             // Converts [0,2*M_PI) to (-PI,PI].
             if(theta_rad > 180) {
@@ -241,11 +243,11 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
         env_xytheta->ConvertStateIDPathintoXYThetaPath(&path_ids, &path_xytheta);
         pos_defined_in_local_grid = true;
         
-        int x_grid = 0;
-        int y_grid = 0;
         sbpl_xy_theta_pt_t xyt_m_rad;
         for(unsigned int i=0; i<path_xytheta.size(); ++i) {
             xyt_m_rad = path_xytheta[i];
+            xyt_m_rad.x -= mSBPLScaleX / 2.0;
+            xyt_m_rad.y -= mSBPLScaleY / 2.0;
             rbs.position = base::Vector3d(xyt_m_rad.x, xyt_m_rad.y, 0);
             rbs.orientation =  Eigen::AngleAxis<double>(xyt_m_rad.theta, base::Vector3d(0,0,1));
             path.push_back(rbs);
