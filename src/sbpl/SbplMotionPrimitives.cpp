@@ -36,96 +36,115 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
     // to create all these primitives.
     mScaleFactor = 1.0;
     if(mConfig.mSpeeds.mSpeedForward > 0) {
-        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedForward);
+        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / (mConfig.mSpeeds.mSpeedForward / mConfig.mNumPrimPartition));
         LOG_INFO("Speed forward, new scale factor: %4.2f", mScaleFactor);
     }
     if(mConfig.mSpeeds.mSpeedBackward > 0) {
-        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedBackward);
+        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / (mConfig.mSpeeds.mSpeedBackward / mConfig.mNumPrimPartition));
         LOG_INFO("Speed backward, new scale factor: %4.2f", mScaleFactor);
     }
     if(mConfig.mSpeeds.mSpeedLateral > 0) {
-        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / mConfig.mSpeeds.mSpeedLateral);
+        mScaleFactor = std::max(mScaleFactor, mConfig.mGridSize / (mConfig.mSpeeds.mSpeedLateral / mConfig.mNumPrimPartition));
         LOG_INFO("Speed lateral, new scale factor: %4.2f", mScaleFactor);
     }
     if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
-        mScaleFactor = std::max(mScaleFactor, mRadPerDiscreteAngle / mConfig.mSpeeds.mSpeedPointTurn);
+        mScaleFactor = std::max(mScaleFactor, mRadPerDiscreteAngle / (mConfig.mSpeeds.mSpeedPointTurn / mConfig.mNumPrimPartition));
         LOG_INFO("Speed point turn, new scale factor: %4.2f", mScaleFactor);
     }
     if(mConfig.mSpeeds.mSpeedTurn > 0) {
-        mScaleFactor = std::max(mScaleFactor, mRadPerDiscreteAngle / mConfig.mSpeeds.mSpeedTurn);
+        mScaleFactor = std::max(mScaleFactor, mRadPerDiscreteAngle / (mConfig.mSpeeds.mSpeedTurn  / mConfig.mNumPrimPartition));
         LOG_INFO("Speed turn, new scale factor: %4.2f", mScaleFactor);
     }
     LOG_INFO("Overall primitives scale factor (movement time in seconds): %4.2f", mScaleFactor);
     
     int primId = 0;
-    // Forward
-    if(mConfig.mSpeeds.mSpeedForward > 0) {
-        // TODO: Not optimal I guess: mConfig.mGridSize * 2 is used (independently of the scale factor)
-        // to improve goal-reaching. Grid size is multiplied by two to take sure that
-        // new x and y values are reached for all 16 angles.
-        mListPrimitivesAngle0.push_back( Primitive(primId++, 
-                0, 
-                base::Vector3d(mConfig.mGridSize * 2, 0.0, 0.0),
-                mConfig.mSpeeds.mMultiplierForward, 
-                MOV_FORWARD));
-        mListPrimitivesAngle0.push_back( Primitive(primId++, 
-                0, 
-                base::Vector3d(mConfig.mSpeeds.mSpeedForward * mScaleFactor, 0.0, 0.0),
-                mConfig.mSpeeds.mMultiplierForward, 
-                MOV_FORWARD));
-    }
-    // Backward
-    if(mConfig.mSpeeds.mSpeedBackward > 0) {
-        mListPrimitivesAngle0.push_back( Primitive(primId++,
-                0,
-                base::Vector3d(-mConfig.mSpeeds.mSpeedBackward * mScaleFactor, 0.0, 0.0),
-                mConfig.mSpeeds.mMultiplierBackward, 
-                MOV_BACKWARD));
-    }
-    // Lateral
-    if(mConfig.mSpeeds.mSpeedLateral > 0) {
-        mListPrimitivesAngle0.push_back( Primitive(primId++, 
-                0,
-                base::Vector3d(0.0, mConfig.mSpeeds.mSpeedLateral * mScaleFactor, 0.0),
-                mConfig.mSpeeds.mMultiplierLateral,
-                MOV_LATERAL));
-        mListPrimitivesAngle0.push_back( Primitive(primId++, 
-                0,
-                base::Vector3d(0.0, -mConfig.mSpeeds.mSpeedLateral * mScaleFactor, 0.0),
-                mConfig.mSpeeds.mMultiplierLateral, 
-                MOV_LATERAL));
-    }
-    // Point turn
-    if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
-        mListPrimitivesAngle0.push_back( Primitive(primId++,
-                0,
-                base::Vector3d(0.0, 0.0, mConfig.mSpeeds.mSpeedPointTurn * mScaleFactor),
-                mConfig.mSpeeds.mMultiplierPointTurn,
-                MOV_POINTTURN));
-        mListPrimitivesAngle0.push_back( Primitive(primId++, 
-                0,
-                base::Vector3d(0.0, 0.0, -mConfig.mSpeeds.mSpeedPointTurn * mScaleFactor),
-                mConfig.mSpeeds.mMultiplierPointTurn,
-                MOV_POINTTURN));
-    }
-    // Forward + negative turn
-    // Calculates end pose driving with full forward and turn speeds.
-    if(mConfig.mSpeeds.mSpeedForward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
-        
-        // Create left hand bend.
-        mListPrimitivesAngle0.push_back(
-            createCurvePrimForAngle0(mConfig.mSpeeds.mSpeedForward * mScaleFactor, 
-                    mConfig.mSpeeds.mSpeedTurn * mScaleFactor, 
-                    primId++, 
-                    mConfig.mSpeeds.mMultiplierTurn));
-        
-        
-        // Create right hand bend.
-        mListPrimitivesAngle0.push_back(
-            createCurvePrimForAngle0(mConfig.mSpeeds.mSpeedForward * mScaleFactor, 
-                    -mConfig.mSpeeds.mSpeedTurn * mScaleFactor, 
-                    primId++, 
-                    mConfig.mSpeeds.mMultiplierTurn));
+    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) {
+        // Forward
+        if(mConfig.mSpeeds.mSpeedForward > 0) {
+            // TODO: Not optimal I guess: mConfig.mGridSize * 2 is used (independently of the scale factor)
+            // to improve goal-reaching. Grid size is multiplied by two to take sure that
+            // new x and y values are reached for all 16 angles.
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0, 
+                    base::Vector3d((mConfig.mSpeeds.mSpeedForward / i) * mScaleFactor, 0.0, 0.0),
+                    mConfig.mSpeeds.mMultiplierForward, 
+                    MOV_FORWARD));
+        }
+        // Backward
+        if(mConfig.mSpeeds.mSpeedBackward > 0) {
+            mListPrimitivesAngle0.push_back( Primitive(primId++,
+                    0,
+                    base::Vector3d((-mConfig.mSpeeds.mSpeedBackward / i) * mScaleFactor, 0.0, 0.0),
+                    mConfig.mSpeeds.mMultiplierBackward, 
+                    MOV_BACKWARD));
+        }
+        // Lateral
+        if(mConfig.mSpeeds.mSpeedLateral > 0) {
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0,
+                    base::Vector3d(0.0, (mConfig.mSpeeds.mSpeedLateral / i) * mScaleFactor, 0.0),
+                    mConfig.mSpeeds.mMultiplierLateral,
+                    MOV_LATERAL));
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0,
+                    base::Vector3d(0.0, (-mConfig.mSpeeds.mSpeedLateral / i) * mScaleFactor, 0.0),
+                    mConfig.mSpeeds.mMultiplierLateral, 
+                    MOV_LATERAL));
+        }
+        // Point turn
+        if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
+            mListPrimitivesAngle0.push_back( Primitive(primId++,
+                    0,
+                    base::Vector3d(0.0, 0.0, (mConfig.mSpeeds.mSpeedPointTurn / i) * mScaleFactor),
+                    mConfig.mSpeeds.mMultiplierPointTurn,
+                    MOV_POINTTURN));
+            mListPrimitivesAngle0.push_back( Primitive(primId++, 
+                    0,
+                    base::Vector3d(0.0, 0.0, (-mConfig.mSpeeds.mSpeedPointTurn / i) * mScaleFactor),
+                    mConfig.mSpeeds.mMultiplierPointTurn,
+                    MOV_POINTTURN));
+        }
+        // Create forward and backward curves.
+        // Calculates end pose driving with full forward and turn speeds.
+        if(mConfig.mSpeeds.mSpeedForward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
+            
+            double forward_speed = (mConfig.mSpeeds.mSpeedForward / i) * mScaleFactor;
+            double backward_speed = (mConfig.mSpeeds.mSpeedBackward / i) * mScaleFactor;
+            double turn_speed = (mConfig.mSpeeds.mSpeedTurn / (mConfig.mNumPrimPartition+1 - i)) * mScaleFactor;
+            
+            // Forward
+            // Create left hand bend.
+            mListPrimitivesAngle0.push_back(
+                createCurvePrimForAngle0(forward_speed, 
+                        turn_speed, 
+                        primId++, 
+                        mConfig.mSpeeds.mMultiplierTurn * i));
+            
+            
+            // Create right hand bend.
+            mListPrimitivesAngle0.push_back(
+                createCurvePrimForAngle0(forward_speed, 
+                        -turn_speed, 
+                        primId++, 
+                        mConfig.mSpeeds.mMultiplierTurn * i));
+            
+            // Backward
+            // Create left hand bend.
+            mListPrimitivesAngle0.push_back(
+                createCurvePrimForAngle0(-backward_speed, 
+                        -turn_speed, 
+                        primId++, 
+                        mConfig.mSpeeds.mMultiplierBackward * i));
+            
+            
+            // Create right hand bend.
+            mListPrimitivesAngle0.push_back(
+                createCurvePrimForAngle0(-backward_speed, 
+                        turn_speed, 
+                        primId++, 
+                        mConfig.mSpeeds.mMultiplierBackward * i));
+          
+        }
     }
 
     return mListPrimitivesAngle0;

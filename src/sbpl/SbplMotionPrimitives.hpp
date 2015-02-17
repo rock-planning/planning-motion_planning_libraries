@@ -19,7 +19,7 @@ namespace motion_planning_libraries {
 struct MotionPrimitivesConfig {
     MotionPrimitivesConfig() :
             mSpeeds(),
-            mNumTurnPrimitives(0),
+            mNumPrimPartition(4),
             mNumIntermediatePoses(0),
             mNumAngles(0),
             mMapWidth(0),
@@ -29,7 +29,7 @@ struct MotionPrimitivesConfig {
     
     MotionPrimitivesConfig(Config config, int trav_map_width, int trav_map_height, double grid_size) :
         mSpeeds(config.mSpeeds),
-        mNumTurnPrimitives(2),
+        mNumPrimPartition(config.mNumPrimPartition),
         mNumIntermediatePoses(10),
         mNumAngles(16),
         mMapWidth(trav_map_width),
@@ -39,7 +39,7 @@ struct MotionPrimitivesConfig {
     
   public:
     struct Speeds mSpeeds;
-    unsigned int mNumTurnPrimitives;
+    double mNumPrimPartition;
     
     unsigned int mNumIntermediatePoses; // Number of points a primitive consists of.
     unsigned int mNumAngles; // Number of discrete angles (in general 2*M_PI / 16)

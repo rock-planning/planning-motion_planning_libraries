@@ -82,7 +82,12 @@ struct Config {
             mSBPLMotionPrimitivesFile(), 
             mSBPLForwardSearch(true),
             mUseIntermediatePoints(false),
+            mNumPrimPartition(2),
             mJointBorders() {
+       if(mNumPrimPartition < 1) {
+           LOG_WARN("Number of sub-primitives (mNumPrimPartition) has to be at least 1 ");
+           mNumPrimPartition = 1;
+       }
     }
     
     // GENERAL
@@ -118,6 +123,8 @@ struct Config {
     bool mSBPLForwardSearch;
     // Use SBPL MPrims Intermediate Points (in general ten per motion primitive).
     bool mUseIntermediatePoints;
+    // Each primitive is divided into sub-movements.
+    unsigned int mNumPrimPartition;
     
     // ARM MOTION PLANNING
     // defines the number and borders of the joints.  <low,high> in rad

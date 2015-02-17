@@ -17,7 +17,7 @@ struct MotionPlanningLibrariesSbplMprimsVisualization::Data {
 
 // PUBLIC
 MotionPlanningLibrariesSbplMprimsVisualization::MotionPlanningLibrariesSbplMprimsVisualization()
-    : mAllAnglesShown(false), mRadiusEndpoints(0.2), p(new Data)
+    : mAllAnglesShown(false), mRadiusEndpoints(0.05), p(new Data)
 {
 }
 
@@ -41,9 +41,6 @@ double  MotionPlanningLibrariesSbplMprimsVisualization::getRadiusEndpoints() con
 }
 
 void  MotionPlanningLibrariesSbplMprimsVisualization::setRadiusEndpoints(double radius) {
-    if(radius <= 0) {
-        radius = 0.2;
-    }
     mRadiusEndpoints = radius;
     emit propertyChanged("endpoint_radius_changed");
 }
@@ -111,51 +108,53 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
     
         osg::ref_ptr<osg::Geode> geode = new osg::Geode();
         
-        // Create sphere.
-        osg::ref_ptr<osg::Sphere> sp = new osg::Sphere(osg::Vec3d(0,0,0), mRadiusEndpoints);
-        osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(sp.get());
-        sd->setColor(color);
-        geode->addDrawable(sd.get());
+        if(mRadiusEndpoints > 0) {
+            // Create sphere.
+            osg::ref_ptr<osg::Sphere> sp = new osg::Sphere(osg::Vec3d(0,0,0), mRadiusEndpoints);
+            osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(sp.get());
+            sd->setColor(color);
+            geode->addDrawable(sd.get());
+            
+            // Create triangle.
+            osg::ref_ptr<osg::Geometry> triangle_geometry = new osg::Geometry();
+            osg::ref_ptr<osg::Vec3Array> triangle_vertices = new osg::Vec3Array();
+            triangle_vertices->push_back(osg::Vec3(0.0, 2*mRadiusEndpoints, 0));
+            triangle_vertices->push_back(osg::Vec3(4*2*mRadiusEndpoints, 0.0, 0));
+            triangle_vertices->push_back(osg::Vec3(0.0, -2*mRadiusEndpoints, 0));
+            triangle_geometry->setVertexArray(triangle_vertices);
+            osg::ref_ptr<osg::DrawElementsUInt> triangle_face = 
+                    new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, 0);
+            triangle_face->push_back(0);
+            triangle_face->push_back(1);
+            triangle_face->push_back(2);
+            triangle_geometry->addPrimitiveSet(triangle_face);
+            triangle_geometry->setColorArray(colors);
+            triangle_geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+            geode->addDrawable(triangle_geometry);
+            
+            // Move the sphere and the triangle to the endpose (converted from grid to world)
+            // using a transform.
+            base::Vector3d mEndPose = it->mEndPose;
+            //std::cout << "Endpose " << mEndPose[0] << " " << mEndPose[1] << " scale factor " << primitives.mScaleFactor << std::endl;
+            double x = mEndPose[0] * primitives.mConfig.mGridSize;
+            double y = mEndPose[1] * primitives.mConfig.mGridSize;
+            double z = 0; // mEndPose[2] * primitives.mScaleFactor; // z is discrete orientation
+            double theta = mEndPose[2] * ((2*M_PI)/primitives.mConfig.mNumAngles);
+
+            //std::cout << "Draw sphere and triangle at XYZTHETA: " << x << " "  << y << " " << z << " " << theta << " " << std::endl; 
+            
+            osg::ref_ptr<osg::PositionAttitudeTransform> transform = 
+                    new osg::PositionAttitudeTransform();
+            osg::Vec3 position = osg::Vec3d(x, y, z);
+            position[2] += 0.01; // Moves the waypoints a little bit above the z=0 plane.
+            transform->setPosition(position);
+            // osg::Quat(0,0,1,heading) != osg::Quat(heading, Vec(0,0,1)).. why?
+            transform->setAttitude(osg::Quat(theta, osg::Vec3f(0,0,1)));
+            transform->addChild(geode);
         
-        // Create triangle.
-        osg::ref_ptr<osg::Geometry> triangle_geometry = new osg::Geometry();
-        osg::ref_ptr<osg::Vec3Array> triangle_vertices = new osg::Vec3Array();
-        triangle_vertices->push_back(osg::Vec3(0.0, 2*mRadiusEndpoints, 0));
-        triangle_vertices->push_back(osg::Vec3(4*2*mRadiusEndpoints, 0.0, 0));
-        triangle_vertices->push_back(osg::Vec3(0.0, -2*mRadiusEndpoints, 0));
-        triangle_geometry->setVertexArray(triangle_vertices);
-        osg::ref_ptr<osg::DrawElementsUInt> triangle_face = 
-                new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, 0);
-        triangle_face->push_back(0);
-        triangle_face->push_back(1);
-        triangle_face->push_back(2);
-        triangle_geometry->addPrimitiveSet(triangle_face);
-        triangle_geometry->setColorArray(colors);
-        triangle_geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
-        geode->addDrawable(triangle_geometry);
-        
-        // Move the sphere and the triangle to the endpose (converted from grid to world)
-        // using a transform.
-        base::Vector3d mEndPose = it->mEndPose;
-        //std::cout << "Endpose " << mEndPose[0] << " " << mEndPose[1] << " scale factor " << primitives.mScaleFactor << std::endl;
-        double x = mEndPose[0] * primitives.mConfig.mGridSize;
-        double y = mEndPose[1] * primitives.mConfig.mGridSize;
-        double z = 0; // mEndPose[2] * primitives.mScaleFactor; // z is discrete orientation
-        double theta = mEndPose[2] * ((2*M_PI)/primitives.mConfig.mNumAngles);
-        
-        //std::cout << "Draw sphere and triangle at XYZTHETA: " << x << " "  << y << " " << z << " " << theta << " " << std::endl; 
-        
-        osg::ref_ptr<osg::PositionAttitudeTransform> transform = 
-                new osg::PositionAttitudeTransform();
-        osg::Vec3 position = osg::Vec3d(x, y, z);
-        position[2] += 0.01; // Moves the waypoints a little bit above the z=0 plane.
-        transform->setPosition(position);
-        // osg::Quat(0,0,1,heading) != osg::Quat(heading, Vec(0,0,1)).. why?
-        transform->setAttitude(osg::Quat(theta, osg::Vec3f(0,0,1)));
-        transform->addChild(geode);
-       
-        // Add transformer containing the spehere and the triangle to the passed group.
-        group->addChild(transform);
+            // Add transformer containing the spehere and the triangle to the passed group.
+            group->addChild(transform);
+        }
         
         // Draw intermediate lines representing the mprim within the world.
         osg::ref_ptr<osg::Geode> geode_intermediate_points = new osg::Geode();

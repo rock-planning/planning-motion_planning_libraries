@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     config.mSpeeds.mMultiplierTurn = 2;
     config.mSpeeds.mMultiplierPointTurn = 8;
     
-    config.mNumTurnPrimitives = 2;
+    config.mNumPrimPartition = 2;
     config.mNumIntermediatePoses = 10;
     config.mNumAngles = 16;
     
