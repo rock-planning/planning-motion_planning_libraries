@@ -7,6 +7,8 @@
 
 #include <base/samples/RigidBodyState.hpp>
 
+#include "Config.hpp"
+
 namespace motion_planning_libraries
 {
 
@@ -15,6 +17,10 @@ enum StateType {STATE_EMPTY, STATE_POSE, STATE_ARM};
 /**
  * Defines the state of the system which could be the pose (xytheta) 
  * OR the joint angles of the arm. Angles have always be defined in rad from -M_PI to M_PI.
+ * Regarding SBPL XYTHETA planning: To each primitive type specific 
+ * speed values has been assigned. This speeds are copied to this state structure,
+ * but only for the first state of each primitive (not for the following intermediate 
+ * points and the endpoint).
  */
 struct State {
 
@@ -25,6 +31,13 @@ struct State {
     std::vector<double> mJointAngles;
     // Currently used to represent width and length.
     double mFootprintRadius;
+    // Currently just used by SBPL
+    // The first state of each primitive receives a prim id
+    // and its speeds. The id of all other states stays -1.
+    int mSBPLPrimId;
+    // Contains the speeds which belong to the primitive.
+    // Like the id only used for the first state of each primitive.
+    Speeds mSpeeds;
     
     State() {
         mPose.initUnknown();
@@ -32,16 +45,19 @@ struct State {
         mPose.invalidatePosition();
         mStateType = STATE_EMPTY;
         mFootprintRadius = 0.0;
+        mSBPLPrimId = -1;
     }
 
     State(base::samples::RigidBodyState rbs) : mPose(rbs) {
         mStateType = STATE_POSE;
         mFootprintRadius = 0.0;
+        mSBPLPrimId = -1;
     }
     
     State(base::samples::RigidBodyState rbs, double footprint_radius) : 
             mPose(rbs), mFootprintRadius(footprint_radius) {
         mStateType = STATE_POSE;
+        mSBPLPrimId = -1;
     }
     
     State(std::vector<double> joint_angles) : mJointAngles(joint_angles) {
@@ -50,6 +66,7 @@ struct State {
         mPose.invalidatePosition();
         mFootprintRadius = 0.0;
         mStateType = STATE_ARM;
+        mSBPLPrimId = -1;
     }
     
     enum StateType getStateType() {
@@ -111,11 +128,12 @@ struct State {
                 break;
             }   
             case STATE_POSE: {
-                ss << "x y z theta footprint-radius: " << mPose.position[0] << " " << 
+                ss << "x y z theta footprint-radius prim-id: " << mPose.position[0] << " " << 
                         mPose.position[1] << " " << 
                         mPose.position[2] << " " << 
                         mPose.getYaw() << " " << 
-                        mFootprintRadius;
+                        mFootprintRadius << " " <<
+                        mSBPLPrimId;
                 break;
             }  
             case STATE_ARM: {

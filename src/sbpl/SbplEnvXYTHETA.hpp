@@ -14,6 +14,9 @@ class SbplEnvXYTHETA : public Sbpl
     // (grid coordinates have to be converted back to meters) 
     double mSBPLScaleX, mSBPLScaleY; 
     struct SbplMotionPrimitives* mPrims;
+    // Used to store the local goal pose (x,y,theta) to add it to the end of the 
+    // found intermediate path (last pose is not supported).
+    base::Vector3d mGoalLocal;
 
  public: 
     SbplEnvXYTHETA(Config config = Config());

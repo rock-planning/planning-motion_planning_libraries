@@ -4,6 +4,7 @@
 #include <math.h>
 
 #include <string>
+#include <iomanip> 
 
 #include <base/Logging.hpp>
 
@@ -26,29 +27,18 @@ enum MovementType {
     MOV_UNDEFINED,
     MOV_FORWARD,
     MOV_BACKWARD,
-    MOV_TURN,
+    MOV_FORWARD_TURN,
+    MOV_BACKWARD_TURN,
     MOV_POINTTURN,
     MOV_LATERAL
 };
 
 /**
- * All speeds should be positive values, multipliers have to be >=1.
+ * All speeds should be >= 0, multipliers have to be >=1.
  * 
  */
 struct Speeds {
-    Speeds() : 
-           mSpeedForward(0.4),
-           mSpeedBackward(0.4),
-           mSpeedLateral(0.0),
-           mSpeedTurn(0.1),
-           mSpeedPointTurn(0.1),
-           mMultiplierForward(1),
-           mMultiplierBackward(1),
-           mMultiplierLateral(1),
-           mMultiplierTurn(1),
-           mMultiplierPointTurn(1) {
-    }
-            
+    
     double mSpeedForward; // m/sec.
     double mSpeedBackward; // m/sec.
     double mSpeedLateral; // m/sec.
@@ -59,6 +49,45 @@ struct Speeds {
     unsigned int mMultiplierLateral;
     unsigned int mMultiplierTurn;
     unsigned int mMultiplierPointTurn;
+    
+    Speeds() : 
+           mSpeedForward(0.0),
+           mSpeedBackward(0.0),
+           mSpeedLateral(0.0),
+           mSpeedTurn(0.0),
+           mSpeedPointTurn(0.0),
+           mMultiplierForward(1),
+           mMultiplierBackward(1),
+           mMultiplierLateral(1),
+           mMultiplierTurn(1),
+           mMultiplierPointTurn(1) {
+    }
+    
+    Speeds(double forward, double backward, double lateral, double turn, double pointturn) :
+            mSpeedForward(forward), mSpeedBackward(backward), mSpeedLateral(lateral), 
+            mSpeedTurn(turn), mSpeedPointTurn(pointturn) {
+    }
+    
+    // Checks if any speed value has been set.
+    bool isSet() {
+        return (mSpeedForward != 0 || mSpeedBackward != 0 || 
+                mSpeedLateral != 0 || mSpeedTurn != 0 || 
+                mSpeedPointTurn != 0);
+    }
+    
+    std::string toString() {
+        if(!isSet()) {
+            return "";
+        } else {
+            std::stringstream ss;
+            ss << "F B L T PT: " << std::setw(8) << std::setprecision(3) << mSpeedForward << " " <<
+                    std::setw(8) << std::setprecision(3) << mSpeedBackward << " " << 
+                    std::setw(8) << std::setprecision(3) << mSpeedLateral << " " << 
+                    std::setw(8) << std::setprecision(3) << mSpeedTurn << " " << 
+                    std::setw(8) << std::setprecision(3) << mSpeedPointTurn;
+            return ss.str();
+        }
+    }
 };
 
 /**

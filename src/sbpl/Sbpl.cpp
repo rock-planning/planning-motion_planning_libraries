@@ -23,7 +23,7 @@ Sbpl::Sbpl(Config config) : AbstractMotionPlanningLibrary(config),
     // mReplanParams.max_time will be added within solve(time).
     mReplanParams.initial_eps = 1000.0;
     mReplanParams.final_eps = 1.0;
-    mReplanParams.dec_eps = 0.2;
+    mReplanParams.dec_eps = 0.1;
     mReplanParams.return_first_solution = config.mSearchUntilFirstSolution;
     mReplanParams.repair_time = -1;
 }

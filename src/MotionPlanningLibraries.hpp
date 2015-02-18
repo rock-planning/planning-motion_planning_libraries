@@ -94,6 +94,7 @@ class MotionPlanningLibraries
      * the planner will try to improve the found path. Otherwise a new planning
      * will be initiated. Thresholds define whether a state is new one.
      * For navigation: A new traversability map will initiate a reinitialization.
+     * TODO: A new trav map should not require a complete reinitialization.
      */
     bool plan(double max_time=1.0); 
     
@@ -106,7 +107,10 @@ class MotionPlanningLibraries
     /** Returns the path stored in mPath as a list of waypoints. */
     std::vector<base::Waypoint> getPathInWorld();
     
-    /** Returns the path stored in mPath as a trajectory (spline). */
+    /** 
+     * Returns the path stored in mPath as a trajectory (spline). 
+     * Currently the path is divided into forward and backward movements.
+     */
     base::Trajectory getTrajectoryInWorld(double speed);
     
     /** Prints the current path to the console. */

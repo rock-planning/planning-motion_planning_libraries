@@ -5,6 +5,7 @@
 #include <iomanip> // std::setprecision
 #include <iostream>
 #include <vector>
+#include <map>
 
 #include <base/Eigen.hpp>
 #include <base/samples/RigidBodyState.hpp>
@@ -69,10 +70,13 @@ struct Primitive {
     // Stores the center of rotation for curves (non discrete). 
     // Used to calculate the intermediate poses.
     base::Vector3d mCenterOfRotationLocal;
+    // Contains the speeds which have been used to create the prim.
+    struct Speeds mSpeeds;
      
     Primitive() : mId(0), mStartAngle(0), mEndPose(), 
             mCostMultiplier(0), mIntermediatePoses(), mMovType(MOV_UNDEFINED), 
-            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotationLocal()
+            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotationLocal(),
+            mSpeeds()
     {
         mEndPose.setZero();
         mCenterOfRotationLocal.setZero();
@@ -89,7 +93,8 @@ struct Primitive {
             mId(id), mStartAngle(start_angle), mEndPose(end_pose), 
             mCostMultiplier(cost_multiplier), 
             mIntermediatePoses(), mMovType(mov_type),
-            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotationLocal()
+            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotationLocal(),
+            mSpeeds()
     {
         mCenterOfRotationLocal.setZero();
     }
@@ -140,9 +145,9 @@ struct SbplMotionPrimitives {
     struct MotionPrimitivesConfig mConfig;
     std::vector<struct Primitive> mListPrimitivesAngle0; // Contains non discrete primitives for angle 0.
     std::vector<struct Primitive> mListPrimitives;
-    // Scale factor used to scale all primitives to take sure that they reach a new state.
-    double mScaleFactor; 
     double mRadPerDiscreteAngle;
+    // The prim id describes the position in this vector.
+    std::vector<struct Speeds> mMapPrimID2Speeds; 
      
     SbplMotionPrimitives();
      
@@ -184,6 +189,13 @@ struct SbplMotionPrimitives {
      */
     Primitive createCurvePrimForAngle0(double forward_speed, double turning_speed, 
             int prim_id, int multiplier);
+    
+    /**
+     * Each primitive type got its own speed values.
+     * This method fills the passed speed structure.
+     * \return false if the is is unknown.
+     */
+    bool getSpeeds(unsigned int prim_id, struct Speeds& speeds);
 };
 
 } // end namespace motion_planning_libraries

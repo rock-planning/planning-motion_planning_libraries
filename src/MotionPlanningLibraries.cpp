@@ -401,25 +401,34 @@ void MotionPlanningLibraries::printPathInWorld() {
     std::vector<State>::iterator it_state = mPlannedPathInWorld.begin();
     
     int counter = 1;
-
-    switch(mConfig.mEnvType) {
-        case ENV_SHERPA: {
-            printf("%s %s %s %s %s %s\n", "       #", "       X", "       Y",
-                    "       Z", "   THETA", "  RADIUS");
-            for(; it != waypoints.end(); it++, counter++, it_state++) {
-                printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2f\n", counter, 
-                        it->position[0], it->position[1], it->position[2], 
-                        it->heading, it_state->getFootprintRadius());
-            }
-            break;
-        } 
-        default: {
-            printf("%s %s %s %s %s\n", "       #", "       X", "       Y", "       Z", "   THETA");
-            for(; it != waypoints.end(); it++, counter++) {
-                printf("%8d %8.2f %8.2f %8.2f %8.2f\n", counter, it->position[0], 
-                        it->position[1], it->position[2], it->heading);
-            }
-            break;
+    
+    if(mConfig.mEnvType == ENV_SHERPA) 
+    {
+        printf("%s %s %s %s %s %s\n", "       #", "       X", "       Y",
+                "       Z", "   THETA", "  RADIUS");
+        for(; it != waypoints.end(); it++, counter++, it_state++) {
+            printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2f\n", counter, 
+                    it->position[0], it->position[1], it->position[2], 
+                    it->heading, it_state->getFootprintRadius());
+        }
+    } 
+    else if(mConfig.mEnvType == ENV_XYTHETA && mConfig.mPlanningLibType == LIB_SBPL) 
+    {
+        printf("%s %s %s %s %s %s %s\n", "       #", "       X", "       Y",
+                "       Z", "   THETA", " PRIM ID", "  SPEEDS");
+        for(; it != waypoints.end(); it++, counter++, it_state++) {
+            printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2d %s\n", counter, 
+                    it->position[0], it->position[1], it->position[2], 
+                    it->heading, it_state->mSBPLPrimId, it_state->mSpeeds.toString().c_str()
+                  );
+        }
+    } 
+    else 
+    {
+        printf("%s %s %s %s %s\n", "       #", "       X", "       Y", "       Z", "   THETA");
+        for(; it != waypoints.end(); it++, counter++) {
+            printf("%8d %8.2f %8.2f %8.2f %8.2f\n", counter, it->position[0], 
+                    it->position[1], it->position[2], it->heading);
         }
     }
 }

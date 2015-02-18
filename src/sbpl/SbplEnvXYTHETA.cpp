@@ -163,19 +163,19 @@ bool SbplEnvXYTHETA::setStartGoal(struct State start_state, struct State goal_st
     int start_id = 0;
     int goal_id = 0;
     
-    // Start/goal have to be defined in meters!
+    // Start/goal have to be defined in meters (grid_local).
     boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
             boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
     
-    double start_x = start_state.getPose().position[0];
-    double start_y = start_state.getPose().position[1];
+    double start_x = start_state.getPose().position[0] * mSBPLScaleX;
+    double start_y = start_state.getPose().position[1] * mSBPLScaleY;
     double start_yaw = start_state.getPose().getYaw();
-    double goal_x = goal_state.getPose().position[0];
-    double goal_y = goal_state.getPose().position[1];
+    double goal_x = goal_state.getPose().position[0] * mSBPLScaleX;
+    double goal_y = goal_state.getPose().position[1] * mSBPLScaleY;
     double goal_yaw = goal_state.getPose().getYaw();
     
-    start_id = env_xytheta->SetStart(start_x * mSBPLScaleX, start_y * mSBPLScaleY, start_yaw);
-    goal_id = env_xytheta->SetGoal(goal_x * mSBPLScaleX, goal_y * mSBPLScaleY, goal_yaw);
+    start_id = env_xytheta->SetStart(start_x, start_y, start_yaw);
+    goal_id = env_xytheta->SetGoal(goal_x, goal_y, goal_yaw);
 
     if (mpSBPLPlanner->set_start(start_id) == 0) {
         LOG_ERROR("Failed to set start state");
@@ -186,6 +186,11 @@ bool SbplEnvXYTHETA::setStartGoal(struct State start_state, struct State goal_st
         LOG_ERROR("Failed to set goal state");
         return false;
     }
+    
+    // Used to add it at the end of the intermediate path.
+    mGoalLocal[0] = goal_x;
+    mGoalLocal[1] = goal_y;
+    mGoalLocal[2] = goal_yaw;
       
     return true;
 }
@@ -209,37 +214,39 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
     // Just fill the path with the motion primitive poses (in grid coordinates).
     std::vector<int>::iterator it = mSBPLWaypointIDs.begin();
     for(; it != mSBPLWaypointIDs.end(); it++) {
-        if(!mConfig.mUseIntermediatePoints) {
-            // Fill path with the found solution.
-            boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
-                    boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
-            env_xytheta->GetCoordFromState(*it, x_discrete, y_discrete, theta_discrete);
+        // Fill path with the found solution.
+        boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
+                boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
+        env_xytheta->GetCoordFromState(*it, x_discrete, y_discrete, theta_discrete);
 
-            // MotionPlanningLibraries expects grid coordinates, but a real angle in rad,
-            // not the discrete one! (0-15), adapts to OMPL angles with (-PI,PI]
-            rbs.position = base::Vector3d((double)x_discrete, (double)y_discrete, 0);
-            double theta_rad = DiscTheta2Cont(theta_discrete, NAVXYTHETALAT_THETADIRS);
-            // Converts [0,2*M_PI) to (-PI,PI].
-            if(theta_rad > 180) {
-                theta_rad -= 2*M_PI;
-            }
-            rbs.orientation =  Eigen::AngleAxis<double>(theta_rad, base::Vector3d(0,0,1));
-            path.push_back(rbs);
-        } else {
-            // Just store the path ids.
+        // MotionPlanningLibraries expects grid coordinates, but a real angle in rad,
+        // not the discrete one! (0-15), adapts to OMPL angles with (-PI,PI]
+        rbs.position = base::Vector3d((double)x_discrete, (double)y_discrete, 0);
+        double theta_rad = DiscTheta2Cont(theta_discrete, NAVXYTHETALAT_THETADIRS);
+        // Converts [0,2*M_PI) to (-PI,PI].
+        if(theta_rad > 180) {
+            theta_rad -= 2*M_PI;
+        }
+        rbs.orientation =  Eigen::AngleAxis<double>(theta_rad, base::Vector3d(0,0,1));
+        
+        if(mConfig.mUseIntermediatePoints) {
+            // Just store the path ids to request the intermediate poses.
             path_ids.push_back(*it);
+        } else {
+            path.push_back(rbs);
         }
     }
+    
+    boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
+        boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
     
     // Use ConvertStateIDPathintoXYThetaPath to create the path in the local grid frame
     // using the intermediate points. In this case 'pos_defined_in_local_grid' has to be set to true.
     // The intermediate poses already contain start and goal and their orientations
     // are already adapted to (-PI,PI].
-    if(mConfig.mUseIntermediatePoints) {
-        boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
-                boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
-                
+    if(mConfig.mUseIntermediatePoints) {         
         // The returned path is already transformed to grid-local.   
+        // TODO Does not support all states, e.g. got 16 ids but just supports 14 waypoints.
         env_xytheta->ConvertStateIDPathintoXYThetaPath(&path_ids, &path_xytheta);
         pos_defined_in_local_grid = true;
         
@@ -252,6 +259,38 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
             rbs.orientation =  Eigen::AngleAxis<double>(xyt_m_rad.theta, base::Vector3d(0,0,1));
             path.push_back(rbs);
         }
+        // The goal pose is not part of the received path, so we add it manually.
+        rbs.position = base::Vector3d(mGoalLocal[0], mGoalLocal[1], 0.0);
+        rbs.orientation =  Eigen::AngleAxis<double>(mGoalLocal[2], base::Vector3d(0,0,1));
+        path.push_back(rbs);
+    }
+    
+    // Request and assign prim id and speed values.
+    // The prim ids and the speed values are just assigned
+    // to the fisrt starting state of each primitive.
+    std::vector<EnvNAVXYTHETALATAction_t> action_list;
+    env_xytheta->GetActionsFromStateIDPath(&path_ids, &action_list);
+    std::vector<EnvNAVXYTHETALATAction_t>::iterator it_action = action_list.begin();
+    std::vector<struct State>::iterator it_state = path.begin();
+    unsigned int prim_id = 0;
+    
+    // Counter to increase the state iterator.
+    int inc_state = 1;
+    if(mConfig.mUseIntermediatePoints) {
+        inc_state = mPrims->mConfig.mNumIntermediatePoses;
+    }
+    
+    // Runs through all states and assigns the prim id and its speed values
+    // to the first state of each primitive.
+    for(;it_state != path.end() && it_action != action_list.end(); it_state += inc_state, it_action++) {
+        prim_id = it_action->aind;
+        Speeds speed;
+        if(!mPrims->getSpeeds(prim_id, speed)) {
+            LOG_WARN("Speed informations are not available for prim id %d", prim_id);
+        }
+        
+        it_state->mSBPLPrimId = prim_id;
+        it_state->mSpeeds = speed;
     }
     
     return true;
