@@ -366,33 +366,94 @@ std::vector<base::Waypoint> MotionPlanningLibraries::getPathInWorld() {
     return path;
 }
 
-base::Trajectory MotionPlanningLibraries::getTrajectoryInWorld(double speed) {
-    base::Trajectory trajectory;
-    trajectory.speed = speed;
+std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(double speed) {
     
+    std::vector<base::Trajectory> trajectories;
+   
+    double use_this_speed = 0.0;
+    double last_speed = nan("");
     std::vector<base::Vector3d> path;
     std::vector<double> parameters;
+    std::vector<base::geometry::SplineBase::CoordinateType> coord_types;
     base::Vector3d last_position;
     last_position[0] = last_position[1] = last_position[2] = nan("");
-    std::vector<base::geometry::SplineBase::CoordinateType> coord_types;
+    
     std::vector<State>::iterator it = mPlannedPathInWorld.begin();  
-    base::samples::RigidBodyState rbs_world;
+    // If the states contain speed values they will be used (can be checked by checking the first state).
+    // So for each different forward and backward speed a single tranjectory will be created.
+    // Otherwise just a single trajectory will be created using the passed speed parameter.
+    bool create_one_trajectory_with_one_speed = !it->mSpeeds.isSet();
+    if( create_one_trajectory_with_one_speed) {
+        LOG_INFO("Create one trajectory with speed %4.2f", speed);
+    } else {
+        LOG_INFO("Create trajectories using the speed of the planner library");
+    }
+    
     for(;it != mPlannedPathInWorld.end(); it++) {
-        rbs_world = it->getPose();
+        if(create_one_trajectory_with_one_speed) {
+            use_this_speed = speed;
+        } else if(it->mSpeeds.isSet()) { // Just regards states with new, not-empty speeds. 
+            // Forward and backward speed are not allowed to be set at the same time.
+            if(it->mSpeeds.mSpeedForward && it->mSpeeds.mSpeedBackward) {
+                LOG_ERROR("Trajetory cannot be created properly, forward and backward speed are set (%4.2f, %4.2f)!", 
+                        it->mSpeeds.mSpeedForward, it->mSpeeds.mSpeedBackward);
+                return std::vector<base::Trajectory>();
+            }
+            use_this_speed = it->mSpeeds.mSpeedForward + it->mSpeeds.mSpeedBackward;
+            LOG_INFO("New trajectory speed: %4.2f", use_this_speed);
+        }
+        
+        // Add positions to path.
+        base::Vector3d position = it->getPose().position;
         // Prevents to add the same position consecutively, otherwise
         // the spline creation fails.
-        if(rbs_world.position != last_position) {
-            path.push_back(rbs_world.position);
+        if(position != last_position) {
+            path.push_back(position);
             coord_types.push_back(base::geometry::SplineBase::ORDINARY_POINT);
         } 
-        last_position = rbs_world.position;
+        last_position = position;
+        
+        // For each new speed a new trajectory will be created (if already points have been added)
+        if(use_this_speed != last_speed && path.size() > 1) {
+            LOG_INFO("Add trajectory with speed: %4.2f", last_speed);
+            base::Trajectory trajectory;
+            trajectory.speed = last_speed;  
+            try {
+                trajectory.spline.interpolate(path, parameters, coord_types);
+            } catch (std::runtime_error& e) {
+                LOG_ERROR("Spline exception: %s", e.what());
+                return std::vector<base::Trajectory>();
+            }
+            trajectories.push_back(trajectory);
+            path.clear();
+            coord_types.clear();
+            
+            // Re-add current point to be the starting point of the next trajectory.
+            path.push_back(position);
+            coord_types.push_back(base::geometry::SplineBase::ORDINARY_POINT);
+
+            last_position = position;
+        }
+        last_speed = use_this_speed;
+    }   
+    
+    // Create a trajectory with all remaining points or actually all points
+    // if only one speed has been used.
+    // Last point does not contain any speed (endpoint), so the path should at
+    // least contain two points, so the trajectory should be valid.
+    if(path.size() > 1) {
+        base::Trajectory trajectory;
+        trajectory.speed = use_this_speed;  
+        LOG_INFO("Add trajectory with speed: %4.2f", use_this_speed);
+        try {
+            trajectory.spline.interpolate(path, parameters, coord_types);
+        } catch (std::runtime_error& e) {
+            LOG_ERROR("Spline exception: %s", e.what());
+        }
+        trajectories.push_back(trajectory);
     }
-    try {
-        trajectory.spline.interpolate(path, parameters, coord_types);
-    } catch (std::runtime_error& e) {
-        LOG_ERROR("Spline exception: %s", e.what());
-    }
-    return trajectory;
+            
+    return trajectories;
 }
 
 void MotionPlanningLibraries::printPathInWorld() {

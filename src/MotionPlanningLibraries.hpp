@@ -109,9 +109,14 @@ class MotionPlanningLibraries
     
     /** 
      * Returns the path stored in mPath as a trajectory (spline). 
-     * Currently the path is divided into forward and backward movements.
+     * If speed values are available within the state for each new
+     * speed a new trajectory will be created. Otherwise a single 
+     * trajectory will be created using the passed speed value.
+     * Takes care that each trajectory contains at least two different
+     * positions and also handles equal positions and equal positions but 
+     * different speeds. 
      */
-    base::Trajectory getTrajectoryInWorld(double speed);
+    std::vector<base::Trajectory> getTrajectoryInWorld(double speed=0);
     
     /** Prints the current path to the console. */
     void printPathInWorld();

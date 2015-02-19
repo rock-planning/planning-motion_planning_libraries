@@ -100,6 +100,8 @@ int main(int argc, char** argv)
     } else {
         std::cout << "SBPL problem could not be solved" << std::endl;
     }
+
+    sbpl.getTrajectoryInWorld();
      
     return 0;
 }

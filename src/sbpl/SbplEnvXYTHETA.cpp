@@ -203,7 +203,7 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
     
     LOG_DEBUG("SBPL fillPath");
     
-    base::samples::RigidBodyState rbs;
+    struct State state;
     
     // GetCoordFromState returns the discrete position and angle!!
     int x_discrete = 0, y_discrete = 0, theta_discrete = 0; 
@@ -221,20 +221,19 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
 
         // MotionPlanningLibraries expects grid coordinates, but a real angle in rad,
         // not the discrete one! (0-15), adapts to OMPL angles with (-PI,PI]
-        rbs.position = base::Vector3d((double)x_discrete, (double)y_discrete, 0);
+        state.mPose.position = base::Vector3d((double)x_discrete, (double)y_discrete, 0);
         double theta_rad = DiscTheta2Cont(theta_discrete, NAVXYTHETALAT_THETADIRS);
         // Converts [0,2*M_PI) to (-PI,PI].
         if(theta_rad > 180) {
             theta_rad -= 2*M_PI;
         }
-        rbs.orientation =  Eigen::AngleAxis<double>(theta_rad, base::Vector3d(0,0,1));
+        state.mPose.orientation =  Eigen::AngleAxis<double>(theta_rad, base::Vector3d(0,0,1));
         
-        if(mConfig.mUseIntermediatePoints) {
-            // Just store the path ids to request the intermediate poses.
-            path_ids.push_back(*it);
-        } else {
-            path.push_back(rbs);
+        if(!mConfig.mUseIntermediatePoints) {
+            path.push_back(state);
         }
+        // Store the path ids to request the intermediate poses and the action list.
+        path_ids.push_back(*it);
     }
     
     boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
@@ -255,19 +254,19 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
             xyt_m_rad = path_xytheta[i];
             xyt_m_rad.x -= mSBPLScaleX / 2.0;
             xyt_m_rad.y -= mSBPLScaleY / 2.0;
-            rbs.position = base::Vector3d(xyt_m_rad.x, xyt_m_rad.y, 0);
-            rbs.orientation =  Eigen::AngleAxis<double>(xyt_m_rad.theta, base::Vector3d(0,0,1));
-            path.push_back(rbs);
+            state.mPose.position = base::Vector3d(xyt_m_rad.x, xyt_m_rad.y, 0);
+            state.mPose.orientation =  Eigen::AngleAxis<double>(xyt_m_rad.theta, base::Vector3d(0,0,1));
+            path.push_back(state);
         }
         // The goal pose is not part of the received path, so we add it manually.
-        rbs.position = base::Vector3d(mGoalLocal[0], mGoalLocal[1], 0.0);
-        rbs.orientation =  Eigen::AngleAxis<double>(mGoalLocal[2], base::Vector3d(0,0,1));
-        path.push_back(rbs);
+        state.mPose.position = base::Vector3d(mGoalLocal[0], mGoalLocal[1], 0.0);
+        state.mPose.orientation =  Eigen::AngleAxis<double>(mGoalLocal[2], base::Vector3d(0,0,1));
+        path.push_back(state);
     }
     
     // Request and assign prim id and speed values.
     // The prim ids and the speed values are just assigned
-    // to the fisrt starting state of each primitive.
+    // to the first starting state of each primitive.
     std::vector<EnvNAVXYTHETALATAction_t> action_list;
     env_xytheta->GetActionsFromStateIDPath(&path_ids, &action_list);
     std::vector<EnvNAVXYTHETALATAction_t>::iterator it_action = action_list.begin();
@@ -280,6 +279,8 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
         inc_state = mPrims->mConfig.mNumIntermediatePoses;
     }
     
+    LOG_INFO("Size path: %d, size actions: %d", path.size(), action_list.size());
+    
     // Runs through all states and assigns the prim id and its speed values
     // to the first state of each primitive.
     for(;it_state != path.end() && it_action != action_list.end(); it_state += inc_state, it_action++) {
@@ -288,9 +289,9 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
         if(!mPrims->getSpeeds(prim_id, speed)) {
             LOG_WARN("Speed informations are not available for prim id %d", prim_id);
         }
-        
         it_state->mSBPLPrimId = prim_id;
         it_state->mSpeeds = speed;
+        LOG_INFO("Assigns to prim id %d the following speeds: %s", prim_id, speed.toString().c_str());
     }
     
     return true;
