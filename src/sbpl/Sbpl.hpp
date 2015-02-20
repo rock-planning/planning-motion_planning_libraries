@@ -38,7 +38,6 @@ class Sbpl : public AbstractMotionPlanningLibrary
     std::vector<int> mSBPLWaypointIDs;
     unsigned char* mpSBPLMapData;
     size_t mSBPLNumElementsMap;
-    ReplanParams mReplanParams;
     int mLastSolutionCost;
         
  public: 

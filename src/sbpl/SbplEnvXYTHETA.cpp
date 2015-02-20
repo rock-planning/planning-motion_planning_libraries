@@ -97,8 +97,9 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             
             // SBPL: time in sec for a 45° turn  
             double time_to_turn_45_degree = fabs((M_PI / 4.0) / turning_speed);
-            double robot_width = 2 * std::max(mConfig.mFootprintRadiusMinMax.first, mConfig.mFootprintRadiusMinMax.second);
-            double robot_length = robot_width;
+            // Dynamic footprints are not supported yet, so the max defined width and length are used.
+            double robot_width = std::max(mConfig.mFootprintWidthMinMax.first, mConfig.mFootprintWidthMinMax.second);
+            double robot_length = std::max(mConfig.mFootprintLengthMinMax.first, mConfig.mFootprintLengthMinMax.second);
             
             if(mConfig.mFootprintRadiusMinMax.first != mConfig.mFootprintRadiusMinMax.second) {
                 LOG_WARN("SBPL does not support variable footprints, max radius will be used");
@@ -127,8 +128,28 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
     }
  
     // Create planner.
-    //mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ARAPlanner(mpSBPLEnv.get(), mConfig.mSBPLForwardSearch));
-    mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ADPlanner(mpSBPLEnv.get(), mConfig.mSBPLForwardSearch));
+    switch(mConfig.mPlanner) {
+        case UNDEFINED_PLANNER: {
+        }
+        case ANYTIME_DSTAR: {
+            mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ADPlanner(mpSBPLEnv.get(), 
+                    mConfig.mSBPLForwardSearch));
+            break;
+        }
+        case ANYTIME_NONPARAMETRIC_ASTAR: {
+            mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new anaPlanner(mpSBPLEnv.get(), 
+                    mConfig.mSBPLForwardSearch));
+            break;
+        }
+        case ANYTIME_ASTAR: {
+            mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ARAPlanner(mpSBPLEnv.get(), 
+                    mConfig.mSBPLForwardSearch));
+        }
+        default: {
+            LOG_ERROR("Planner %d is not available for this environment", (int)mConfig.mPlanner);
+            return false;
+        }
+    }
     mpSBPLPlanner->set_search_mode(mConfig.mSearchUntilFirstSolution); 
     
     // If available use the start and goal defined in the SBPL environment.

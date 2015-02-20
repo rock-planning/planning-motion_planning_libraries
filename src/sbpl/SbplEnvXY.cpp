@@ -43,7 +43,28 @@ bool SbplEnvXY::initialize(envire::TraversabilityGrid* trav_grid,
     } 
       
     // Create planner.
-    mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ADPlanner(mpSBPLEnv.get(), mConfig.mSBPLForwardSearch));
+    switch(mConfig.mPlanner) {
+        case UNDEFINED_PLANNER: {
+        }
+        case ANYTIME_DSTAR: {
+            mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ADPlanner(mpSBPLEnv.get(), 
+                    mConfig.mSBPLForwardSearch));
+            break;
+        }
+        case ANYTIME_NONPARAMETRIC_ASTAR: {
+            mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new anaPlanner(mpSBPLEnv.get(), 
+                    mConfig.mSBPLForwardSearch));
+            break;
+        }
+        case ANYTIME_ASTAR: {
+            mpSBPLPlanner = boost::shared_ptr<SBPLPlanner>(new ARAPlanner(mpSBPLEnv.get(), 
+                    mConfig.mSBPLForwardSearch));
+        }
+        default: {
+            LOG_ERROR("Planner %d is not available for this environment", (int)mConfig.mPlanner);
+            return false;
+        }
+    }
     mpSBPLPlanner->set_search_mode(mConfig.mSearchUntilFirstSolution); 
     
     // If available use the start and goal defined in the SBPL environment.

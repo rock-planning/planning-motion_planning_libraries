@@ -33,6 +33,14 @@ enum MovementType {
     MOV_LATERAL
 };
 
+// TODO Add OMPL planners
+enum Planners {
+    UNDEFINED_PLANNER, // Let the environment decide.
+    ANYTIME_DSTAR, // AD*
+    ANYTIME_NONPARAMETRIC_ASTAR, // ANA*
+    ANYTIME_ASTAR // ARA*
+};
+
 /**
  * All speeds should be >= 0, multipliers have to be >=1.
  * 
@@ -98,12 +106,15 @@ struct Speeds {
 struct Config {
     Config() : mPlanningLibType(LIB_SBPL), 
             mEnvType(ENV_XY),
+            mPlanner(UNDEFINED_PLANNER),
             mSearchUntilFirstSolution(false),
             mReplanDuringEachUpdate(false),
             mReplanOnNewStartPose(false),
             mMaxAllowedSampleDist(-1),
             mSpeeds(),
-            mFootprintRadiusMinMax(0.5,0.5),  
+            mFootprintRadiusMinMax(nan(""),nan("")),  
+            mFootprintLengthMinMax(nan(""),nan("")),
+            mFootprintWidthMinMax(nan(""),nan("")),
             mNumFootprintClasses(10),
             mTimeToAdaptFootprint(40.0),
             mAdaptFootprintPenalty(20.0),
@@ -122,6 +133,7 @@ struct Config {
     // GENERAL
     enum PlanningLibraryType mPlanningLibType;
     enum EnvType mEnvType;
+    enum Planners mPlanner;
     // Defines whether the planner accepts the first found solution or uses the
     // complete available time.
     bool mSearchUntilFirstSolution; 
@@ -138,7 +150,11 @@ struct Config {
     struct Speeds mSpeeds;
     
     // FOOTPRINT
+    // Either a radius or a rectangle has to be defined. If the system cannot adapt it's
+    // footprint use the same value for first and second.
     std::pair<double,double> mFootprintRadiusMinMax; // Minimal / maximal footprint radius.
+    std::pair<double,double> mFootprintLengthMinMax; // Size along the x-axis. 
+    std::pair<double,double> mFootprintWidthMinMax; // Size along the y-axis.
     // Defines number of different footprint radii from min to max, used to discretize the search space.
     unsigned int mNumFootprintClasses;
     // Time in seconds to change the footprint from min to max.

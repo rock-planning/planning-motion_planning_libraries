@@ -24,6 +24,18 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) :
         mArmInitialized(false),
         mReplanRequired(false),
         mError(MPL_ERR_NONE) {
+            
+    // Do some checks.
+    // Footprint, need radius or rectangle
+    if( isnan(mConfig.mFootprintRadiusMinMax.first) && 
+        isnan(mConfig.mFootprintRadiusMinMax.second) &&
+        isnan(mConfig.mFootprintLengthMinMax.first) &&
+        isnan(mConfig.mFootprintLengthMinMax.second) && 
+        isnan(mConfig.mFootprintWidthMinMax.first) && 
+        isnan(mConfig.mFootprintWidthMinMax.second)) {
+        LOG_ERROR("No footprint available, either a radius or width/length have to be defined");
+        throw new std::runtime_error("No footprint has been defined");
+    }
 
     // Creates the requested planning library.  
     switch(config.mPlanningLibType) {
@@ -207,36 +219,38 @@ bool MotionPlanningLibraries::setGoalState(struct State goal_state) {
 bool MotionPlanningLibraries::plan(double max_time) {
     
     mError = MPL_ERR_NONE;
-  
+
     if(mStartState.getStateType() == STATE_EMPTY) {
         LOG_WARN("Start states have not been set yet, planning can not be executed"); 
-        mError = MPL_ERR_MISSING_START_STATE;
-        return false;
+        mError = static_cast<MplErrors>((int)mError + (int)MPL_ERR_MISSING_START);
     }
-    
+
     if(mGoalState.getStateType() == STATE_EMPTY) {
         LOG_WARN("Goal states have not been set yet, planning can not be executed"); 
-        mError = MPL_ERR_MISSING_GOAL_STATE;
+        mError = static_cast<MplErrors>((int)mError + (int)MPL_ERR_MISSING_GOAL);
+    }
+
+    // Arm planning environment does not need a trav map.
+    if(mConfig.mEnvType != ENV_ARM && mpTravGrid == NULL) {
+        LOG_WARN("No traversability map available, planning cannot be executed");
+        mError = static_cast<MplErrors>((int)mError + (int)MPL_ERR_MISSING_TRAV);
+    } 
+    
+    if(mError != MPL_ERR_NONE) {
         return false;
     }
 
     assert(mStartState.getStateType() == mGoalState.getStateType());
 
     // Required checks for path planning (not required for arm movement).
-    if(mStartState.getStateType() == STATE_POSE) {
-        if(mpTravGrid == NULL) {
-            LOG_WARN("No traversability map available, planning cannot be executed");
-            mError = MPL_ERR_MISSING_TRAV_GRID;
-            return false;
-        } 
-        
+    if(mConfig.mEnvType != ENV_ARM ) {
         if(mStartStateGrid.getStateType() != STATE_POSE || 
                 mGoalStateGrid.getStateType() != STATE_POSE) {
             LOG_WARN("Start/Goal (grid) contains no pose, planning can not be executed"); 
             mError = MPL_ERR_WRONG_STATE_TYPE;
             return false;
         }
-        
+   
         // Currently the complete environment will be reinitialized 
         // if a new trav map has been received.
         if(mReceivedNewTravGrid) {
@@ -254,7 +268,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
             // Reset current start and goal state within the new environment!
             if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
                 LOG_WARN("Start/goal state could not be set after reinitialization");
-                mError = MPL_ERR_SET_STATES;
+                mError = MPL_ERR_SET_START_GOAL;
                 return false;
             }
         }
@@ -263,7 +277,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
     // Currently the arm environment will be initialized just once.
     // Later changes in the environment may require a reinitialization similar 
     // to the current implementation of the robot navigation.
-    if(mStartState.getStateType() == STATE_ARM) {
+    if(mConfig.mEnvType == ENV_ARM) {
         if(!mArmInitialized) {
             if(!mpPlanningLib->initialize_arm()) {
                 LOG_WARN("Initialization (arm motion planning) failed"); 
@@ -279,7 +293,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
     if(mReceivedNewStart || mReceivedNewGoal) {       
         if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
             LOG_WARN("Start/goal state could not be set");
-            mError = MPL_ERR_SET_STATES;
+            mError = MPL_ERR_SET_START_GOAL;
             return false;
         } else {
             if(mReceivedNewGoal ||
@@ -308,16 +322,23 @@ bool MotionPlanningLibraries::plan(double max_time) {
         LOG_INFO("Replanning not required");
         return true;
     }
+    // At the moment (if mReplanDuringEachUpdate is set to false) the planner just
+    // tries to solve the problem once and no optimizations are made.
+    // And if max_time is too small no solutions will be found.
+    // So actually for navigation mConfig.mReplanDuringEachUpdate should be set to true.
     mReplanRequired = false;
     
     if (solved)
     {
         LOG_INFO("Solution found");
         
+        // TODO Not required?
+        /*
         mReceivedNewStart = false;
         mReceivedNewGoal = false;
         mReceivedNewTravGrid = false;
-
+        */
+        
         // By default grid coordinates are expeted.
         std::vector<State> planned_path;
         bool pos_defined_in_local_grid = false;
@@ -467,7 +488,7 @@ void MotionPlanningLibraries::printPathInWorld() {
     {
         printf("%s %s %s %s %s %s\n", "       #", "       X", "       Y",
                 "       Z", "   THETA", "  RADIUS");
-        for(; it != waypoints.end(); it++, counter++, it_state++) {
+        for(; it != waypoints.end() && it_state != mPlannedPathInWorld.end(); it++, counter++, it_state++) {
             printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2f\n", counter, 
                     it->position[0], it->position[1], it->position[2], 
                     it->heading, it_state->getFootprintRadius());
@@ -477,7 +498,7 @@ void MotionPlanningLibraries::printPathInWorld() {
     {
         printf("%s %s %s %s %s %s %s\n", "       #", "       X", "       Y",
                 "       Z", "   THETA", " PRIM ID", "  SPEEDS");
-        for(; it != waypoints.end(); it++, counter++, it_state++) {
+        for(; it != waypoints.end() && it_state != mPlannedPathInWorld.end(); it++, counter++, it_state++) {
             printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2d %s\n", counter, 
                     it->position[0], it->position[1], it->position[2], 
                     it->heading, it_state->mSBPLPrimId, it_state->mSpeeds.toString().c_str()
