@@ -101,10 +101,16 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             double robot_width = std::max(mConfig.mFootprintWidthMinMax.first, mConfig.mFootprintWidthMinMax.second);
             double robot_length = std::max(mConfig.mFootprintLengthMinMax.first, mConfig.mFootprintLengthMinMax.second);
             
-            if(mConfig.mFootprintRadiusMinMax.first != mConfig.mFootprintRadiusMinMax.second) {
-                LOG_WARN("SBPL does not support variable footprints, max radius will be used");
+            if(isnan(robot_width) || isnan(robot_length)) {
+                LOG_WARN("No rectangle footprint has been defined, using footprint radius instead");
             }
-            
+            robot_width = robot_length = std::max(mConfig.mFootprintRadiusMinMax.first, mConfig.mFootprintRadiusMinMax.second);
+            if(isnan(robot_width) || isnan(robot_length)) {
+                LOG_ERROR("No footprint has been specified");
+                return false;
+            }
+
+            LOG_INFO("SBPL does not support variable footprints, max radius will be used");
             std::vector<sbpl_2Dpt_t> fp_vec = createFootprint(robot_width, robot_length);
             
             env_xytheta->InitializeEnv(grid_width, grid_height, 
