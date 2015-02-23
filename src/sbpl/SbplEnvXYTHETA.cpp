@@ -103,8 +103,8 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             
             if(isnan(robot_width) || isnan(robot_length)) {
                 LOG_WARN("No rectangle footprint has been defined, using footprint radius instead");
+                robot_width = robot_length = std::max(mConfig.mFootprintRadiusMinMax.first, mConfig.mFootprintRadiusMinMax.second);
             }
-            robot_width = robot_length = std::max(mConfig.mFootprintRadiusMinMax.first, mConfig.mFootprintRadiusMinMax.second);
             if(isnan(robot_width) || isnan(robot_length)) {
                 LOG_ERROR("No footprint has been specified");
                 return false;
