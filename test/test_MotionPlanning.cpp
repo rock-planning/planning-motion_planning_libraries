@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(sbpl_mprims)
     config.mSpeeds.mMultiplierPointTurn = 5;
     
     config.mNumPrimPartition = 2;
-    config.mNumIntermediatePoses = 10;
+    config.mNumPosesPerPrim = 10;
     config.mNumAngles = 16;
     
     config.mMapWidth = 100;

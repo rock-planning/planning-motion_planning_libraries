@@ -347,9 +347,9 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
         end_pose_local[0] = it->mEndPose[0] * mConfig.mGridSize;
         end_pose_local[1] = it->mEndPose[1] * mConfig.mGridSize;
         
-        x_step = end_pose_local[0] / ((double)mConfig.mNumIntermediatePoses-1);
-        y_step = end_pose_local[1] / ((double)mConfig.mNumIntermediatePoses-1);
-        theta_step = (discrete_rot_diff * mRadPerDiscreteAngle) / ((double)mConfig.mNumIntermediatePoses-1);
+        x_step = end_pose_local[0] / ((double)mConfig.mNumPosesPerPrim-1);
+        y_step = end_pose_local[1] / ((double)mConfig.mNumPosesPerPrim-1);
+        theta_step = (discrete_rot_diff * mRadPerDiscreteAngle) / ((double)mConfig.mNumPosesPerPrim-1);
         
         if(it->mMovType == MOV_FORWARD_TURN || it->mMovType == MOV_BACKWARD_TURN) {
             // Everything has to be transformed to local, center of rotation as well..
@@ -375,8 +375,8 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
             len_base_local = base_local.norm();
             double len_end_pose_local = end_pose_local.norm();
             double len_diff =  len_end_pose_local - len_base_local;
-            len_diff_delta = len_diff / ((double)mConfig.mNumIntermediatePoses-1);
-            len_scale_factor = (len_end_pose_local / len_base_local - 1) / ((double)mConfig.mNumIntermediatePoses-1);
+            len_diff_delta = len_diff / ((double)mConfig.mNumPosesPerPrim-1);
+            len_scale_factor = (len_end_pose_local / len_base_local - 1) / ((double)mConfig.mNumPosesPerPrim-1);
             
             ss << "len base: " << len_base_local << ", len end pose local: " << 
                     len_end_pose_local << ", len_delta: " << len_diff_delta << 
@@ -386,12 +386,12 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
             double angle = acos(base_local.dot(end_pose_local) / (len_base_local * len_end_pose_local));
             // Add the direction of rotation.
             angle = discrete_rot_diff < 0 ? -angle : angle; 
-            angle_delta = angle / ((double)mConfig.mNumIntermediatePoses-1);
+            angle_delta = angle / ((double)mConfig.mNumPosesPerPrim-1);
             
             ss << "Angle between vectors: " << angle << ", angle delta " << angle_delta << std::endl;
         }
         
-        for(unsigned int i=0; i<mConfig.mNumIntermediatePoses; i++) { 
+        for(unsigned int i=0; i<mConfig.mNumPosesPerPrim; i++) { 
             switch(it->mMovType) {
                 // Forward, backward or lateral movement, orientation does not change.
                 case MOV_FORWARD:

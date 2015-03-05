@@ -121,7 +121,7 @@ struct Config {
             mSBPLEnvFile(),
             mSBPLMotionPrimitivesFile(), 
             mSBPLForwardSearch(true),
-            mUseIntermediatePoints(false),
+            mNumIntermediatePoints(0),
             mNumPrimPartition(2),
             mJointBorders() {
        if(mNumPrimPartition < 1) {
@@ -166,8 +166,10 @@ struct Config {
     std::string mSBPLEnvFile;
     std::string mSBPLMotionPrimitivesFile;
     bool mSBPLForwardSearch;
-    // Use SBPL MPrims Intermediate Points (in general ten per motion primitive).
-    bool mUseIntermediatePoints;
+    // Can be used to create and use intermediate points for each motion primitive.
+    // E.g. if you want to get 10 points per primitive, you have
+    // to set this variable to 8 (8 + start and end point).
+    unsigned int mNumIntermediatePoints;
     // Each primitive is divided into sub-movements.
     unsigned int mNumPrimPartition;
     

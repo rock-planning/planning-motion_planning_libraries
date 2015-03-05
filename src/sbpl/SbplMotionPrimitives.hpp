@@ -21,7 +21,7 @@ struct MotionPrimitivesConfig {
     MotionPrimitivesConfig() :
             mSpeeds(),
             mNumPrimPartition(4),
-            mNumIntermediatePoses(0),
+            mNumPosesPerPrim(2),
             mNumAngles(0),
             mMapWidth(0),
             mMapHeight(0),
@@ -31,7 +31,7 @@ struct MotionPrimitivesConfig {
     MotionPrimitivesConfig(Config config, int trav_map_width, int trav_map_height, double grid_size) :
         mSpeeds(config.mSpeeds),
         mNumPrimPartition(config.mNumPrimPartition),
-        mNumIntermediatePoses(10),
+        mNumPosesPerPrim(config.mNumIntermediatePoints + 2), // intermediate points + start pose + end pose
         mNumAngles(16),
         mMapWidth(trav_map_width),
         mMapHeight(trav_map_height),
@@ -42,7 +42,7 @@ struct MotionPrimitivesConfig {
     struct Speeds mSpeeds;
     double mNumPrimPartition;
     
-    unsigned int mNumIntermediatePoses; // Number of points a primitive consists of.
+    unsigned int mNumPosesPerPrim; // Number of points a primitive consists of.
     unsigned int mNumAngles; // Number of discrete angles (in general 2*M_PI / 16)
     
     unsigned int mMapWidth;
@@ -138,7 +138,7 @@ struct Primitive {
  *  - Discrete start angle
  *  - Discrete end pose (x_grid, y_grid, theta) theta has to be +- 0 to mNumAngles
  *  - Cost multiplier
- *  - mNumIntermediatePoses intermediate poses including start and end with (x_m, y_m, theta_rad)
+ *  - mNumPosesPerPrim: intermediate poses plus start and end with (x_m, y_m, theta_rad)
  */
 struct SbplMotionPrimitives {
  public:

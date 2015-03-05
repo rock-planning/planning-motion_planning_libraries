@@ -257,7 +257,7 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
         }
         state.mPose.orientation =  Eigen::AngleAxis<double>(theta_rad, base::Vector3d(0,0,1));
         
-        if(!mConfig.mUseIntermediatePoints) {
+        if(mConfig.mNumIntermediatePoints == 0) {
             path.push_back(state);
         }
         // Store the path ids to request the intermediate poses and the action list.
@@ -271,7 +271,7 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
     // using the intermediate points. In this case 'pos_defined_in_local_grid' has to be set to true.
     // The intermediate poses already contain start and goal and their orientations
     // are already adapted to (-PI,PI].
-    if(mConfig.mUseIntermediatePoints) {         
+    if(mConfig.mNumIntermediatePoints > 0) {         
         // The returned path is already transformed to grid-local.   
         // TODO Does not support all states, e.g. got 16 ids but just supports 14 waypoints.
         env_xytheta->ConvertStateIDPathintoXYThetaPath(&path_ids, &path_xytheta);
@@ -303,23 +303,23 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
     
     // Counter to increase the state iterator.
     int inc_state = 1;
-    if(mConfig.mUseIntermediatePoints) {
-        inc_state = mPrims->mConfig.mNumIntermediatePoses;
+    if(mConfig.mNumIntermediatePoints > 0) {
+        inc_state = mPrims->mConfig.mNumPosesPerPrim;
     }
     
-    LOG_INFO("Size path: %d, size actions: %d, num intermediate points: %d", 
-            path.size(), action_list.size(), inc_state);
+    LOG_INFO("Path consist of %d poses / %d primitives (each primitive contains %d poses)", 
+            path.size(), action_list.size(), mPrims->mConfig.mNumPosesPerPrim);
     
     // Runs through all states and assigns the prim id and its speed values
     // to the first state of each primitive.
     // If a mprim file is used mPrims may be NULL!
-    for(;it_state != path.end() && it_action != action_list.end(); it_state += inc_state, it_action++) {
+    for(;it_state < path.end() && it_action < action_list.end(); it_state += inc_state, it_action++) {
         prim_id = it_action->aind;
         Speeds speed;
         
         if(mPrims != NULL) {
             mPrims->getSpeeds(prim_id, speed);
-            LOG_INFO("Assigns to prim id %d the following speeds: %s", prim_id, speed.toString().c_str());
+            LOG_DEBUG("Assigns to prim id %d the following speeds: %s", prim_id, speed.toString().c_str());
         }
         
         it_state->mSBPLPrimId = prim_id;

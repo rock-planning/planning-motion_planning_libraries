@@ -312,7 +312,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
     bool solved = false;
     if(mReplanRequired || mConfig.mReplanDuringEachUpdate) { 
                   
-        LOG_INFO("Planning from %s (Grid %s) to %s (Grid %s)", 
+        LOG_INFO("Planning from \n%s (Grid %s) \nto \n%s (Grid %s)", 
                 mStartState.getString().c_str(), mStartStateGrid.getString().c_str(),
                 mGoalState.getString().c_str(), mGoalStateGrid.getString().c_str());    
             
@@ -408,9 +408,9 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(doub
     // Otherwise just a single trajectory will be created using the passed speed parameter.
     bool create_one_trajectory_with_one_speed = !it->mSpeeds.isSet();
     if( create_one_trajectory_with_one_speed) {
-        LOG_INFO("Create one trajectory with speed %4.2f", speed);
+        LOG_DEBUG("Creates one trajectory with speed %4.2f", speed);
     } else {
-        LOG_INFO("Create trajectories using the speed of the planner library");
+        LOG_DEBUG("Trajectories use the speed of the planner library");
     }
     
     for(;it != mPlannedPathInWorld.end(); it++) {
@@ -424,7 +424,7 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(doub
                 return std::vector<base::Trajectory>();
             }
             use_this_speed = it->mSpeeds.mSpeedForward + it->mSpeeds.mSpeedBackward;
-            LOG_INFO("New trajectory speed: %4.2f", use_this_speed);
+            LOG_DEBUG("New trajectory speed: %4.2f", use_this_speed);
         }
         
         // Add positions to path.
@@ -439,7 +439,7 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(doub
         
         // For each new speed a new trajectory will be created (if already points have been added)
         if(use_this_speed != last_speed && path.size() > 1) {
-            LOG_INFO("Add trajectory with speed: %4.2f", last_speed);
+            LOG_DEBUG("Add trajectory with speed: %4.2f", last_speed);
             base::Trajectory trajectory;
             trajectory.speed = last_speed;  
             try {
@@ -468,7 +468,7 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(doub
     if(path.size() > 1) {
         base::Trajectory trajectory;
         trajectory.speed = use_this_speed;  
-        LOG_INFO("Add trajectory with speed: %4.2f", use_this_speed);
+        LOG_DEBUG("Add trajectory with speed: %4.2f", use_this_speed);
         try {
             trajectory.spline.interpolate(path, parameters, coord_types);
         } catch (std::runtime_error& e) {
