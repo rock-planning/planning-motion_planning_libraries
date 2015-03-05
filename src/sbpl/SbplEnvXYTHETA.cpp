@@ -79,7 +79,7 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             double speed = fabs(mConfig.mSpeeds.mSpeedForward);
             
             if(mConfig.mSpeeds.mSpeedForward != mConfig.mSpeeds.mSpeedBackward) {
-                LOG_WARN("SBPL does not use backward velocity, only forward velocity will be used");
+                LOG_WARN("SBPL does not use backward velocity, only forward velocity will be used for cost calculations");
             }
             
             if(speed == 0.0) {
@@ -101,16 +101,17 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             double robot_width = std::max(mConfig.mFootprintWidthMinMax.first, mConfig.mFootprintWidthMinMax.second);
             double robot_length = std::max(mConfig.mFootprintLengthMinMax.first, mConfig.mFootprintLengthMinMax.second);
             
-            if(isnan(robot_width) || isnan(robot_length)) {
-                LOG_WARN("No rectangle footprint has been defined, using footprint radius instead");
+            if(robot_width == 0 || robot_length == 0) {
                 robot_width = robot_length = std::max(mConfig.mFootprintRadiusMinMax.first, mConfig.mFootprintRadiusMinMax.second);
+                LOG_WARN("No rectangle footprint has been defined, using footprint radius instead %4.2f", robot_width);
             }
-            if(isnan(robot_width) || isnan(robot_length)) {
+            if(robot_width == 0 || robot_length == 0) {
                 LOG_ERROR("No footprint has been specified");
                 return false;
             }
 
-            LOG_INFO("SBPL does not support variable footprints, max radius will be used");
+            LOG_INFO("SBPL does not support variable footprints, using max width,length (%4.2f, %4.2f)", 
+                    robot_width, robot_length);
             std::vector<sbpl_2Dpt_t> fp_vec = createFootprint(robot_width, robot_length);
             
             env_xytheta->InitializeEnv(grid_width, grid_height, 
@@ -306,19 +307,23 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
         inc_state = mPrims->mConfig.mNumIntermediatePoses;
     }
     
-    LOG_INFO("Size path: %d, size actions: %d", path.size(), action_list.size());
+    LOG_INFO("Size path: %d, size actions: %d, num intermediate points: %d", 
+            path.size(), action_list.size(), inc_state);
     
     // Runs through all states and assigns the prim id and its speed values
     // to the first state of each primitive.
+    // If a mprim file is used mPrims may be NULL!
     for(;it_state != path.end() && it_action != action_list.end(); it_state += inc_state, it_action++) {
         prim_id = it_action->aind;
         Speeds speed;
-        if(!mPrims->getSpeeds(prim_id, speed)) {
-            LOG_WARN("Speed informations are not available for prim id %d", prim_id);
+        
+        if(mPrims != NULL) {
+            mPrims->getSpeeds(prim_id, speed);
+            LOG_INFO("Assigns to prim id %d the following speeds: %s", prim_id, speed.toString().c_str());
         }
+        
         it_state->mSBPLPrimId = prim_id;
         it_state->mSpeeds = speed;
-        LOG_INFO("Assigns to prim id %d the following speeds: %s", prim_id, speed.toString().c_str());
     }
     
     return true;

@@ -26,6 +26,11 @@ bool OmplEnvSHERPA::initialize(envire::TraversabilityGrid* trav_grid,
 
     LOG_INFO("Create OMPL SHERPA environment");
     
+    if(mConfig.mFootprintRadiusMinMax.first == 0 || mConfig.mFootprintRadiusMinMax.second == 0) {
+        LOG_WARN("No min AND max radius have been defined within the Sherpa environment, abort");
+        return false;
+    }
+    
     SherpaStateSpace* sherpa_state_space = new SherpaStateSpace(mConfig);
     ob::RealVectorBounds bounds(2);
     bounds.setLow (0, 0);

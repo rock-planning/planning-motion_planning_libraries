@@ -120,9 +120,8 @@ class GridCalculations {
             // Check borders.
             if(     fp_x < 0 || fp_x >= (int)mpTravGrid->getCellSizeX() ||
                     fp_y < 0 || fp_y >= (int)mpTravGrid->getCellSizeY()) {
-                base::Vector3d vec = mFootprint2Grid.translation();
                 LOG_DEBUG("State (%d,%d) is invalid (footprint (%4.2f,%4.2f) not within the grid)", 
-                        vec[0], vec[1], fp_x, fp_y);
+                        mFootprint2Grid.translation()[0], mFootprint2Grid.translation()[1], fp_x, fp_y);
                 return false;
             } 
             
@@ -131,9 +130,8 @@ class GridCalculations {
             driveability = (mpTravGrid->getTraversabilityClass(class_value)).getDrivability();
         
             if(driveability == 0.0) {
-                base::Vector3d vec = mFootprint2Grid.translation();
                 LOG_DEBUG("State (%d,%d) is invalid (footprint (%4.2f,%4.2f) lies on an obstacle)", 
-                        vec[0], vec[1], fp_x, fp_y);
+                        mFootprint2Grid.translation()[0], mFootprint2Grid.translation()[1], fp_x, fp_y);
                 return false;
             }  
         }

@@ -40,6 +40,11 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
     int primId = 0;
     Primitive prim;
     
+    // Should the speed reduced for smaller primitives.
+    bool adapt_speed = false;
+    
+    assert (mConfig.mNumPrimPartition >= 1);
+    
     // TODO: In general: Use speed or speed / i here?
     // So, drive smaller segments slowly or always use one speed?
     // For the curves it is required to use the correct speeds.
@@ -55,13 +60,16 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d((mConfig.mSpeeds.mSpeedForward / i) * scale_factor_forward, 0.0, 0.0),
                     mConfig.mSpeeds.mMultiplierForward, 
                     MOV_FORWARD);
-            prim.mSpeeds.mSpeedForward = mConfig.mSpeeds.mSpeedForward / i;
+            prim.mSpeeds.mSpeedForward = adapt_speed ? mConfig.mSpeeds.mSpeedForward / i : mConfig.mSpeeds.mSpeedForward;
 
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
         }
         // Backward
+        if(mConfig.mSpeeds.mSpeedBackward < 0) {
+            LOG_WARN("Backward speed has to be positive, no backward movement will be available!");
+        }
         if(mConfig.mSpeeds.mSpeedBackward > 0) {
             double scale_factor_backward = std::max(1.0, min_prim_length / 
                     (mConfig.mSpeeds.mSpeedBackward / mConfig.mNumPrimPartition));
@@ -72,7 +80,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d((-mConfig.mSpeeds.mSpeedBackward / i) * scale_factor_backward, 0.0, 0.0),
                     mConfig.mSpeeds.mMultiplierBackward, 
                     MOV_BACKWARD);
-            prim.mSpeeds.mSpeedBackward = -mConfig.mSpeeds.mSpeedBackward / i;
+            prim.mSpeeds.mSpeedBackward = adapt_speed ? -mConfig.mSpeeds.mSpeedBackward / i : -mConfig.mSpeeds.mSpeedBackward;
 
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
@@ -89,7 +97,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d(0.0, (mConfig.mSpeeds.mSpeedLateral / i) * scale_factor_lateral, 0.0),
                     mConfig.mSpeeds.mMultiplierLateral,
                     MOV_LATERAL);
-            prim.mSpeeds.mSpeedLateral = mConfig.mSpeeds.mSpeedLateral / i;
+            prim.mSpeeds.mSpeedLateral = adapt_speed ? mConfig.mSpeeds.mSpeedLateral / i : mConfig.mSpeeds.mSpeedLateral;
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
@@ -99,7 +107,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d(0.0, (-mConfig.mSpeeds.mSpeedLateral / i) * scale_factor_lateral, 0.0),
                     mConfig.mSpeeds.mMultiplierLateral, 
                     MOV_LATERAL);
-            prim.mSpeeds.mSpeedLateral = -mConfig.mSpeeds.mSpeedLateral / i;
+            prim.mSpeeds.mSpeedLateral = adapt_speed ? -mConfig.mSpeeds.mSpeedLateral / i : -mConfig.mSpeeds.mSpeedLateral;
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
@@ -115,7 +123,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d(0.0, 0.0, (mConfig.mSpeeds.mSpeedPointTurn / i) * scale_factor_pointturn),
                     mConfig.mSpeeds.mMultiplierPointTurn,
                     MOV_POINTTURN);
-            prim.mSpeeds.mSpeedPointTurn = mConfig.mSpeeds.mSpeedPointTurn / i;
+            prim.mSpeeds.mSpeedPointTurn = adapt_speed ? mConfig.mSpeeds.mSpeedPointTurn / i : mConfig.mSpeeds.mSpeedPointTurn;
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
@@ -125,7 +133,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d(0.0, 0.0, (-mConfig.mSpeeds.mSpeedPointTurn / i) * scale_factor_pointturn),
                     mConfig.mSpeeds.mMultiplierPointTurn,
                     MOV_POINTTURN);
-            prim.mSpeeds.mSpeedPointTurn = -mConfig.mSpeeds.mSpeedPointTurn / i;
+            prim.mSpeeds.mSpeedPointTurn = adapt_speed ? -mConfig.mSpeeds.mSpeedPointTurn / i : -mConfig.mSpeeds.mSpeedPointTurn;
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
@@ -166,8 +174,9 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
+        }
             
-            
+        if(mConfig.mSpeeds.mSpeedBackward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {    
             // Backward turns
             double scale_factor_backward_turn = std::max(1.0, min_prim_length / 
                     (mConfig.mSpeeds.mSpeedBackward / mConfig.mNumPrimPartition));

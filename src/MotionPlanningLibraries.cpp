@@ -342,7 +342,10 @@ bool MotionPlanningLibraries::plan(double max_time) {
         // By default grid coordinates are expeted.
         std::vector<State> planned_path;
         bool pos_defined_in_local_grid = false;
+        
+        std::cout << "before fill path" << std::endl;
         mpPlanningLib->fillPath(planned_path, pos_defined_in_local_grid);
+        std::cout << "after fill path" << std::endl;
         
         if(planned_path.size() == 0) {
             LOG_WARN("Planned path does not contain any states!");
@@ -614,12 +617,18 @@ bool MotionPlanningLibraries::gridlocal2world(envire::TraversabilityGrid const* 
         LOG_WARN("grid2world transformation requires a traversability map");
         return false;
     }
+    
+    base::samples::RigidBodyState grid_local_pose_tmp = grid_local_pose;
+    
+    // We got a grid local pose, but the trav map offset is still missing.
+    grid_local_pose_tmp.position[0] += trav->getOffsetX();
+    grid_local_pose_tmp.position[1] += trav->getOffsetY();
         
     // Transformation LOCAL2WOLRD
     Eigen::Affine3d local2world = trav->getEnvironment()->relativeTransform(
         trav->getFrameNode(),
         trav->getEnvironment()->getRootNode());
-    world_pose.setTransform(local2world * grid_local_pose.getTransform() );
+    world_pose.setTransform(local2world * grid_local_pose_tmp.getTransform() );
     
     return true;
 }

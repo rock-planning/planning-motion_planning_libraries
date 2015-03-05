@@ -16,8 +16,18 @@ double OmplEnvXYTHETA::mCarLength = 2.0;
     
 // PUBLIC
 OmplEnvXYTHETA::OmplEnvXYTHETA(Config config) : Ompl(config) {
-    mCarLength = std::max(mConfig.mFootprintRadiusMinMax.first, 
+    double length = std::max(mConfig.mFootprintLengthMinMax.first, mConfig.mFootprintLengthMinMax.second);
+    if(length == 0) {
+        length = std::max(mConfig.mFootprintRadiusMinMax.first, 
             mConfig.mFootprintRadiusMinMax.second);
+        if(length == 0) {
+            LOG_WARN("No length has been defined, use default %4.2f instead", OmplEnvXYTHETA::mCarLength);
+            length = OmplEnvXYTHETA::mCarLength;
+        } else {
+            LOG_WARN("No length has been defined, use max radius %4.2f instead", length);
+        }
+    }
+    mCarLength = length;
 }
  
 bool OmplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
