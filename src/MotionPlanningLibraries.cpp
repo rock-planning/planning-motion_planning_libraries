@@ -343,9 +343,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
         std::vector<State> planned_path;
         bool pos_defined_in_local_grid = false;
         
-        std::cout << "before fill path" << std::endl;
         mpPlanningLib->fillPath(planned_path, pos_defined_in_local_grid);
-        std::cout << "after fill path" << std::endl;
         
         if(planned_path.size() == 0) {
             LOG_WARN("Planned path does not contain any states!");
