@@ -98,16 +98,24 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
     mReceivedNewTravGrid = false;
     envire::TraversabilityGrid* trav_grid = extractTravGrid(env, trav_map_id);
     if(trav_grid == NULL) {
-        LOG_WARN("Traversability map could not be set");
+        LOG_WARN("Traversability map could not be extracted");
         return false;
-    } else {
-        mpTravGrid = trav_grid;
-        // Creates a copy of the current grid data.
-        mpTravData = boost::shared_ptr<TravData>(new TravData(
-            mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY)));
-        mReceivedNewTravGrid = true;
-        return true;
+    } 
+    
+    // Currently if you start the grap-slam-module and do not wait a feew seconds
+    // you get a map with sizex/sizey 0.1.
+    if(trav_grid->getSizeX() < 1 || trav_grid->getSizeY() < 1) {
+        LOG_ERROR("Size of the extracted map is incorrect (%4.2f, %4.2f)", trav_grid->getSizeX(), trav_grid->getSizeY());
+        return false;
     }
+    
+    mpTravGrid = trav_grid;
+    // Creates a copy of the current grid data.
+    mpTravData = boost::shared_ptr<TravData>(new TravData(
+        mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY)));
+    mReceivedNewTravGrid = true;
+
+    return true;
 }
 
 bool MotionPlanningLibraries::setStartState(struct State start_state) {
