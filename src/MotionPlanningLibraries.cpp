@@ -23,6 +23,8 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) :
         mReceivedNewGoal(false),
         mArmInitialized(false),
         mReplanRequired(false),
+        mLostX(0.0),
+        mLostY(0.0),
         mError(MPL_ERR_NONE) {
             
     // Do some checks.
@@ -180,7 +182,8 @@ bool MotionPlanningLibraries::setGoalState(struct State goal_state) {
         }
         case STATE_POSE: { // If a pose is defined convert it to the grid.
             base::samples::RigidBodyState goal_grid_new;
-            if(!world2grid(mpTravGrid, goal_state.getPose(), goal_grid_new)) {
+            // Stores discretisation error.
+            if(!world2grid(mpTravGrid, goal_state.getPose(), goal_grid_new, &mLostX, &mLostY)) {
                 LOG_WARN("Goal pose could not be set");
                 return false;
             }
@@ -274,6 +277,14 @@ bool MotionPlanningLibraries::plan(double max_time) {
             }
             
             // Reset current start and goal state within the new environment!
+            // The new trav grid can contain another transformation, so 
+            // the old start and goal pose have to be transformed into the grid again.
+            if(!setStartState(mStartState) || !setGoalState(mGoalState)) {
+                LOG_ERROR("Old start and goal pose could not be transformed into the new environment");
+                mError = MPL_ERR_SET_START_GOAL;
+                return false;
+            }
+            
             if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
                 LOG_WARN("Start/goal state could not be set after reinitialization");
                 mError = MPL_ERR_SET_START_GOAL;
@@ -298,7 +309,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
     }
     
     // Updates the start/goal pose within the planner.
-    if(mReceivedNewStart || mReceivedNewGoal) {       
+    if((mConfig.mReplanOnNewStartPose && mReceivedNewStart) || mReceivedNewGoal) {       
         if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
             LOG_WARN("Start/goal state could not be set");
             mError = MPL_ERR_SET_START_GOAL;
@@ -347,7 +358,7 @@ bool MotionPlanningLibraries::plan(double max_time) {
         mReceivedNewTravGrid = false;
         */
         
-        // By default grid coordinates are expeted.
+        // By default grid coordinates are expected.
         std::vector<State> planned_path;
         bool pos_defined_in_local_grid = false;
         
@@ -372,6 +383,19 @@ bool MotionPlanningLibraries::plan(double max_time) {
             it->setPose(rbs_world);
             mPlannedPathInWorld.push_back(*it);
         }
+        
+        // Calculate distance between goal pose and end of trajectory.
+        // Currently e.g. in SBPL-XYTHETA the trajectory may not reach the goal pose.
+        if(mPlannedPathInWorld.size() > 0) {
+            base::samples::RigidBodyState end_pose_trajectory = (mPlannedPathInWorld.end()-1)->mPose;
+            double dist = (end_pose_trajectory.position - mGoalState.getPose().position).norm();
+            double max_allowed_dist = 0.2;
+            LOG_INFO("Distance end of trajectory to goal position in world: %4.2f", dist);
+            if(dist > max_allowed_dist) {
+                LOG_WARN("Goal position could only be reached imprecisely (>%4.2f m)", max_allowed_dist);
+            }
+        }
+        
         return true;
     } else {
         LOG_WARN("No solution found");     
@@ -552,7 +576,9 @@ bool MotionPlanningLibraries::getSbplMotionPrimitives(struct SbplMotionPrimitive
 
 bool MotionPlanningLibraries::world2grid(envire::TraversabilityGrid const* trav,
         base::samples::RigidBodyState const& world_pose, 
-        base::samples::RigidBodyState& grid_pose) {
+        base::samples::RigidBodyState& grid_pose,
+        double* lost_x,
+        double* lost_y) {
         
     if(trav == NULL) {
         LOG_WARN("world2grid transformation requires a traversability map");
@@ -568,8 +594,19 @@ bool MotionPlanningLibraries::world2grid(envire::TraversabilityGrid const* trav,
     
     // Calculate and set grid coordinates (and orientation).
     size_t x_grid = 0, y_grid = 0;
-    if(!trav->toGrid(local_pose.position.x(), local_pose.position.y(), 
-            x_grid, y_grid)) 
+    bool ret = true;
+    double xmod = 0.0, ymod = 0.0;
+    if(lost_x != NULL && lost_y != NULL) {
+        ret = trav->toGrid(local_pose.position.x(), local_pose.position.y(), 
+            x_grid, y_grid,
+            xmod, ymod);
+        *lost_x = xmod;
+        *lost_y = ymod;
+    } else {
+        ret = trav->toGrid(local_pose.position.x(), local_pose.position.y(), 
+            x_grid, y_grid);
+    }
+    if(!ret) 
     {
         LOG_WARN("Position (%4.2f,%4.2f) / cell (%d,%d) is out of grid", 
                 local_pose.position.x(), local_pose.position.y(), x_grid, y_grid);
@@ -600,6 +637,10 @@ bool MotionPlanningLibraries::grid2world(envire::TraversabilityGrid const* trav,
     // TODO Is it ok: Do not use fromGrid() to avoid shifting to the cell center.
     x_local = x_grid * trav->getScaleX() + trav->getOffsetX();
     y_local = y_grid * trav->getScaleY() + trav->getOffsetY();
+    
+    // Readds discretization error based on the set goal pose.
+    x_local += mLostX;
+    y_local += mLostY;
 
     base::samples::RigidBodyState local_pose = grid_pose;
     local_pose.position[0] = x_local;
@@ -611,6 +652,10 @@ bool MotionPlanningLibraries::grid2world(envire::TraversabilityGrid const* trav,
         trav->getFrameNode(),
         trav->getEnvironment()->getRootNode());
     world_pose.setTransform(local2world * local_pose.getTransform() );
+    
+    printf("Transformation scale x y offset x y %4.2f %4.2f %4.2f %4.2f\n", 
+           trav->getScaleX(), trav->getScaleY(), trav->getOffsetX(), trav->getOffsetY());
+    std::cout << "local2world " << local2world.matrix() << std::endl;
     
     return true;
 }
@@ -629,6 +674,10 @@ bool MotionPlanningLibraries::gridlocal2world(envire::TraversabilityGrid const* 
     // We got a grid local pose, but the trav map offset is still missing.
     grid_local_pose_tmp.position[0] += trav->getOffsetX();
     grid_local_pose_tmp.position[1] += trav->getOffsetY();
+    
+    // Readds discretization error based on the set goal pose.
+    grid_local_pose_tmp.position[0] += mLostX;
+    grid_local_pose_tmp.position[1] += mLostY;
         
     // Transformation LOCAL2WOLRD
     Eigen::Affine3d local2world = trav->getEnvironment()->relativeTransform(

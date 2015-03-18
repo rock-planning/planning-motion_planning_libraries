@@ -202,6 +202,9 @@ bool SbplEnvXYTHETA::setStartGoal(struct State start_state, struct State goal_st
     double goal_y = goal_state.getPose().position[1] * mSBPLScaleY;
     double goal_yaw = goal_state.getPose().getYaw();
     
+    LOG_INFO("Change start/goal within SBPL env and planner to (%4.2f, %4.2f, %4.2f), (%4.2f, %4.2f, %4.2f)",
+        start_x, start_y, start_yaw, goal_x, goal_y, goal_yaw);
+    
     start_id = env_xytheta->SetStart(start_x, start_y, start_yaw);
     goal_id = env_xytheta->SetGoal(goal_x, goal_y, goal_yaw);
 
@@ -245,6 +248,7 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
         // Fill path with the found solution.
         boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
                 boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
+        // Provides grid coordinates, not grid local.
         env_xytheta->GetCoordFromState(*it, x_discrete, y_discrete, theta_discrete);
 
         // MotionPlanningLibraries expects grid coordinates, but a real angle in rad,
@@ -280,6 +284,9 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
         sbpl_xy_theta_pt_t xyt_m_rad;
         for(unsigned int i=0; i<path_xytheta.size(); ++i) {
             xyt_m_rad = path_xytheta[i];
+            // The grid local path is shifted to the center of the cells.
+            // This is not required here (will be done in MotionPlanningLibraries
+            // regarding to the goal pose.
             xyt_m_rad.x -= mSBPLScaleX / 2.0;
             xyt_m_rad.y -= mSBPLScaleY / 2.0;
             state.mPose.position = base::Vector3d(xyt_m_rad.x, xyt_m_rad.y, 0);

@@ -64,7 +64,8 @@ class MotionPlanningLibraries
     bool mReceivedNewGoal;
     bool mArmInitialized;
     bool mReplanRequired;
-    
+    double mLostX; // Used to trac discretization error.
+    double mLostY;
     enum MplErrors mError;
     
  public: 
@@ -143,12 +144,14 @@ class MotionPlanningLibraries
      */        
     static bool world2grid(envire::TraversabilityGrid const* trav, 
         base::samples::RigidBodyState const& world_pose, 
-        base::samples::RigidBodyState& grid_pose);
+        base::samples::RigidBodyState& grid_pose,
+        double* lost_x = NULL,
+        double* lost_y = NULL);
         
     /**
      * Transforms the grid-coordinates to grid local to world.
      */
-    static bool grid2world(envire::TraversabilityGrid const* trav,
+    bool grid2world(envire::TraversabilityGrid const* trav,
             base::samples::RigidBodyState const& grid_pose, 
             base::samples::RigidBodyState& world_pose);
      
@@ -157,7 +160,7 @@ class MotionPlanningLibraries
      * Poses within the grid local frame use meter and radians (-PI, PI] instead of
      * discrete grid coordinates.
      */
-    static bool gridlocal2world(envire::TraversabilityGrid const* trav,
+    bool gridlocal2world(envire::TraversabilityGrid const* trav,
         base::samples::RigidBodyState const& grid_local_pose,
         base::samples::RigidBodyState& world_pose);
     

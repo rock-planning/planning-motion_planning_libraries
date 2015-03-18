@@ -60,6 +60,10 @@ class AbstractMotionPlanningLibrary
      * position have to be defined within the grid (grid-coordinates).
      * If the positions have already been converted to meter (local_grid)
      * the passed bolean has to be set to true.
+     * Converting grid to grid_local: Do not move the positions 
+     * to the center of a cell. This will be added automatically regrading to 
+     * discretization error of the the goal pose. This takes care that the path 
+     * directly ends at the goal pose.
      * E.g. SBPL XYTHETA uses intermediate points which are defined
      * in the local grid already.
      * The orientation/theta should be (-PI,PI] (according to OMPL).
