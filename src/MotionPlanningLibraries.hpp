@@ -101,7 +101,7 @@ class MotionPlanningLibraries
      * For navigation: A new traversability map will initiate a reinitialization.
      * TODO: A new trav map should not require a complete reinitialization.
      */
-    bool plan(double max_time=1.0); 
+    bool plan(double max_time, double& cost); 
     
     /**
      * Like getStates() but with world coordinates.

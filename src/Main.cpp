@@ -94,7 +94,8 @@ int main(int argc, char** argv)
     sbpl.setStartState(State(rbs_start));
     sbpl.setGoalState(State(rbs_goal));
 
-    if(sbpl.plan(10)) {
+    double cost = 0;
+    if(sbpl.plan(10, cost)) {
         std::cout << "SBPL problem solved" << std::endl;
         sbpl.printPathInWorld();
     } else {

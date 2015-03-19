@@ -5,7 +5,8 @@ namespace motion_planning_libraries
 
 // PUBLIC
 AbstractMotionPlanningLibrary::AbstractMotionPlanningLibrary(Config config) : 
-        mConfig(config) 
+        mConfig(config),
+        mPathCost(nan(""))
 {
 }
 

@@ -227,9 +227,14 @@ bool MotionPlanningLibraries::setGoalState(struct State goal_state) {
     return true;
 }
 
-bool MotionPlanningLibraries::plan(double max_time) {
+bool MotionPlanningLibraries::plan(double max_time, double& cost) {
     
     mError = MPL_ERR_NONE;
+    
+    if(max_time <= 0) {
+        LOG_WARN("Max allowed planning time must exceed 0, set to 1");
+        max_time = 1.0;
+    }
 
     if(mStartState.getStateType() == STATE_EMPTY) {
         LOG_WARN("Start states have not been set yet, planning can not be executed"); 
@@ -351,12 +356,8 @@ bool MotionPlanningLibraries::plan(double max_time) {
     {
         LOG_INFO("Solution found");
         
-        // TODO Not required?
-        /*
-        mReceivedNewStart = false;
-        mReceivedNewGoal = false;
-        mReceivedNewTravGrid = false;
-        */
+        // Request costs if available, otherwise nan is returned.
+        cost = mpPlanningLib->getCost();
         
         // By default grid coordinates are expected.
         std::vector<State> planned_path;

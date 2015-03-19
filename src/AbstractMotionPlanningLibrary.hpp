@@ -24,6 +24,7 @@ class AbstractMotionPlanningLibrary
 {
  protected: 
     Config mConfig;
+    double mPathCost;
         
  public: 
     AbstractMotionPlanningLibrary(Config config = Config());
@@ -69,6 +70,13 @@ class AbstractMotionPlanningLibrary
      * The orientation/theta should be (-PI,PI] (according to OMPL).
      */
     virtual bool fillPath(std::vector<struct State>& path, bool& pos_defined_in_local_grid) = 0;
+    
+    /**
+     * If path-cost available within the planner they can be returned here. 
+     */
+    virtual double getCost() {
+        return mPathCost;
+    }
 };
 
 } // end namespace motion_planning_libraries
