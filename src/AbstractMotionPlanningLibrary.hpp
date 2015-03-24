@@ -11,7 +11,6 @@
 #include "Config.hpp"
 #include "State.hpp"
 
-
 namespace motion_planning_libraries
 {
 
@@ -76,6 +75,16 @@ class AbstractMotionPlanningLibrary
      */
     virtual double getCost() {
         return mPathCost;
+    }
+    
+    /**
+     * Can be implemented to check whether the start and/or goal state
+     * are not valid. In this case MPL_ERR_START_ON_OBSTACLE,
+     * MPL_ERR_GOAL_ON_OBSTACLE or MPL_ERR_START_GOAL_ON_OBSTACLE
+     * should be returned.
+     */
+    virtual enum MplErrors isStartGoalValid() {
+        return MPL_ERR_UNDEFINED;
     }
 };
 

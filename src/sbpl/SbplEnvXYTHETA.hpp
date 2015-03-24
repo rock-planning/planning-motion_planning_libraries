@@ -44,6 +44,8 @@ class SbplEnvXYTHETA : public Sbpl
     inline struct SbplMotionPrimitives* getMotionPrimitives() {
         return mPrims;
     }
+    
+    enum MplErrors isStartGoalValid();
 };
     
 } // end namespace motion_planning_libraries

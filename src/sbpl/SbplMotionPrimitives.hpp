@@ -196,6 +196,11 @@ struct SbplMotionPrimitives {
      * \return false if the is is unknown.
      */
     bool getSpeeds(unsigned int prim_id, struct Speeds& speeds);
+    
+    /**
+     * Calculates the discrete angle to the passed non-discrete one.
+     */
+    int calcDiscreteEndOrientation(double yaw_rad);
 };
 
 } // end namespace motion_planning_libraries

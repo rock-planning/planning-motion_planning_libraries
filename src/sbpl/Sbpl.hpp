@@ -39,6 +39,9 @@ class Sbpl : public AbstractMotionPlanningLibrary
     unsigned char* mpSBPLMapData;
     size_t mSBPLNumElementsMap;
     int mLastSolutionCost;
+    // Discrete start and goal state(x,y,theta), can be used to check 
+    // - after planning have failed - whether the states intersect with an obstacle.
+    Eigen::Vector3i mStartGrid, mGoalGrid;
         
  public: 
     Sbpl(Config config = Config());

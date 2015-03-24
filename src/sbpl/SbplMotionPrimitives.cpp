@@ -519,4 +519,13 @@ bool SbplMotionPrimitives::getSpeeds(unsigned int prim_id, struct Speeds& speeds
     return true;
 }
 
+int SbplMotionPrimitives::calcDiscreteEndOrientation(double yaw_rad) {
+    int discrete_theta = round(yaw_rad / (double)mConfig.mNumAngles);
+    while (discrete_theta >= (int)mConfig.mNumAngles)
+        discrete_theta -= mConfig.mNumAngles;
+    while (discrete_theta < 0)
+        discrete_theta += mConfig.mNumAngles;
+    return discrete_theta;
+}
+
 } // end namespace motion_planning_libraries

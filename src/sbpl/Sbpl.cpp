@@ -16,7 +16,9 @@ Sbpl::Sbpl(Config config) : AbstractMotionPlanningLibrary(config),
         mSBPLWaypointIDs(),
         mpSBPLMapData(NULL),
         mSBPLNumElementsMap(0),
-        mLastSolutionCost(0) {
+        mLastSolutionCost(0),
+        mStartGrid(),
+        mGoalGrid() {
             
     LOG_DEBUG("SBPL constructor");
 }
@@ -78,7 +80,7 @@ void Sbpl::createSBPLMap(envire::TraversabilityGrid* trav_grid,
     std::vector <envire::TraversabilityClass > trav_classes = trav_grid->getTraversabilityClasses();
     double highest_driveability = 0.0;
     double last_highest_driveability = 0.0;
-    for(int i=0; i<trav_classes.size(); i++) {
+    for(unsigned int i=0; i<trav_classes.size(); i++) {
         double driveability = (trav_grid->getTraversabilityClass(i)).getDrivability();
         if(driveability > highest_driveability) {
             last_highest_driveability = highest_driveability; 

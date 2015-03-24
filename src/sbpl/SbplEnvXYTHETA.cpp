@@ -10,7 +10,7 @@ namespace motion_planning_libraries
 
 // PUBLIC
 SbplEnvXYTHETA::SbplEnvXYTHETA(Config config) : Sbpl(config), 
-        mSBPLScaleX(0), mSBPLScaleY(0), mPrims(NULL) {
+        mSBPLScaleX(0), mSBPLScaleY(0), mPrims(NULL), mGoalLocal() {
     LOG_DEBUG("SbplEnvXYTHETA constructor");
 }
 
@@ -222,6 +222,14 @@ bool SbplEnvXYTHETA::setStartGoal(struct State start_state, struct State goal_st
     mGoalLocal[0] = goal_x;
     mGoalLocal[1] = goal_y;
     mGoalLocal[2] = goal_yaw;
+    
+    // Stores discrete start and goal pose to check for validity.
+    mStartGrid[0] = start_state.getPose().position[0];
+    mStartGrid[1] = start_state.getPose().position[1];
+    mStartGrid[2] = mPrims->calcDiscreteEndOrientation(start_state.getPose().getYaw());
+    mGoalGrid[0] = goal_state.getPose().position[0];
+    mGoalGrid[1] = goal_state.getPose().position[1];
+    mGoalGrid[2] = mPrims->calcDiscreteEndOrientation(goal_state.getPose().getYaw());
       
     return true;
 }
@@ -334,6 +342,27 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
     }
     
     return true;
+}
+
+enum MplErrors SbplEnvXYTHETA::isStartGoalValid() {
+    boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
+        boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
+    
+    LOG_INFO("Check discrete start (%d, %d, %d) and goal pose (%d, %d, %d) for validity",
+            mStartGrid[0], mStartGrid[1], mStartGrid[2], mGoalGrid[0], mGoalGrid[1], mGoalGrid[2]);
+        
+    bool start_not_valid = !(env_xytheta->IsValidConfiguration(mStartGrid[0], mStartGrid[1], mStartGrid[2]));
+    bool goal_not_valid = !(env_xytheta->IsValidConfiguration(mGoalGrid[0], mGoalGrid[1], mGoalGrid[2]));
+    
+    if(start_not_valid && goal_not_valid) {
+        return MPL_ERR_START_GOAL_ON_OBSTACLE;
+    } else if(start_not_valid) {
+        return MPL_ERR_START_ON_OBSTACLE;
+    } else if (goal_not_valid) {
+        return MPL_ERR_GOAL_ON_OBSTACLE;
+    } else {
+        return MPL_ERR_UNDEFINED;
+    }
 }
 
 } // namespace motion_planning_libraries

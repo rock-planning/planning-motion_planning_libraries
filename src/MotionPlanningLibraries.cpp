@@ -399,8 +399,13 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
         
         return true;
     } else {
-        LOG_WARN("No solution found");     
-        mError = MPL_ERR_PLANNING_FAILED;
+        LOG_WARN("No solution found");   
+        enum MplErrors err = mpPlanningLib->isStartGoalValid();
+        if(err == MPL_ERR_UNDEFINED) {
+            mError = MPL_ERR_PLANNING_FAILED;
+        } else {
+            mError = err;
+        }
         return false;
     }
 }
@@ -653,10 +658,6 @@ bool MotionPlanningLibraries::grid2world(envire::TraversabilityGrid const* trav,
         trav->getFrameNode(),
         trav->getEnvironment()->getRootNode());
     world_pose.setTransform(local2world * local_pose.getTransform() );
-    
-    printf("Transformation scale x y offset x y %4.2f %4.2f %4.2f %4.2f\n", 
-           trav->getScaleX(), trav->getScaleY(), trav->getOffsetX(), trav->getOffsetY());
-    std::cout << "local2world " << local2world.matrix() << std::endl;
     
     return true;
 }
