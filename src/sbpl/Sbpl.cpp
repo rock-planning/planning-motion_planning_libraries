@@ -18,7 +18,8 @@ Sbpl::Sbpl(Config config) : AbstractMotionPlanningLibrary(config),
         mSBPLNumElementsMap(0),
         mLastSolutionCost(0),
         mStartGrid(),
-        mGoalGrid() {
+        mGoalGrid(),
+        mEpsilon(0.0) {
             
     LOG_DEBUG("SBPL constructor");
 }
@@ -34,6 +35,7 @@ bool Sbpl::solve(double time) {
         // Current conclusion: Better not touch each planners epsilon.
         ret = mpSBPLPlanner->replan(time, &mSBPLWaypointIDs, &mLastSolutionCost);
         mPathCost = mLastSolutionCost;
+        mEpsilon = mpSBPLPlanner->get_solution_eps();
     } catch (...) {
         LOG_ERROR("Replanning failed");
         return false;
@@ -125,6 +127,10 @@ std::vector<sbpl_2Dpt_t> Sbpl::createFootprint(double robot_width, double robot_
     footprint.push_back(pt_m);
     
     return footprint;
+}
+
+bool Sbpl::foundFinalSolution() {
+    return (mEpsilon == 1.0);
 }
 
 } // namespace motion_planning_libraries

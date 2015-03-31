@@ -86,6 +86,16 @@ class AbstractMotionPlanningLibrary
     virtual enum MplErrors isStartGoalValid() {
         return MPL_ERR_UNDEFINED;
     }
+    
+    /**
+     * Can be used to tell whether the passed solution is the optimal one.
+     * E.g. in SBPL epsilon == 1.0 identifies an optimal solution.
+     * By default this method returns true, so it does not influence
+     * replanning.
+     */
+    virtual bool foundFinalSolution() {
+        return true;
+    }
 };
 
 } // end namespace motion_planning_libraries

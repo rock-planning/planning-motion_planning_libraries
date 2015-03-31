@@ -42,6 +42,7 @@ class Sbpl : public AbstractMotionPlanningLibrary
     // Discrete start and goal state(x,y,theta), can be used to check 
     // - after planning have failed - whether the states intersect with an obstacle.
     Eigen::Vector3i mStartGrid, mGoalGrid;
+    double mEpsilon;
         
  public: 
     Sbpl(Config config = Config());
@@ -62,6 +63,12 @@ class Sbpl : public AbstractMotionPlanningLibrary
      * The footprint has to be defined in meter.
      */
     std::vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
+    
+    /**
+     * In SBPL the optimal solution has been found if the internal epsilon reaches 1.0
+     * (starting at a higher number).
+     */
+    bool foundFinalSolution();
 };
     
 } // end namespace motion_planning_libraries

@@ -334,7 +334,7 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
     // trav map (navigation planning) have been received or mReplanDuringEachUpdate
     // has been set to true.
     bool solved = false;
-    if(mReplanRequired || mConfig.mReplanDuringEachUpdate) { 
+    if(mReplanRequired || mConfig.mReplanDuringEachUpdate || !mpPlanningLib->foundFinalSolution()) { 
                   
         LOG_INFO("Planning from \n%s (Grid %s) \nto \n%s (Grid %s)", 
                 mStartState.getString().c_str(), mStartStateGrid.getString().c_str(),
@@ -344,7 +344,8 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
         solved = mpPlanningLib->solve(max_time);
     } else {
         LOG_INFO("Replanning not required");
-        return true;
+        mError = MPL_ERR_REPLANNING_NOT_REQUIRED;
+        return false;
     }
     // At the moment (if mReplanDuringEachUpdate is set to false) the planner just
     // tries to solve the problem once and no optimizations are made.

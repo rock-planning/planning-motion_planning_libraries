@@ -84,6 +84,11 @@ class MotionPlanningLibraries
      * will be initiated. Thresholds define whether a state is new one.
      * For navigation: A new traversability map will initiate a reinitialization.
      * TODO: A new trav map should not require a complete reinitialization.
+     * \return True if a planning has been successfully executed. 
+     * If an error has occurred or replanning is not required (MPL_ERR_REPLANNING_NOT_REQUIRED) 
+     * false will be returned and the error state will be set accordingly. 
+     * isPlanningRequired() can be used before planning to check whether a
+     * replanning is necessary. 
      */
     bool plan(double max_time, double& cost); 
     
