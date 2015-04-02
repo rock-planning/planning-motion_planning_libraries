@@ -203,6 +203,17 @@ struct Config {
             mJointBorders.push_back(std::pair<double,double>(lower_border, upper_border));
         }
     }
+    
+    // Calculates the max radius in meter using the specified footprint radius and rectangle.
+    double getMaxRadius() {
+        double max_radius = std::max(mFootprintRadiusMinMax.first, mFootprintRadiusMinMax.second);
+        double max_length = std::max(mFootprintLengthMinMax.first, mFootprintLengthMinMax.second);
+        double max_width = std::max(mFootprintWidthMinMax.first, mFootprintWidthMinMax.second);
+        
+        // Calculates radius using width and length.
+        double max_radius2 = sqrt(pow(max_length/2.0, 2) + pow(max_width/2.0, 2));
+        return std::max(max_radius, max_radius2);
+    }
 };
 
 } // end namespace motion_planning_libraries

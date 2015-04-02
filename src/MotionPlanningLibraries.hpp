@@ -112,6 +112,13 @@ class MotionPlanningLibraries
      */
     std::vector<base::Trajectory> getTrajectoryInWorld(double speed=0);
     
+    /**
+     * Inverts the last trajectory and searches from goal to start for the next valid pose.
+     * This can be used if the robot stucks within an obstacle.
+     * Returns an empty vector if an error occurred.
+     */
+    std::vector<base::Trajectory> getEscapeTrajectoryInWorld(double speed=0);
+    
     /** Prints the current path to the console. */
     void printPathInWorld();
     

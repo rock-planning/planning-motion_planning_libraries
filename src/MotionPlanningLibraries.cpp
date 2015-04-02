@@ -1,5 +1,7 @@
 #include "MotionPlanningLibraries.hpp"
 
+#include "Helpers.hpp"
+
 #include <motion_planning_libraries/sbpl/SbplEnvXY.hpp>
 #include <motion_planning_libraries/sbpl/SbplEnvXYTHETA.hpp>
 #include <motion_planning_libraries/ompl/OmplEnvXY.hpp>
@@ -515,6 +517,85 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(doub
     }
             
     return trajectories;
+}
+
+std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorld(double speed) {
+    
+    if(mPlannedPathInWorld.size() == 0) {
+        LOG_WARN("No path available, escape trajectory cannot be created");
+        return std::vector<base::Trajectory>();
+    }
+    printf("Get escape trajectory\n");
+    
+    std::vector<base::Trajectory> trajectories = getTrajectoryInWorld(speed);
+    std::vector<base::Trajectory> inverted_trajectories;
+    GridCalculations grid_calc;
+    grid_calc.setTravGrid(mpTravGrid, mpTravData);
+    double max_radius = mConfig.getMaxRadius();
+    double min_cell_size = std::min(mpTravGrid->getScaleX(), mpTravGrid->getScaleY());
+    double robot_max_radius_in_grid =   max_radius / min_cell_size; 
+    // Checks all cells within the radius.. can be very expensive.
+    // Footprint radius is increased a little bit to add some extra safety distance.
+    robot_max_radius_in_grid *= 1.2;
+    // TODO Could use false here, so that just the center and the border of the circle.
+    grid_calc.setFootprintCircleInGrid(robot_max_radius_in_grid, true);
+    printf("Robot max radius %4.2f, min cell size %4.2f, robot_max_radius_in_grid %4.2f\n", 
+            max_radius, min_cell_size, robot_max_radius_in_grid);
+    
+    bool free_point_found = false;
+    base::samples::RigidBodyState rbs_world, rbs_grid;
+    rbs_world.orientation.setIdentity();
+    
+    printf("Trajectory containts %d splines", trajectories.size());
+    for(unsigned int i=trajectories.size()-1; i>=0; i--) {
+        double inverted_speed = -trajectories[i].speed; // Invert speed.
+        base::geometry::Spline<3> spline = trajectories[i].spline;
+        
+        // Creates a point every 0.1m.
+        double dist = 0.1;
+        double division = spline.getCurveLength() / dist;
+        if(division < 2) {
+            division = 2; // Divides each spline at least into two pieces (each spline requires at least two points).
+        }
+        double stepSize = (spline.getEndParam() - spline.getStartParam()) / division;
+        std::vector<base::Vector3d> inverted_points;
+        std::vector<base::geometry::SplineBase::CoordinateType> coord_types;
+        base::Vector3d point;
+        printf("Start %4.2f End %4.2f Step %4.2f", spline.getStartParam(), spline.getEndParam(), stepSize);
+        
+        // Extract points from spline from end to start.
+        for(double p = spline.getEndParam(); p >= spline.getStartParam(); p -= stepSize ) { 
+            point = spline.getPoint(p);
+            inverted_points.push_back(point);
+            coord_types.push_back(base::geometry::SplineBase::ORDINARY_POINT);
+            std::cout << "Adds point " << point.transpose() << std::endl;
+            // Stops if the first point does not lie on an obstacle anymore.
+            // Transforms to the grid and uses the max radius of the system.
+            rbs_world.position = point;
+            world2grid(mpTravGrid, rbs_world, rbs_grid, NULL, NULL); 
+            grid_calc.setFootprintPoseInGrid(rbs_grid.position[0], rbs_grid.position[1], 0);
+            free_point_found = grid_calc.isValid();
+            if(free_point_found && inverted_points.size() >= 2) {
+                break;
+            }
+        }
+        base::Trajectory inverted_trajectory;
+        try {
+            inverted_trajectory.speed = inverted_speed;
+            std::vector<double> parameters;
+            inverted_trajectory.spline.interpolate(inverted_points, parameters, coord_types);
+        } catch (std::runtime_error& e) {
+            LOG_ERROR("Spline exception: %s", e.what());
+            return std::vector<base::Trajectory>();
+        }
+        inverted_trajectories.push_back(inverted_trajectory);
+        if(free_point_found) {
+            break;
+        }
+    }
+    printf("Escape trajectory contains %d splines\n", inverted_trajectories.size());
+    printf("First safe point is at %4.2f %4.2f\n", rbs_world.position[0], rbs_world.position[1]);
+    return inverted_trajectories;
 }
 
 void MotionPlanningLibraries::printPathInWorld() {
