@@ -76,6 +76,7 @@ struct Speeds {
     unsigned int mMultiplierBackward;
     unsigned int mMultiplierLateral;
     unsigned int mMultiplierTurn;
+    unsigned int mMultiplierBackwardTurn;
     unsigned int mMultiplierPointTurn;
     
     Speeds() : 
@@ -88,6 +89,7 @@ struct Speeds {
            mMultiplierBackward(1),
            mMultiplierLateral(1),
            mMultiplierTurn(1),
+           mMultiplierBackwardTurn(1),
            mMultiplierPointTurn(1) {
     }
     

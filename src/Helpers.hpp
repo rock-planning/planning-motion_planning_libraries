@@ -29,6 +29,10 @@ class GridCalculations {
     }
  
     void setTravGrid(envire::TraversabilityGrid* trav_grid, boost::shared_ptr<TravData> trav_data) {
+        if(trav_grid == NULL) {
+            LOG_WARN("setTravGrid: Received an empty traversability map");
+        }
+        
         mpTravGrid = trav_grid; 
         mpTravData = trav_data;
     }

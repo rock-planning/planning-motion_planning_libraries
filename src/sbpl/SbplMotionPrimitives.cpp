@@ -20,6 +20,14 @@ SbplMotionPrimitives::~SbplMotionPrimitives() {
     * Fills mListPrimitives.
     */
 void SbplMotionPrimitives::createPrimitives() {  
+    // TODO: Fix/check this!
+    if(mConfig.mNumPrimPartition != 1 &&
+        mConfig.mNumPrimPartition != 2 &&
+        mConfig.mNumPrimPartition != 4 &&
+        mConfig.mNumPrimPartition != 8) {
+        LOG_WARN("Currently only 1, 2, 4 or 8 are valid for mNumPrimPartition!");
+    }
+    
     std::vector<struct Primitive> prim_angle_0 = createMPrimsForAngle0();
     createMPrims(prim_angle_0); // Stores to global prim list mListPrimitives as well.
     createIntermediatePoses(mListPrimitives); // Adds intermediate poses.
@@ -66,6 +74,9 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
         }
+    }
+    
+    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) {   
         // Backward
         if(mConfig.mSpeeds.mSpeedBackward < 0) {
             LOG_WARN("Backward speed has to be positive, no backward movement will be available!");
@@ -85,7 +96,10 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
-        }
+        }   
+    }
+    
+    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
         // Lateral
         if(mConfig.mSpeeds.mSpeedLateral > 0) {
             double scale_factor_lateral = std::max(1.0, min_prim_length / 
@@ -112,6 +126,9 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
         }
+    }
+    
+    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
         // Point turn
         if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
             double scale_factor_pointturn = std::max(1.0, mRadPerDiscreteAngle / 
@@ -138,6 +155,10 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
         }
+        
+    }
+    
+    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
         // Create forward and backward curves.
         // First calculates a common scale factor for the minimal forward/backward- and 
         // turning-speed. 
@@ -153,11 +174,13 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             double forward_speed = (mConfig.mSpeeds.mSpeedForward / i);
             double forward_turn_speed = (mConfig.mSpeeds.mSpeedTurn / (mConfig.mNumPrimPartition+1 - i));
             
+            // TODO: For turn-multipliers mConfig.mSpeeds.mMultiplierTurn * i has been used.
+            // But SBPL already creates higher costs for narrow curves, does it?
             // Create left hand bend.
             prim = createCurvePrimForAngle0(forward_speed * scale_factor_forward_turn, 
                         forward_turn_speed * scale_factor_forward_turn, 
                         primId, 
-                        mConfig.mSpeeds.mMultiplierTurn * i);
+                        mConfig.mSpeeds.mMultiplierTurn);
             prim.mSpeeds.mSpeedForward = forward_speed;
             prim.mSpeeds.mSpeedTurn = forward_turn_speed;
             mListPrimitivesAngle0.push_back(prim);
@@ -168,13 +191,16 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             prim = createCurvePrimForAngle0(forward_speed * scale_factor_forward_turn, 
                         -forward_turn_speed * scale_factor_forward_turn, 
                         primId, 
-                        mConfig.mSpeeds.mMultiplierTurn * i);
+                        mConfig.mSpeeds.mMultiplierTurn);
             prim.mSpeeds.mSpeedForward = forward_speed;
             prim.mSpeeds.mSpeedTurn = -forward_turn_speed;
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
         }
+    }
+    
+    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
             
         if(mConfig.mSpeeds.mSpeedBackward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {    
             // Backward turns
@@ -187,11 +213,12 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             double backward_speed = (mConfig.mSpeeds.mSpeedBackward / i);
             double backward_turn_speed = (mConfig.mSpeeds.mSpeedTurn / (mConfig.mNumPrimPartition+1 - i));
 
+            // TODO Using backward multiplier here, actually we need a backward-turn multiplier?
             // Create left hand bend.
             prim =  createCurvePrimForAngle0(-backward_speed * scale_factor_backward_turn, 
                         -backward_turn_speed * scale_factor_backward_turn, 
                         primId, 
-                        mConfig.mSpeeds.mMultiplierBackward * i);
+                        mConfig.mSpeeds.mMultiplierBackwardTurn);
             prim.mSpeeds.mSpeedBackward = -backward_speed;
             prim.mSpeeds.mSpeedTurn = -backward_turn_speed;
             mListPrimitivesAngle0.push_back(prim);
@@ -202,7 +229,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             prim = createCurvePrimForAngle0(-backward_speed * scale_factor_backward_turn, 
                         backward_turn_speed * scale_factor_backward_turn, 
                         primId, 
-                        mConfig.mSpeeds.mMultiplierBackward * i);
+                        mConfig.mSpeeds.mMultiplierBackwardTurn);
             prim.mSpeeds.mSpeedBackward = -backward_speed;
             prim.mSpeeds.mSpeedTurn = backward_turn_speed;
             mListPrimitivesAngle0.push_back(prim); 
