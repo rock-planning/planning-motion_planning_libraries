@@ -46,6 +46,7 @@ class MotionPlanningLibraries
     bool mReceivedNewTravGrid;
     bool mReceivedNewStart;
     bool mReceivedNewGoal;
+    bool mGoalReached;
     bool mArmInitialized;
     bool mReplanRequired;
     double mLostX; // Used to trac discretization error.
