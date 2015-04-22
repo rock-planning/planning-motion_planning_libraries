@@ -118,6 +118,17 @@ struct State {
         mFootprintRadius = fp_radius_min + (fp_radius_max - fp_radius_min) * 
                 fp_class / (num_fp_classes - 1);
     }
+
+    /**
+     * Returns the abs-distance between both states.
+     * If the states are not pose-states a negative number will be returned.
+     */
+    double dist(State state) {
+        if(this->mStateType != STATE_POSE || state.mStateType != STATE_POSE) {
+            return -1;
+        }
+        return (this->mPose.position - state.mPose.position).norm();
+    }
      
     // Returns a string of the contained data.
     std::string getString() {

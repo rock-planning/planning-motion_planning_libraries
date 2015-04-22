@@ -280,7 +280,9 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
                 mError = MPL_ERR_INITIALIZE_MAP;
                 return false;
             } else {
-                mReplanRequired = true;
+                if(mStartState.dist(mGoalState) >= mConfig.mReplanMinDistStartGoal) {
+                    mReplanRequired = true;
+                }
                 mReceivedNewTravGrid = false;
             }
             
@@ -324,7 +326,9 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
             return false;
         } else {
             if(mReceivedNewGoal ||
-                (mConfig.mReplanOnNewStartPose && mReceivedNewStart)) {
+                (mConfig.mReplanOnNewStartPose && 
+                        mReceivedNewStart && 
+                        mStartState.dist(mGoalState) >= mConfig.mReplanMinDistStartGoal)) {
                 mReplanRequired = true;
             }
             

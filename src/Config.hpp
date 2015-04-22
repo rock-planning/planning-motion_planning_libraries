@@ -132,6 +132,7 @@ struct Config {
             mSearchUntilFirstSolution(false),
             mReplanDuringEachUpdate(false),
             mReplanOnNewStartPose(false),
+            mReplanMinDistStartGoal(0.0),
             mMaxAllowedSampleDist(-1),
             mSpeeds(),
             mFootprintRadiusMinMax(0,0),  
@@ -163,9 +164,16 @@ struct Config {
     // the solution.
     bool mReplanDuringEachUpdate;
     bool mReplanOnNewStartPose;
+    // If > 0 this describes the minimal distance between start and goal to
+    // initiate a replanning if a new trav map or start pose has been received.
+    // In other words: This parameter allows you to define a area around the
+    // goal which prevents replanning (except a new goal pose has been received).
+    // Especially for SBPL XYTHETA this parameter is meaningful by preventing unwanted 
+    // circle paths.  
+    double mReplanMinDistStartGoal;
     // If mSearchUntilFirstSolution is set to false this parameter can be used to 
     // define the maximal allowed distance between two samples.
-    // If it is set to a negative value or nan ot will be ignored.
+    // If it is set to a negative value or nan it will be ignored.
     double mMaxAllowedSampleDist;
     
     // NAVIGATION
