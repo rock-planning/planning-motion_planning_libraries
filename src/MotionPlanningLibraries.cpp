@@ -107,7 +107,7 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
         return false;
     } 
     
-    // Currently if you start the grap-slam-module and do not wait a feew seconds
+    // Currently if you start the grap-slam-module and do not wait a few seconds
     // you get a map with sizex/sizey 0.1.
     if(trav_grid->getSizeX() < 1 || trav_grid->getSizeY() < 1) {
         LOG_ERROR("Size of the extracted map is incorrect (%4.2f, %4.2f)", trav_grid->getSizeX(), trav_grid->getSizeY());
@@ -468,6 +468,12 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(doub
                 return std::vector<base::Trajectory>();
             }
             use_this_speed = it->mSpeeds.mSpeedForward + it->mSpeeds.mSpeedBackward;
+            // TODO Temp. fix: In case of a pointturn speed would be 0, which is not 
+            // accepted by the current follower.
+            if(use_this_speed == 0) {
+                LOG_WARN("Speed would be zero, set to %4.2f", mConfig.mSpeeds.mSpeedForward);
+                use_this_speed = mConfig.mSpeeds.mSpeedForward;
+            }
             LOG_DEBUG("New trajectory speed: %4.2f", use_this_speed);
         }
         
