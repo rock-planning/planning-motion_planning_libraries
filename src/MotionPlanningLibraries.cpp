@@ -12,6 +12,11 @@
 namespace motion_planning_libraries
 {
 
+const double MotionPlanningLibraries::REPLANNING_DIST_THRESHOLD = 0.05;
+const double MotionPlanningLibraries::REPLANNING_TURN_THRESHOLD = 0.017;
+const double MotionPlanningLibraries::REPLANNING_JOINT_ANGLE_THRESHOLD = 0.017;
+
+
 // PUBLIC
 MotionPlanningLibraries::MotionPlanningLibraries(Config config) : 
         mConfig(config),

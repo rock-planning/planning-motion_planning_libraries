@@ -22,8 +22,8 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
 
  public:   
      static const unsigned char OMPL_MAX_COST = 100;
-     static const double TIME_TO_ADAPT_FOOTPRINT = 40; // Time to move from min to max in sec.
-     static const double PENALTY_TO_ADAPT_FOOTPRINT = 20;
+     static const double TIME_TO_ADAPT_FOOTPRINT; // Time to move from min to max in sec.
+     static const double PENALTY_TO_ADAPT_FOOTPRINT;
     
  private:
      envire::TraversabilityGrid* mpTravGrid; // To request the driveability values.

@@ -30,9 +30,9 @@ typedef envire::TraversabilityGrid::ArrayType TravData;
 class MotionPlanningLibraries
 {
  protected:
-    static const double REPLANNING_DIST_THRESHOLD = 0.05;
-    static const double REPLANNING_TURN_THRESHOLD = 0.017;
-    static const double REPLANNING_JOINT_ANGLE_THRESHOLD = 0.017;
+    static const double REPLANNING_DIST_THRESHOLD;
+    static const double REPLANNING_TURN_THRESHOLD;
+    static const double REPLANNING_JOINT_ANGLE_THRESHOLD;
     
     Config mConfig;
     
