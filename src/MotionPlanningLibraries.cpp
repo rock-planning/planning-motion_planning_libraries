@@ -28,6 +28,7 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) :
         mReceivedNewTravGrid(false),
         mReceivedNewStart(false),
         mReceivedNewGoal(false),
+        mGoalReached(false),
         mArmInitialized(false),
         mReplanRequired(false),
         mLostX(0.0),
@@ -266,6 +267,16 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
 
     assert(mStartState.getStateType() == mGoalState.getStateType());
 
+    //if the start-goal distance was less then the mReplanMinDistStartGoal distance
+    //mGoalReached is set to true, no replans should happen, on new maps or start positions
+    if(mStartState.dist(mGoalState) <= mConfig.mReplanMinDistStartGoal) {
+    	mGoalReached = true;
+    }
+    // in case the goal is new, we cannot have reached it already
+    if (mReceivedNewGoal){
+    	mGoalReached = false;
+    }
+
     // Required checks for path planning (not required for arm movement).
     if(mConfig.mEnvType != ENV_ARM ) {
         if(mStartStateGrid.getStateType() != STATE_POSE || 
@@ -285,7 +296,7 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
                 mError = MPL_ERR_INITIALIZE_MAP;
                 return false;
             } else {
-                if(mStartState.dist(mGoalState) >= mConfig.mReplanMinDistStartGoal) {
+                if(!mGoalReached) {
                     mReplanRequired = true;
                 }
                 mReceivedNewTravGrid = false;
@@ -333,7 +344,7 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
             if(mReceivedNewGoal ||
                 (mConfig.mReplanOnNewStartPose && 
                         mReceivedNewStart && 
-                        mStartState.dist(mGoalState) >= mConfig.mReplanMinDistStartGoal)) {
+                        !mGoalReached)) {
                 mReplanRequired = true;
             }
             
