@@ -335,7 +335,9 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
     }
     
     // Updates the start/goal pose within the planner.
-    if((mConfig.mReplanOnNewStartPose && mReceivedNewStart) || mReceivedNewGoal) {       
+   if((mConfig.mReplanOnNewStartPose && mReceivedNewStart) || 
+            mReceivedNewGoal ||
+            mConfig.mReplanDuringEachUpdate) {       
         if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
             LOG_WARN("Start/goal state could not be set");
             mError = MPL_ERR_SET_START_GOAL;
