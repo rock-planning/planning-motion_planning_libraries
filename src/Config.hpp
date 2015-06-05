@@ -68,7 +68,7 @@ enum MplErrors {
 struct Speeds {
     
     double mSpeedForward; // m/sec.
-    double mSpeedBackward; // m/sec.
+    double mSpeedBackward; // m/sec., positive value!
     double mSpeedLateral; // m/sec.
     double mSpeedTurn; // rad/sec.
     double mSpeedPointTurn; // rad/sec.
@@ -78,6 +78,14 @@ struct Speeds {
     unsigned int mMultiplierTurn;
     unsigned int mMultiplierBackwardTurn;
     unsigned int mMultiplierPointTurn;
+    // If > 0 allows to specify the minimal turning radius of the system.
+    // Without this not valid curves may be created, especially with higher values 
+    // for mNumPrimPartition.
+    double mMinTurningRadius; 
+    // The speed is not allowed to drop below this value.
+    // If > 0 this parameter takes care that the forward speed 
+    // during a turn does not drop below this border.
+    double mMinSpeed;
     
     Speeds() : 
            mSpeedForward(0.0),
@@ -90,12 +98,14 @@ struct Speeds {
            mMultiplierLateral(1),
            mMultiplierTurn(1),
            mMultiplierBackwardTurn(1),
-           mMultiplierPointTurn(1) {
+           mMultiplierPointTurn(1),
+           mMinTurningRadius(0.0),
+           mMinSpeed(0.0) {
     }
     
-    Speeds(double forward, double backward, double lateral, double turn, double pointturn) :
+    Speeds(double forward, double backward, double lateral, double turn, double pointturn, double turning_radius=0.0) :
             mSpeedForward(forward), mSpeedBackward(backward), mSpeedLateral(lateral), 
-            mSpeedTurn(turn), mSpeedPointTurn(pointturn) {
+            mSpeedTurn(turn), mSpeedPointTurn(pointturn), mMinTurningRadius(turning_radius) {
     }
     
     // Checks if any speed value has been set.

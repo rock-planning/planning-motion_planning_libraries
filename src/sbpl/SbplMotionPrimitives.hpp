@@ -99,6 +99,14 @@ struct Primitive {
         mCenterOfRotationLocal.setZero();
     }
     
+    bool operator==(Primitive& prim) {
+        return (this->mStartAngle == prim.mStartAngle && this->mEndPose == prim.mEndPose);
+    }
+    
+    bool operator!=(Primitive& prim) {
+        return (this->mStartAngle != prim.mStartAngle || this->mEndPose != prim.mEndPose);
+    }
+    
     /** 
      * Stores the passed discrete orientation with truncated orientation (0 to mNumAngles) to
      * mEndPose and stores the not-truncated orientation to 
@@ -187,8 +195,8 @@ struct SbplMotionPrimitives {
      * Forward and turning speed does already contain the scale factor.
      * Uses grid_local.
      */
-    Primitive createCurvePrimForAngle0(double forward_speed, double turning_speed, 
-            int prim_id, int multiplier);
+    bool createCurvePrimForAngle0(double const forward_speed, double const turning_speed, 
+        int const prim_id, int const multiplier, Primitive& primitive);
     
     /**
      * Each primitive type got its own speed values.

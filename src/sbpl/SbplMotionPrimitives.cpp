@@ -48,16 +48,13 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
     int primId = 0;
     Primitive prim;
     
-    // Should the speed reduced for smaller primitives.
-    bool adapt_speed = false;
-    
     assert (mConfig.mNumPrimPartition >= 1);
     
-    // TODO: In general: Use speed or speed / i here?
-    // So, drive smaller segments slowly or always use one speed?
-    // For the curves it is required to use the correct speeds.
+    // All prims of one type will receive their defined max speed regardless  of their length.
+    // Only for the curves it is required to use the correct speeds.
+    
+    // Forward
     for(double i=1; i < mConfig.mNumPrimPartition+1; i++) {
-        // Forward
         if(mConfig.mSpeeds.mSpeedForward > 0) {
             double scale_factor_forward = std::max(1.0, min_prim_length / 
                     (mConfig.mSpeeds.mSpeedForward / mConfig.mNumPrimPartition));
@@ -68,7 +65,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d((mConfig.mSpeeds.mSpeedForward / i) * scale_factor_forward, 0.0, 0.0),
                     mConfig.mSpeeds.mMultiplierForward, 
                     MOV_FORWARD);
-            prim.mSpeeds.mSpeedForward = adapt_speed ? mConfig.mSpeeds.mSpeedForward / i : mConfig.mSpeeds.mSpeedForward;
+            prim.mSpeeds.mSpeedForward = mConfig.mSpeeds.mSpeedForward;
 
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
@@ -76,8 +73,8 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
         }
     }
     
+    // Backward
     for(double i=1; i < mConfig.mNumPrimPartition+1; i++) {   
-        // Backward
         if(mConfig.mSpeeds.mSpeedBackward < 0) {
             LOG_WARN("Backward speed has to be positive, no backward movement will be available!");
         }
@@ -91,7 +88,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d((-mConfig.mSpeeds.mSpeedBackward / i) * scale_factor_backward, 0.0, 0.0),
                     mConfig.mSpeeds.mMultiplierBackward, 
                     MOV_BACKWARD);
-            prim.mSpeeds.mSpeedBackward = adapt_speed ? -mConfig.mSpeeds.mSpeedBackward / i : -mConfig.mSpeeds.mSpeedBackward;
+            prim.mSpeeds.mSpeedBackward = -mConfig.mSpeeds.mSpeedBackward;
 
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
@@ -99,8 +96,8 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
         }   
     }
     
+    // Lateral
     for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
-        // Lateral
         if(mConfig.mSpeeds.mSpeedLateral > 0) {
             double scale_factor_lateral = std::max(1.0, min_prim_length / 
                     (mConfig.mSpeeds.mSpeedLateral / mConfig.mNumPrimPartition));
@@ -111,7 +108,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d(0.0, (mConfig.mSpeeds.mSpeedLateral / i) * scale_factor_lateral, 0.0),
                     mConfig.mSpeeds.mMultiplierLateral,
                     MOV_LATERAL);
-            prim.mSpeeds.mSpeedLateral = adapt_speed ? mConfig.mSpeeds.mSpeedLateral / i : mConfig.mSpeeds.mSpeedLateral;
+            prim.mSpeeds.mSpeedLateral = mConfig.mSpeeds.mSpeedLateral;
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
@@ -121,15 +118,15 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d(0.0, (-mConfig.mSpeeds.mSpeedLateral / i) * scale_factor_lateral, 0.0),
                     mConfig.mSpeeds.mMultiplierLateral, 
                     MOV_LATERAL);
-            prim.mSpeeds.mSpeedLateral = adapt_speed ? -mConfig.mSpeeds.mSpeedLateral / i : -mConfig.mSpeeds.mSpeedLateral;
+            prim.mSpeeds.mSpeedLateral = -mConfig.mSpeeds.mSpeedLateral;
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
         }
     }
     
+    // Point turn
     for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
-        // Point turn
         if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
             double scale_factor_pointturn = std::max(1.0, mRadPerDiscreteAngle / 
                     (mConfig.mSpeeds.mSpeedPointTurn / mConfig.mNumPrimPartition));
@@ -140,7 +137,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d(0.0, 0.0, (mConfig.mSpeeds.mSpeedPointTurn / i) * scale_factor_pointturn),
                     mConfig.mSpeeds.mMultiplierPointTurn,
                     MOV_POINTTURN);
-            prim.mSpeeds.mSpeedPointTurn = adapt_speed ? mConfig.mSpeeds.mSpeedPointTurn / i : mConfig.mSpeeds.mSpeedPointTurn;
+            prim.mSpeeds.mSpeedPointTurn = mConfig.mSpeeds.mSpeedPointTurn;
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
@@ -150,7 +147,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                     base::Vector3d(0.0, 0.0, (-mConfig.mSpeeds.mSpeedPointTurn / i) * scale_factor_pointturn),
                     mConfig.mSpeeds.mMultiplierPointTurn,
                     MOV_POINTTURN);
-            prim.mSpeeds.mSpeedPointTurn = adapt_speed ? -mConfig.mSpeeds.mSpeedPointTurn / i : -mConfig.mSpeeds.mSpeedPointTurn;
+            prim.mSpeeds.mSpeedPointTurn = -mConfig.mSpeeds.mSpeedPointTurn;
             mListPrimitivesAngle0.push_back(prim);
             mMapPrimID2Speeds.push_back(prim.mSpeeds);
             primId++;
@@ -158,52 +155,60 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
         
     }
     
+    // Forward turns
     for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
         // Create forward and backward curves.
         // First calculates a common scale factor for the minimal forward/backward- and 
         // turning-speed. 
         if(mConfig.mSpeeds.mSpeedForward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
 
-            // Forward turns
-            double scale_factor_forward_turn = std::max(1.0, min_prim_length / 
-                    (mConfig.mSpeeds.mSpeedForward / mConfig.mNumPrimPartition));
-            scale_factor_forward_turn = std::max(scale_factor_forward_turn, mRadPerDiscreteAngle / 
-                    (mConfig.mSpeeds.mSpeedTurn / mConfig.mNumPrimPartition));
+            double scale_factor_forward_turn = std::max(1.0, 
+                    min_prim_length / (mConfig.mSpeeds.mSpeedForward / mConfig.mNumPrimPartition));
+            scale_factor_forward_turn = std::max(scale_factor_forward_turn, 
+                    mRadPerDiscreteAngle / (mConfig.mSpeeds.mSpeedTurn / mConfig.mNumPrimPartition));
             LOG_INFO("Speed forward turn scale factor: %4.2f", scale_factor_forward_turn);
             
             double forward_speed = (mConfig.mSpeeds.mSpeedForward / i);
             double forward_turn_speed = (mConfig.mSpeeds.mSpeedTurn / (mConfig.mNumPrimPartition+1 - i));
             
+            // Takes care that we keep a minimal speed, so just the turning speed will be increased.
+            if(mConfig.mSpeeds.mMinSpeed > 0 && forward_speed < mConfig.mSpeeds.mMinSpeed) {
+                forward_speed = mConfig.mSpeeds.mMinSpeed;
+            }
+            
             // TODO: For turn-multipliers mConfig.mSpeeds.mMultiplierTurn * i has been used.
             // But SBPL already creates higher costs for narrow curves, does it?
             // Create left hand bend.
-            prim = createCurvePrimForAngle0(forward_speed * scale_factor_forward_turn, 
+            if(createCurvePrimForAngle0(forward_speed * scale_factor_forward_turn, 
                         forward_turn_speed * scale_factor_forward_turn, 
                         primId, 
-                        mConfig.mSpeeds.mMultiplierTurn);
-            prim.mSpeeds.mSpeedForward = forward_speed;
-            prim.mSpeeds.mSpeedTurn = forward_turn_speed;
-            mListPrimitivesAngle0.push_back(prim);
-            mMapPrimID2Speeds.push_back(prim.mSpeeds);
-            primId++;
+                        mConfig.mSpeeds.mMultiplierTurn,
+                        prim)) {
+                prim.mSpeeds.mSpeedForward = forward_speed;
+                prim.mSpeeds.mSpeedTurn = forward_turn_speed;
+                mListPrimitivesAngle0.push_back(prim);
+                mMapPrimID2Speeds.push_back(prim.mSpeeds);
+                primId++;
+            }
             
             // Create right hand bend.
-            prim = createCurvePrimForAngle0(forward_speed * scale_factor_forward_turn, 
+            if(createCurvePrimForAngle0(forward_speed * scale_factor_forward_turn, 
                         -forward_turn_speed * scale_factor_forward_turn, 
                         primId, 
-                        mConfig.mSpeeds.mMultiplierTurn);
-            prim.mSpeeds.mSpeedForward = forward_speed;
-            prim.mSpeeds.mSpeedTurn = -forward_turn_speed;
-            mListPrimitivesAngle0.push_back(prim);
-            mMapPrimID2Speeds.push_back(prim.mSpeeds);
-            primId++;
+                        mConfig.mSpeeds.mMultiplierTurn, 
+                        prim)) {
+                prim.mSpeeds.mSpeedForward = forward_speed;
+                prim.mSpeeds.mSpeedTurn = -forward_turn_speed;
+                mListPrimitivesAngle0.push_back(prim);
+                mMapPrimID2Speeds.push_back(prim.mSpeeds);
+                primId++;
+            }
         }
     }
     
+    // Backward turns
     for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
-            
         if(mConfig.mSpeeds.mSpeedBackward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {    
-            // Backward turns
             double scale_factor_backward_turn = std::max(1.0, min_prim_length / 
                     (mConfig.mSpeeds.mSpeedBackward / mConfig.mNumPrimPartition));
             scale_factor_backward_turn = std::max(scale_factor_backward_turn, mRadPerDiscreteAngle / 
@@ -212,29 +217,38 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             
             double backward_speed = (mConfig.mSpeeds.mSpeedBackward / i);
             double backward_turn_speed = (mConfig.mSpeeds.mSpeedTurn / (mConfig.mNumPrimPartition+1 - i));
+            
+            // Takes care that we keep a minimal speed, so just the turning speed will be increased.
+            if(mConfig.mSpeeds.mMinSpeed > 0 && backward_speed < mConfig.mSpeeds.mMinSpeed) {
+                backward_speed = mConfig.mSpeeds.mMinSpeed;
+            }
 
             // TODO Using backward multiplier here, actually we need a backward-turn multiplier?
             // Create left hand bend.
-            prim =  createCurvePrimForAngle0(-backward_speed * scale_factor_backward_turn, 
+            if(createCurvePrimForAngle0(-backward_speed * scale_factor_backward_turn, 
                         -backward_turn_speed * scale_factor_backward_turn, 
                         primId, 
-                        mConfig.mSpeeds.mMultiplierBackwardTurn);
-            prim.mSpeeds.mSpeedBackward = -backward_speed;
-            prim.mSpeeds.mSpeedTurn = -backward_turn_speed;
-            mListPrimitivesAngle0.push_back(prim);
-            mMapPrimID2Speeds.push_back(prim.mSpeeds);
-            primId++;
+                        mConfig.mSpeeds.mMultiplierBackwardTurn,
+                        prim)) {
+                prim.mSpeeds.mSpeedBackward = -backward_speed;
+                prim.mSpeeds.mSpeedTurn = -backward_turn_speed;
+                mListPrimitivesAngle0.push_back(prim);
+                mMapPrimID2Speeds.push_back(prim.mSpeeds);
+                primId++;
+            }
             
             // Create right hand bend.
-            prim = createCurvePrimForAngle0(-backward_speed * scale_factor_backward_turn, 
+            if(createCurvePrimForAngle0(-backward_speed * scale_factor_backward_turn, 
                         backward_turn_speed * scale_factor_backward_turn, 
                         primId, 
-                        mConfig.mSpeeds.mMultiplierBackwardTurn);
-            prim.mSpeeds.mSpeedBackward = -backward_speed;
-            prim.mSpeeds.mSpeedTurn = backward_turn_speed;
-            mListPrimitivesAngle0.push_back(prim); 
-            mMapPrimID2Speeds.push_back(prim.mSpeeds);
-            primId++;
+                        mConfig.mSpeeds.mMultiplierBackwardTurn,
+                        prim)) {
+                prim.mSpeeds.mSpeedBackward = -backward_speed;
+                prim.mSpeeds.mSpeedTurn = backward_turn_speed;
+                mListPrimitivesAngle0.push_back(prim); 
+                mMapPrimID2Speeds.push_back(prim.mSpeeds);
+                primId++;
+            }
         }
     }
 
@@ -509,11 +523,19 @@ void SbplMotionPrimitives::storeToFile(std::string path) {
     * Forward and turning speed does already contain the scale factor.
     * Uses grid_local.
     */
-Primitive SbplMotionPrimitives::createCurvePrimForAngle0(double forward_speed, double turning_speed, 
-        int prim_id, int multiplier) {
+bool SbplMotionPrimitives::createCurvePrimForAngle0(double const forward_speed, double const turning_speed, 
+        int const prim_id, int const multiplier, Primitive& primitive) {
     
     // TODO Is this radius calculation correct?
     double turning_radius = forward_speed / turning_speed;
+    
+    // Avoid using too sharp curves.
+    if(mConfig.mSpeeds.mMinTurningRadius > 0 && 
+            fabs(turning_radius) < mConfig.mSpeeds.mMinTurningRadius) {
+        LOG_WARN("Turning radius of %4.2f (forward speed %4.2f, turning speed %4.2f) is too sharp for the system and will be ignored.",
+               turning_radius, forward_speed, turning_speed); 
+        return false;
+    }
     
     base::Vector3d center_of_rotation(0.0, turning_radius, 0.0);
     base::Vector3d vec_endpos(0.0, 0.0, 0.0);
@@ -526,15 +548,15 @@ Primitive SbplMotionPrimitives::createCurvePrimForAngle0(double forward_speed, d
     
     enum MovementType mov_type = forward_speed > 0 ? MOV_FORWARD_TURN :  MOV_BACKWARD_TURN;
     
-    Primitive prim(prim_id, 
+    primitive = Primitive(prim_id, 
         0,
         vec_endpos,  
         multiplier, 
         mov_type);
     // Store center of rotation.
-    prim.mCenterOfRotationLocal = center_of_rotation;
+    primitive.mCenterOfRotationLocal = center_of_rotation;
     
-    return prim;
+    return true;
 }
 
 bool SbplMotionPrimitives::getSpeeds(unsigned int prim_id, struct Speeds& speeds) {
