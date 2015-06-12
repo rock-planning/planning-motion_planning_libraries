@@ -15,6 +15,7 @@ namespace vizkit3d
     {
     Q_OBJECT
     
+    Q_PROPERTY(int angleNum READ getAngleNum WRITE setAngleNum)
     Q_PROPERTY(bool showAllAngles READ allAnglesShown WRITE setShowAllAngles)
     Q_PROPERTY(double radiusEndpoints READ getRadiusEndpoints WRITE setRadiusEndpoints)
     
@@ -28,12 +29,15 @@ namespace vizkit3d
     }
     
     public slots:
+        int getAngleNum() const;
+        void setAngleNum(int num);
         bool allAnglesShown() const;
         void setShowAllAngles(bool enabled);
         double getRadiusEndpoints() const;
         void setRadiusEndpoints(double radius);
 
     protected:
+        int mAngleNum;
         bool mAllAnglesShown;
         double mRadiusEndpoints;
         

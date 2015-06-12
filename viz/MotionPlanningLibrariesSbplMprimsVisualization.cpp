@@ -17,7 +17,7 @@ struct MotionPlanningLibrariesSbplMprimsVisualization::Data {
 
 // PUBLIC
 MotionPlanningLibrariesSbplMprimsVisualization::MotionPlanningLibrariesSbplMprimsVisualization()
-    : mAllAnglesShown(false), mRadiusEndpoints(0.05), p(new Data)
+    : mAllAnglesShown(false), mRadiusEndpoints(0.05), mAngleNum(0), p(new Data)
 {
 }
 
@@ -27,6 +27,15 @@ MotionPlanningLibrariesSbplMprimsVisualization::~MotionPlanningLibrariesSbplMpri
 }
 
 // PUBLIC SLOTS
+int MotionPlanningLibrariesSbplMprimsVisualization::getAngleNum() const {
+    return mAngleNum;
+}
+
+void MotionPlanningLibrariesSbplMprimsVisualization::setAngleNum(int num) {
+    mAngleNum = num;
+    emit propertyChanged("angle_num_changed");
+}
+
 bool MotionPlanningLibrariesSbplMprimsVisualization::allAnglesShown() const {
     return mAllAnglesShown;
 }
@@ -76,35 +85,31 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
     std::vector<motion_planning_libraries::Primitive> prim_list = primitives.mListPrimitives;
     std::vector<motion_planning_libraries::Primitive>::iterator it = prim_list.begin();
     
-    int num_prims_per_angle = primitives.mListPrimitives.size() / primitives.mConfig.mNumAngles;
     double hue_step = 1.0 / (double)primitives.mConfig.mNumAngles;
     double hue = 0.0;
     float r=0, g=0, b=0;
     osg::Vec4 color(r, g, b, 1.0f); 
     osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
+    int last_angle = -1;
     
-    for(int i=0; it != prim_list.end(); it++, i++) {
+    for(; it != prim_list.end(); it++) {
         
-        // Take a different color for each set of primitives.
-        //std::cout << "Draw primitive " << i << std::endl;
-        if(i >= num_prims_per_angle) {
-            if(!mAllAnglesShown) {
-                break;
-            }
-            i = 0;
+        // If mAlleAnglesShow is not set, just draw all prims of mAngleNum.
+        if(!mAllAnglesShown && it->mStartAngle != (unsigned int)mAngleNum) {
+            continue;
         }
         
-        if(i == 0) {            
+        // Changes the prim color for each new angle.
+        if((int)it->mStartAngle != last_angle) {
             vizkit3d::hslToRgb(hue, 1.0, 0.5, r, g, b);
             color = osg::Vec4(r, g, b, 1.0f);    
             colors = new osg::Vec4Array;
             colors->clear();
             colors->push_back( color );
             hue += hue_step;
-            //std::cout << "Change color" << std::endl;
-        }        
-        
-        //std::cout << "Set color to RGB: " << r << " " << g << " " << b << std::endl;
+            
+            last_angle = it->mStartAngle;
+        }
     
         osg::ref_ptr<osg::Geode> geode = new osg::Geode();
         
@@ -163,13 +168,14 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
         osg::ref_ptr<osg::Geometry> fp_geometry = new osg::Geometry();
         osg::ref_ptr<osg::Vec3Array> fp_vertices = new osg::Vec3Array();
         base::Vector3d v_tmp;
+        
         //std::cout << "Number of intermediate points: " << i_p.size() << std::endl;
         for(unsigned int i = 0; i < i_p.size(); ++i) {
             v_tmp = i_p[i];
             fp_vertices->push_back(osg::Vec3(v_tmp[0], v_tmp[1], 0));
-            if(i == i_p.size() - 1) {
+            //if(i == i_p.size() - 1) {
                 //std::cout << "Draw intermediate points to endpoint XY: " << v_tmp[0] << " " << v_tmp[1] << std::endl;
-            }
+            //}
         }
         
         fp_geometry->setVertexArray(fp_vertices);
