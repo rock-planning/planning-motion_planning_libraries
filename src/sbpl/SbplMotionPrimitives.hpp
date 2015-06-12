@@ -57,8 +57,8 @@ struct MotionPrimitivesConfig {
  */
 struct Primitive {
  public:
-    int mId;
-    int mStartAngle;
+    unsigned int mId;
+    unsigned int mStartAngle;
     /// Can receive non discrete and discrete endposes.
     base::Vector3d mEndPose;
     unsigned int mCostMultiplier;
@@ -88,7 +88,7 @@ struct Primitive {
      * \param end_pose End pose with <x,y,theta>.
      * \param cost_multiplier Cost multiplier of this kind of motion.
      */
-    Primitive(int id, int start_angle, base::Vector3d end_pose, 
+    Primitive(unsigned int id, unsigned int start_angle, base::Vector3d end_pose, 
             unsigned int cost_multiplier, enum MovementType mov_type) : 
             mId(id), mStartAngle(start_angle), mEndPose(end_pose), 
             mCostMultiplier(cost_multiplier), 

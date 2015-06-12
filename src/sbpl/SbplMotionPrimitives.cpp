@@ -223,7 +223,6 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 backward_speed = mConfig.mSpeeds.mMinSpeed;
             }
 
-            // TODO Using backward multiplier here, actually we need a backward-turn multiplier?
             // Create left hand bend.
             if(createCurvePrimForAngle0(-backward_speed * scale_factor_backward_turn, 
                         -backward_turn_speed * scale_factor_backward_turn, 
@@ -387,6 +386,7 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
         
         end_pose_local[0] = it->mEndPose[0] * mConfig.mGridSize;
         end_pose_local[1] = it->mEndPose[1] * mConfig.mGridSize;
+        end_pose_local[2] = 0;
         
         x_step = end_pose_local[0] / ((double)mConfig.mNumPosesPerPrim-1);
         y_step = end_pose_local[1] / ((double)mConfig.mNumPosesPerPrim-1);
@@ -397,6 +397,7 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
             // TODO: Center of rotation is already in grid_local?
             center_of_rotation_local[0] = it->mCenterOfRotationLocal[0];// * mConfig.mGridSize;
             center_of_rotation_local[1] = it->mCenterOfRotationLocal[1];// * mConfig.mGridSize;
+            center_of_rotation_local[2] = 0;
             
             ss << "center of rotation: " << center_of_rotation_local.transpose() << std::endl;
             
@@ -432,6 +433,7 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
             ss << "Angle between vectors: " << angle << ", angle delta " << angle_delta << std::endl;
         }
         
+        base::Vector3d intermediate_pose_cof_tmp;
         for(unsigned int i=0; i<mConfig.mNumPosesPerPrim; i++) { 
             switch(it->mMovType) {
                 // Forward, backward or lateral movement, orientation does not change.
@@ -458,6 +460,8 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
                     //rbs_intermediate.position = cur_rot * base::Vector3d(0,-(len_base_local + i * len_diff_delta), 0);
                     rbs_intermediate.position = cur_rot *  (base_local * (1.0 + len_scale_factor * i));
                     rbs_intermediate.orientation = cur_rot;
+                    intermediate_pose_cof_tmp = rbs_intermediate.position;
+                    intermediate_pose_cof_tmp[2] = rbs_intermediate.getYaw();
                     
                     // Transform back into the base frame.
                     rbs_intermediate.setTransform(cor2base * rbs_intermediate.getTransform() );
@@ -478,16 +482,39 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
             while(intermediate_pose[2] > M_PI)
                 intermediate_pose[2] -= 2*M_PI;
             
+            // TODO Hack! Sometimes because of the transf. cor2base (as it seems) the intermediate endpose may
+            // not reach the discrete end pose precisely which is not accepted by SBPL.
+            // Because of that we set the last intermediate point regarding the discrete end pose.
+            if(i == mConfig.mNumPosesPerPrim-1) {
+                double expected_end_pose_x = it->mEndPose[0] * mConfig.mGridSize;
+                double expected_end_pose_y = it->mEndPose[1] * mConfig.mGridSize;
+                if (fabs(intermediate_pose[0] - expected_end_pose_x) > 0.01 ||
+                        fabs(intermediate_pose[1] - expected_end_pose_y) > 0.01) {
+                    LOG_WARN("Angle %d prim ID %d: Intermediate positions (%4.2f, %4.2f) \
+does not reach the expected end position (%4.2f, %4.2f) precisely (> 0.01), will be adapted", 
+                            it->mStartAngle, it->mId,
+                            intermediate_pose[0], intermediate_pose[1],
+                            expected_end_pose_x, expected_end_pose_y);
+                    intermediate_pose[0] = expected_end_pose_x;
+                    intermediate_pose[1] = expected_end_pose_y;
+                }
+            }
+                         
             ss << "Intermediate pose (x,y,theta) has been added: " << 
                     intermediate_pose[0] << ", " << 
                     intermediate_pose[1] << ", " << 
-                    intermediate_pose[2] << std::endl;
+                    intermediate_pose[2] << std::endl << 
+                    "(Local: " << 
+                    intermediate_pose_cof_tmp[0] << ", " << 
+                    intermediate_pose_cof_tmp[1] << ", " << 
+                    intermediate_pose_cof_tmp[2] << ")" << 
+                    std::endl;
             
             it->mIntermediatePoses.push_back(intermediate_pose);
         }
         //it->mIntermediatePoses.push_back(end_pose_local);
     }
-    //printf("%s", ss.str().c_str());
+    LOG_DEBUG("%s", ss.str().c_str());
 }
 
 void SbplMotionPrimitives::storeToFile(std::string path) {
