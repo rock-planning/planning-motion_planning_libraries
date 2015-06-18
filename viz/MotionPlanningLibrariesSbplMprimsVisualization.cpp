@@ -17,7 +17,7 @@ struct MotionPlanningLibrariesSbplMprimsVisualization::Data {
 
 // PUBLIC
 MotionPlanningLibrariesSbplMprimsVisualization::MotionPlanningLibrariesSbplMprimsVisualization()
-    : mAllAnglesShown(false), mRadiusEndpoints(0.05), mAngleNum(0), p(new Data)
+    : mAngleNum(0), mAllAnglesShown(false), mRadiusEndpoints(0.05),  p(new Data)
 {
 }
 
