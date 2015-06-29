@@ -1,5 +1,7 @@
 #include "SbplMotionPrimitives.hpp"
 
+#include <set>
+
 namespace motion_planning_libraries {
 
 SbplMotionPrimitives::SbplMotionPrimitives() : mConfig(), 
@@ -34,228 +36,170 @@ void SbplMotionPrimitives::createPrimitives() {
 }
 
 /**
-    * Uses the defined speeds of the system to create the motion primitives 
-    * for discrete angle 0.
-    */
+ * Creates a dense set of prims within the grid frame. The length of the prim / 
+ * length of the turning radius is increased by 0.1 starting from 1.0 / mMinTurningRadius.
+ * When turning this dense set, only the best prims will be used.
+ * As closer a prim reaches a discrete position as more valuable it is.
+ */
+
+/**
+ * Creates unit vectors for all movements respectively discrete minimal turning radius for curves. 
+ * In the next step these vectors are rotated (discrete angles) and extended until
+ * mNumPrimPartition valid prims have been collected. A prim is valid if it
+ * is close enough to a discrete state and if this discrete state is not already reached
+ * by another prim.
+ */
 std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() { 
+    
     mListPrimitivesAngle0.clear();
     mMapPrimID2Speeds.clear();
         
-    // mConfig.mGridSize * 2 is used (independently of the scale factor)
-    // to improve new-discrete-state-reaching. Grid size is multiplied by two 
-    // to take sure that new x and y values are reached for all 16 angles.
-    double min_prim_length = mConfig.mGridSize * 2;
     int primId = 0;
     Primitive prim;
     
     assert (mConfig.mNumPrimPartition >= 1);
-    
+
     // All prims of one type will receive their defined max speed regardless  of their length.
     // Only for the curves it is required to use the correct speeds.
     
     // Forward
-    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) {
-        if(mConfig.mSpeeds.mSpeedForward > 0) {
-            double scale_factor_forward = std::max(1.0, min_prim_length / 
-                    (mConfig.mSpeeds.mSpeedForward / mConfig.mNumPrimPartition));
-            LOG_INFO("Speed forward scale factor: %4.2f", scale_factor_forward);
-            
-            prim = Primitive(primId, 
-                    0, 
-                    base::Vector3d((mConfig.mSpeeds.mSpeedForward / i) * scale_factor_forward, 0.0, 0.0),
-                    mConfig.mSpeeds.mMultiplierForward, 
-                    MOV_FORWARD);
-            prim.mSpeeds.mSpeedForward = mConfig.mSpeeds.mSpeedForward;
-
-            mListPrimitivesAngle0.push_back(prim);
-            mMapPrimID2Speeds.push_back(prim.mSpeeds);
-            primId++;
-        }
+    if(mConfig.mSpeeds.mSpeedForward > 0) {
+        prim = Primitive(primId, 
+                0, 
+                base::Vector3d(1.0, 0.0, 0.0),
+                mConfig.mSpeeds.mMultiplierForward, 
+                MOV_FORWARD);
+        prim.mSpeeds.mSpeedForward = mConfig.mSpeeds.mSpeedForward;
+        mMapPrimID2Speeds.push_back(prim.mSpeeds);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;
     }
     
     // Backward
-    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) {   
-        if(mConfig.mSpeeds.mSpeedBackward < 0) {
-            LOG_WARN("Backward speed has to be positive, no backward movement will be available!");
-        }
-        if(mConfig.mSpeeds.mSpeedBackward > 0) {
-            double scale_factor_backward = std::max(1.0, min_prim_length / 
-                    (mConfig.mSpeeds.mSpeedBackward / mConfig.mNumPrimPartition));
-            LOG_INFO("Speed backward scale factor: %4.2f", scale_factor_backward);
-            
-            prim = Primitive(primId,
-                    0,
-                    base::Vector3d((-mConfig.mSpeeds.mSpeedBackward / i) * scale_factor_backward, 0.0, 0.0),
-                    mConfig.mSpeeds.mMultiplierBackward, 
-                    MOV_BACKWARD);
-            prim.mSpeeds.mSpeedBackward = -mConfig.mSpeeds.mSpeedBackward;
-
-            mListPrimitivesAngle0.push_back(prim);
-            mMapPrimID2Speeds.push_back(prim.mSpeeds);
-            primId++;
-        }   
+    if(mConfig.mSpeeds.mSpeedBackward > 0) {
+        prim = Primitive(primId,
+                0,
+                base::Vector3d(-1.0, 0.0, 0.0),
+                mConfig.mSpeeds.mMultiplierBackward, 
+                MOV_BACKWARD);
+        prim.mSpeeds.mSpeedBackward = -mConfig.mSpeeds.mSpeedBackward; 
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;         
     }
     
     // Lateral
-    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
-        if(mConfig.mSpeeds.mSpeedLateral > 0) {
-            double scale_factor_lateral = std::max(1.0, min_prim_length / 
-                    (mConfig.mSpeeds.mSpeedLateral / mConfig.mNumPrimPartition));
-            LOG_INFO("Speed lateral scale factor: %4.2f", scale_factor_lateral);
-            
-            prim = Primitive(primId, 
-                    0,
-                    base::Vector3d(0.0, (mConfig.mSpeeds.mSpeedLateral / i) * scale_factor_lateral, 0.0),
-                    mConfig.mSpeeds.mMultiplierLateral,
-                    MOV_LATERAL);
-            prim.mSpeeds.mSpeedLateral = mConfig.mSpeeds.mSpeedLateral;
-            mListPrimitivesAngle0.push_back(prim);
-            mMapPrimID2Speeds.push_back(prim.mSpeeds);
-            primId++;
-            
-            prim = Primitive(primId, 
-                    0,
-                    base::Vector3d(0.0, (-mConfig.mSpeeds.mSpeedLateral / i) * scale_factor_lateral, 0.0),
-                    mConfig.mSpeeds.mMultiplierLateral, 
-                    MOV_LATERAL);
-            prim.mSpeeds.mSpeedLateral = -mConfig.mSpeeds.mSpeedLateral;
-            mListPrimitivesAngle0.push_back(prim);
-            mMapPrimID2Speeds.push_back(prim.mSpeeds);
-            primId++;
-        }
-    }
-    
-    // Point turn
-    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
-        if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
-            double scale_factor_pointturn = std::max(1.0, mRadPerDiscreteAngle / 
-                    (mConfig.mSpeeds.mSpeedPointTurn / mConfig.mNumPrimPartition));
-            LOG_INFO("Speed point turn scale factor: %4.2f", scale_factor_pointturn);
-            
-            prim = Primitive(primId,
-                    0,
-                    base::Vector3d(0.0, 0.0, (mConfig.mSpeeds.mSpeedPointTurn / i) * scale_factor_pointturn),
-                    mConfig.mSpeeds.mMultiplierPointTurn,
-                    MOV_POINTTURN);
-            prim.mSpeeds.mSpeedPointTurn = mConfig.mSpeeds.mSpeedPointTurn;
-            mListPrimitivesAngle0.push_back(prim);
-            mMapPrimID2Speeds.push_back(prim.mSpeeds);
-            primId++;
-            
-            prim = Primitive(primId, 
-                    0,
-                    base::Vector3d(0.0, 0.0, (-mConfig.mSpeeds.mSpeedPointTurn / i) * scale_factor_pointturn),
-                    mConfig.mSpeeds.mMultiplierPointTurn,
-                    MOV_POINTTURN);
-            prim.mSpeeds.mSpeedPointTurn = -mConfig.mSpeeds.mSpeedPointTurn;
-            mListPrimitivesAngle0.push_back(prim);
-            mMapPrimID2Speeds.push_back(prim.mSpeeds);
-            primId++;
-        }
+    if(mConfig.mSpeeds.mSpeedLateral > 0) {
+        // Lateral Left
+        prim = Primitive(primId, 
+                0,
+                base::Vector3d(0.0, 1.0, 0.0),
+                mConfig.mSpeeds.mMultiplierLateral,
+                MOV_LATERAL);
+        prim.mSpeeds.mSpeedLateral = mConfig.mSpeeds.mSpeedLateral;
+        mMapPrimID2Speeds.push_back(prim.mSpeeds);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;
         
+        // Lateral Right
+        prim = Primitive(primId, 
+                0,
+                base::Vector3d(0.0, -1.0, 0.0),
+                mConfig.mSpeeds.mMultiplierLateral, 
+                MOV_LATERAL);
+        prim.mSpeeds.mSpeedLateral = -mConfig.mSpeeds.mSpeedLateral;
+        mMapPrimID2Speeds.push_back(prim.mSpeeds);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;
     }
     
-    // Forward turns
-    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
-        // Create forward and backward curves.
-        // First calculates a common scale factor for the minimal forward/backward- and 
-        // turning-speed. 
-        if(mConfig.mSpeeds.mSpeedForward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
-
-            double scale_factor_forward_turn = std::max(1.0, 
-                    min_prim_length / (mConfig.mSpeeds.mSpeedForward / mConfig.mNumPrimPartition));
-            scale_factor_forward_turn = std::max(scale_factor_forward_turn, 
-                    mRadPerDiscreteAngle / (mConfig.mSpeeds.mSpeedTurn / mConfig.mNumPrimPartition));
-            LOG_INFO("Speed forward turn scale factor: %4.2f", scale_factor_forward_turn);
-            
-            double forward_speed = (mConfig.mSpeeds.mSpeedForward / i);
-            double forward_turn_speed = (mConfig.mSpeeds.mSpeedTurn / (mConfig.mNumPrimPartition+1 - i));
-            
-            // Takes care that we keep a minimal speed, so just the turning speed will be increased.
-            if(mConfig.mSpeeds.mMinSpeed > 0 && forward_speed < mConfig.mSpeeds.mMinSpeed) {
-                forward_speed = mConfig.mSpeeds.mMinSpeed;
-            }
-            
-            // TODO: For turn-multipliers mConfig.mSpeeds.mMultiplierTurn * i has been used.
-            // But SBPL already creates higher costs for narrow curves, does it?
-            // Create left hand bend.
-            if(createCurvePrimForAngle0(forward_speed * scale_factor_forward_turn, 
-                        forward_turn_speed * scale_factor_forward_turn, 
-                        primId, 
-                        mConfig.mSpeeds.mMultiplierTurn,
-                        prim)) {
-                prim.mSpeeds.mSpeedForward = forward_speed;
-                prim.mSpeeds.mSpeedTurn = forward_turn_speed;
-                mListPrimitivesAngle0.push_back(prim);
-                mMapPrimID2Speeds.push_back(prim.mSpeeds);
-                primId++;
-            }
-            
-            // Create right hand bend.
-            if(createCurvePrimForAngle0(forward_speed * scale_factor_forward_turn, 
-                        -forward_turn_speed * scale_factor_forward_turn, 
-                        primId, 
-                        mConfig.mSpeeds.mMultiplierTurn, 
-                        prim)) {
-                prim.mSpeeds.mSpeedForward = forward_speed;
-                prim.mSpeeds.mSpeedTurn = -forward_turn_speed;
-                mListPrimitivesAngle0.push_back(prim);
-                mMapPrimID2Speeds.push_back(prim.mSpeeds);
-                primId++;
-            }
-        }
+    if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
+        // Pointturn
+        prim = Primitive(primId,
+                0,
+                base::Vector3d(0.0, 0.0, 1.0),
+                mConfig.mSpeeds.mMultiplierPointTurn,
+                MOV_POINTTURN);
+        prim.mSpeeds.mSpeedPointTurn = mConfig.mSpeeds.mSpeedPointTurn;
+        mMapPrimID2Speeds.push_back(prim.mSpeeds);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;
+        
+        prim = Primitive(primId, 
+                0,
+                base::Vector3d(0.0, 0.0, -1.0),
+                mConfig.mSpeeds.mMultiplierPointTurn,
+                MOV_POINTTURN);
+        prim.mSpeeds.mSpeedPointTurn = -mConfig.mSpeeds.mSpeedPointTurn;
+        mMapPrimID2Speeds.push_back(prim.mSpeeds);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;
+    }
+          
+    // Forward and Backward Curves.
+    // Calculates the minimal turning radius in grids.
+    double start_turning_radius = std::max(1.0, mConfig.mSpeeds.mMinTurningRadius / mConfig.mGridSize);
+    
+    if(mConfig.mSpeeds.mSpeedForward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
+        // Forward left hand bend
+        prim = Primitive(primId, 
+            0,
+            base::Vector3d(0.0, 0.0, 1.0),
+            mConfig.mSpeeds.mMultiplierTurn,
+            MOV_FORWARD_TURN);
+        prim.mCenterOfRotation = base::Vector3d(0.0, start_turning_radius, 0.0);
+        prim.mSpeeds.mSpeedForward = mConfig.mSpeeds.mSpeedForward;
+        prim.mSpeeds.mSpeedTurn = mConfig.mSpeeds.mSpeedTurn;
+        mMapPrimID2Speeds.push_back(prim.mSpeeds);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;
+        
+        // Forward right hand bend
+        prim = Primitive(primId, 
+            0,
+            base::Vector3d(0.0, 0.0, -1.0),
+            mConfig.mSpeeds.mMultiplierTurn,
+            MOV_FORWARD_TURN);
+        prim.mCenterOfRotation = base::Vector3d(0.0, -start_turning_radius, 0.0);
+        prim.mSpeeds.mSpeedForward = mConfig.mSpeeds.mSpeedForward;
+        prim.mSpeeds.mSpeedTurn = -mConfig.mSpeeds.mSpeedTurn;
+        mMapPrimID2Speeds.push_back(prim.mSpeeds);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;
     }
     
-    // Backward turns
-    for(double i=1; i < mConfig.mNumPrimPartition+1; i++) { 
-        if(mConfig.mSpeeds.mSpeedBackward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {    
-            double scale_factor_backward_turn = std::max(1.0, min_prim_length / 
-                    (mConfig.mSpeeds.mSpeedBackward / mConfig.mNumPrimPartition));
-            scale_factor_backward_turn = std::max(scale_factor_backward_turn, mRadPerDiscreteAngle / 
-                    (mConfig.mSpeeds.mSpeedTurn / mConfig.mNumPrimPartition));
-            LOG_INFO("Speed backward turn scale factor: %4.2f", scale_factor_backward_turn);
-            
-            double backward_speed = (mConfig.mSpeeds.mSpeedBackward / i);
-            double backward_turn_speed = (mConfig.mSpeeds.mSpeedTurn / (mConfig.mNumPrimPartition+1 - i));
-            
-            // Takes care that we keep a minimal speed, so just the turning speed will be increased.
-            if(mConfig.mSpeeds.mMinSpeed > 0 && backward_speed < mConfig.mSpeeds.mMinSpeed) {
-                backward_speed = mConfig.mSpeeds.mMinSpeed;
-            }
-
-            // Create left hand bend.
-            if(createCurvePrimForAngle0(-backward_speed * scale_factor_backward_turn, 
-                        -backward_turn_speed * scale_factor_backward_turn, 
-                        primId, 
-                        mConfig.mSpeeds.mMultiplierBackwardTurn,
-                        prim)) {
-                prim.mSpeeds.mSpeedBackward = -backward_speed;
-                prim.mSpeeds.mSpeedTurn = -backward_turn_speed;
-                mListPrimitivesAngle0.push_back(prim);
-                mMapPrimID2Speeds.push_back(prim.mSpeeds);
-                primId++;
-            }
-            
-            // Create right hand bend.
-            if(createCurvePrimForAngle0(-backward_speed * scale_factor_backward_turn, 
-                        backward_turn_speed * scale_factor_backward_turn, 
-                        primId, 
-                        mConfig.mSpeeds.mMultiplierBackwardTurn,
-                        prim)) {
-                prim.mSpeeds.mSpeedBackward = -backward_speed;
-                prim.mSpeeds.mSpeedTurn = backward_turn_speed;
-                mListPrimitivesAngle0.push_back(prim); 
-                mMapPrimID2Speeds.push_back(prim.mSpeeds);
-                primId++;
-            }
-        }
+    if(mConfig.mSpeeds.mSpeedBackward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
+        // Backward left hand bend
+        prim = Primitive(primId, 
+            0,
+            base::Vector3d(0.0, 0.0, 1.0),
+            mConfig.mSpeeds.mMultiplierTurn,
+            MOV_BACKWARD_TURN);
+        prim.mCenterOfRotation = base::Vector3d(0.0, -start_turning_radius, 0.0);
+        prim.mSpeeds.mSpeedBackward = -mConfig.mSpeeds.mSpeedBackward;
+        prim.mSpeeds.mSpeedTurn = -mConfig.mSpeeds.mSpeedTurn;
+        mMapPrimID2Speeds.push_back(prim.mSpeeds);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;
+        
+        // Backward right hand bend
+        prim = Primitive(primId, 
+            0,
+            base::Vector3d(0.0, 0.0, -1.0),
+            mConfig.mSpeeds.mMultiplierTurn,
+            MOV_BACKWARD_TURN);
+        prim.mCenterOfRotation = base::Vector3d(0.0, start_turning_radius, 0.0);
+        prim.mSpeeds.mSpeedBackward = -mConfig.mSpeeds.mSpeedBackward;
+        prim.mSpeeds.mSpeedTurn = mConfig.mSpeeds.mSpeedTurn;
+        mMapPrimID2Speeds.push_back(prim.mSpeeds);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;  
     }
 
     return mListPrimitivesAngle0;
 }
 
 /**
-    * Uses the passed list of angle 0 non discrete motion primitives to
+    * Uses the passed list of angle 0 discrete-double motion primitives to
     * calculate all primitives. This is done by rotating the angle 0 prims
     * mNumAngles-1 times to cover the complete 2*M_PI and to find the discrete
     * pose.
@@ -265,84 +209,174 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
     // Creates discrete end poses for all angles.
     mListPrimitives.clear();
     base::Vector3d vec_tmp;
-    base::Vector3d discrete_endpose_tmp;
     base::Vector3d turned_center_of_rotation;
+    base::Vector3d turned_end_position;
     double theta_tmp = 0.0;
+    double required_end_pos_value = 0.25;
+    double max_dist_to_center_grids = 100;
+    
     assert(mConfig.mNumAngles != 0);
+    
+    std::stringstream ss;
+    
     // Runs through all discrete angles (default 16)
     for(unsigned int angle=0; angle < mConfig.mNumAngles; ++angle) {
         std::vector< struct Primitive >::iterator it = prims_angle_0.begin();
+
+        // For each base prim mNumPrimPartition primitives are created.
+        // TODO Get each prim the correct id?
+        int new_id = 0;
         
         // Runs through all endposes in grid-local which have been defined for angle 0.
         for(int id=0; it != prims_angle_0.end(); ++it, ++id) {
+            
+            ss << "Use primitives " << it->toString() << " to create the prim for angle " << angle << std::endl;
+            
             // Extract x,y,theta from the Vector3d.
-            vec_tmp = it->mEndPose;
-            theta_tmp = vec_tmp[2];
-            vec_tmp[2] = 0;
-            vec_tmp = Eigen::AngleAxis<double>(angle * mRadPerDiscreteAngle, Eigen::Vector3d::UnitZ()) * vec_tmp;
+            turned_end_position = it->mEndPose;
+            theta_tmp = turned_end_position[2];
+            turned_end_position[2] = 0;
+            turned_end_position = Eigen::AngleAxis<double>(angle * mRadPerDiscreteAngle, 
+                    Eigen::Vector3d::UnitZ()) * turned_end_position;
             
             // Turn center of rotation vector as well
-            turned_center_of_rotation = Eigen::AngleAxis<double>(angle * mRadPerDiscreteAngle, Eigen::Vector3d::UnitZ()) * 
-                    it->mCenterOfRotationLocal;
-            
-            // Calculates discrete pose.
-            // TODO How to round correctly? How much inaccuracy is acceptable?
-            discrete_endpose_tmp[0] = (int)(round(vec_tmp[0] / mConfig.mGridSize));
-            discrete_endpose_tmp[1] = (int)(round(vec_tmp[1] / mConfig.mGridSize));
+            turned_center_of_rotation = Eigen::AngleAxis<double>(angle * mRadPerDiscreteAngle, 
+                    Eigen::Vector3d::UnitZ()) * it->mCenterOfRotation;
                     
-            // SBPL orientation uses the range [0, 2*M_PI), intermediate points should get (-PI,PI].
-            theta_tmp = theta_tmp + angle * mRadPerDiscreteAngle;
-            // Discrete value can be < 0 and > mNumAngles. Will be stored for intermediate point calculation.
-            discrete_endpose_tmp[2] = ((int)round(theta_tmp / mRadPerDiscreteAngle));
+            base::Vector3d discrete_end_pose;
+            base::Vector3d discrete_end_pose_rounded;
+            int discrete_angle = 0;
+            double d = 0.0;
+            int upper_discrete_angle = ceil(mConfig.mNumAngles / 4);
+            int current_discrete_angle = upper_discrete_angle;
+            std::set< struct Triple > reached_end_positions;
+            int prims_added = 0;
             
-            // We have to reach another discrete state. So regarding to the
-            // movement type we have to reach another discrete grid coordinate
-            // or another discrete angle.
-            bool new_state = true;
-            int original_x_discrete = 0; //(int)(round(it->mEndPose[0] / mConfig.mGridSize));
-            int original_y_discrete = 0; //(int)(round(it->mEndPose[1] / mConfig.mGridSize));
-            int original_theta_discrete = angle; //(int)(round(it->mEndPose[2] / mRadPerDiscreteAngle));
-            
-            switch(it->mMovType) {
-                case MOV_POINTTURN: {
-                    if(discrete_endpose_tmp[2] == original_theta_discrete) {
-                        new_state = false;
+            while(prims_added < mConfig.mNumPrimPartition) {
+                
+                discrete_end_pose.setZero();
+                discrete_end_pose_rounded.setZero();
+                
+                switch(it->mMovType) {
+                    // Scales the received vector by 1.0, 1.1, ...
+                    case MOV_FORWARD:
+                    case MOV_BACKWARD:
+                    case MOV_LATERAL: {
+                        discrete_end_pose = turned_end_position * (1.0 + d);
+                        discrete_angle = angle;
+                        d += 0.1;
+                        break;
                     }
+                    // Increaes the angle by one discrete step in one direction.
+                    case MOV_POINTTURN: {
+                        discrete_end_pose[0] = 0.0;
+                        discrete_end_pose[1] = 0.0;
+                        // theta_tmp defines the turning direction.
+                        discrete_angle = (d+1) * theta_tmp + angle;
+                        d++;
+                        break;
+                    }
+                    // First rotates the endpose from ceil(mConfig.mNumAngles / 4) to 1
+                    // and after that the vector is scaled.
+                    case MOV_FORWARD_TURN:
+                    case MOV_BACKWARD_TURN: {
+                        // theta_tmp defines the turning direction.
+                        double angle_rad = current_discrete_angle * theta_tmp * mRadPerDiscreteAngle;
+                        ss << "Turning angle in rad " << angle_rad << std::endl;
+                        // TODO Scaling depends of the initial turning radius length, always small steps should be used
+                        base::Vector3d scaled_center_of_rotation = turned_center_of_rotation  * (1.0 + d);
+                        ss << "Scaled center of rotation " << scaled_center_of_rotation.transpose() << std::endl;
+                        discrete_end_pose -= scaled_center_of_rotation;
+                        discrete_end_pose = Eigen::AngleAxis<double>(angle_rad, Eigen::Vector3d::UnitZ()) * discrete_end_pose;
+                        discrete_end_pose += scaled_center_of_rotation;
+                        ss << "Discrete end pose " << discrete_end_pose.transpose() << std::endl;
+                         // Discrete orientation can be < 0 and > mNumAngles. Will be stored for intermediate point calculation.
+                        discrete_angle = current_discrete_angle * theta_tmp + angle;
+                        ss << "Discrete angle " << discrete_angle << std::endl;
+                        current_discrete_angle--;
+                        if(current_discrete_angle < 1) {
+                            current_discrete_angle = upper_discrete_angle;
+                            d += 0.1;
+                        }
+                        break;
+                    }
+                    default: {
+                    
+                        break;
+                    }
+                }
+                
+                discrete_end_pose_rounded[0] = std::round(discrete_end_pose[0]);
+                discrete_end_pose_rounded[1] = std::round(discrete_end_pose[1]);
+                // Stores diff between rounded and not rounded end pose and calculates
+                // the value of the position (distance to the next discrete grid cell).
+                base::Vector3d diff_end_to_rounded = discrete_end_pose_rounded - discrete_end_pose;
+                double value_end_position = diff_end_to_rounded.norm();
+                
+                ss << "New discrete end pose " << discrete_end_pose_rounded.transpose() << 
+                        ", discrete_angle " << discrete_angle << ", value " << value_end_position << std::endl; 
+                
+                // Used to check the curves: Turned back discrete end position have 
+                // to be on the same side like the center of rotation and greater 0.
+                base::Vector3d discrete_pose_rotate_back;
+                discrete_pose_rotate_back.setZero();
+                discrete_pose_rotate_back = Eigen::AngleAxis<double>(-angle * mRadPerDiscreteAngle, 
+                        Eigen::Vector3d::UnitZ()) * discrete_end_pose_rounded;
+                        
+                // Checks.
+                // Close enugh to a discrete position.
+                if(value_end_position > required_end_pos_value) {
+                    ss << "Primitive not close enough to a discrete position" << std::endl;
+                    continue;
+                }
+                
+                // If it is a curve its discretized end position must not be 0 and 
+                // it has to lay on the same side of the x-axis as the center of rotation.
+                bool curve_valid = (it->mCenterOfRotation[1] > 0 && discrete_pose_rotate_back[1] > 0) ||
+                        (it->mCenterOfRotation[1] < 0 && discrete_pose_rotate_back[1] < 0);
+                if((it->mMovType == MOV_FORWARD_TURN || it->mMovType == MOV_BACKWARD_TURN) && !curve_valid) {
+                    ss << "Curve is not valid, y of the turned back curve: " << discrete_pose_rotate_back[1] << std::endl;
+                    continue;
+                }
+                
+                // Pointturns should cover 90 degree but not much more.
+                if(it->mMovType == MOV_POINTTURN && (d+1) > upper_discrete_angle) {
+                    ss << "Pointturn primitives should not exceed mConfig.mNumAngles / 4 (rounded up)" << std::endl;
                     break;
                 }
-                case MOV_FORWARD_TURN:
-                case MOV_BACKWARD_TURN: {
-                    // TODO Correct?
-                    if((discrete_endpose_tmp[0] == original_x_discrete &&
-                        discrete_endpose_tmp[1] == original_y_discrete) ||
-                        discrete_endpose_tmp[2] == original_theta_discrete) {
-                        new_state = false;
-                    }
+                
+                // If dist to center exceeds a certain value we have to skip.
+                if(discrete_end_pose.norm() > max_dist_to_center_grids) {
+                    ss << "Primitive becomes too long, only " << prims_added << 
+                            " prims have been found for angle " << angle << " / prim id " << id << std::endl;
                     break;
                 }
-                default: {
-                    if(discrete_endpose_tmp[0] == original_x_discrete &&
-                        discrete_endpose_tmp[1] == original_y_discrete) {
-                        new_state = false;
-                    }
-                    break;
+                
+                // Prim not already added?   
+                // TODO add typedef
+                std::pair<std::set< struct Triple >::iterator,bool> set_ret;
+                set_ret = reached_end_positions.insert(Triple((int)discrete_end_pose_rounded[0], 
+                        (int)discrete_end_pose_rounded[1], discrete_angle));
+                if(set_ret.second) { // New element inserted.
+                    ss << "New primitive added" << std::endl;
+                    Primitive prim_discrete(new_id++, angle, discrete_end_pose_rounded, it->mCostMultiplier, it->mMovType);
+                    // The orientation of the discrete endpose still can exceed the borders 0 to mNumAngles.
+                    // We will store this for the intermediate point calculation, but the orientation
+                    // of the discrete end pose will be truncated to [0,mNumAngles).
+                    prim_discrete.setDiscreteEndOrientation(discrete_angle, mConfig.mNumAngles);
+                    // Applies the discretization difference to the center of rotation.
+                    // TODO check
+                    prim_discrete.mCenterOfRotation = turned_center_of_rotation;// + diff_end_to_rounded;
+                    mListPrimitives.push_back(prim_discrete);
+                    
+                    prims_added++;
+                } else {
+                    ss << "Primitive with this discrete end positionis already available" << std::endl;
                 }
-            }
-            if(!new_state) {
-                LOG_WARN("Primitive %d of type %d for angle %d does not lead into a new state", 
-                        id, (int)it->mMovType, angle);
-            }
-            
-            Primitive prim_discrete(it->mId, angle, discrete_endpose_tmp, it->mCostMultiplier, it->mMovType);
-            // The orientation of the discrete endpose still can exceed the borders 0 to mNumAngles.
-            // We will store this for the intermediate point calculation, but the orientation
-            // of the discrete end pose will be truncated to [0,mNumAngles).
-            prim_discrete.setDiscreteEndOrientation(discrete_endpose_tmp[2], mConfig.mNumAngles);
-            prim_discrete.mCenterOfRotationLocal = turned_center_of_rotation;
-            prim_discrete.mSpeeds = it->mSpeeds;
-            mListPrimitives.push_back(prim_discrete);
+            } 
         }
     }
+    //std::cout << ss.str() << std::endl;
     return mListPrimitives;
 }
 
@@ -393,10 +427,9 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
         theta_step = (discrete_rot_diff * mRadPerDiscreteAngle) / ((double)mConfig.mNumPosesPerPrim-1);
         
         if(it->mMovType == MOV_FORWARD_TURN || it->mMovType == MOV_BACKWARD_TURN) {
-            // Everything has to be transformed to local, center of rotation as well..
-            // TODO: Center of rotation is already in grid_local?
-            center_of_rotation_local[0] = it->mCenterOfRotationLocal[0];// * mConfig.mGridSize;
-            center_of_rotation_local[1] = it->mCenterOfRotationLocal[1];// * mConfig.mGridSize;
+            // Transform center of rotatin to grid local.
+            center_of_rotation_local[0] = it->mCenterOfRotation[0] * mConfig.mGridSize;
+            center_of_rotation_local[1] = it->mCenterOfRotation[1] * mConfig.mGridSize;
             center_of_rotation_local[2] = 0;
             
             ss << "center of rotation: " << center_of_rotation_local.transpose() << std::endl;
@@ -467,7 +500,12 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
                     rbs_intermediate.setTransform(cor2base * rbs_intermediate.getTransform() );
                     intermediate_pose[0] = rbs_intermediate.position[0];
                     intermediate_pose[1] = rbs_intermediate.position[1];
-                    intermediate_pose[2] = rbs_intermediate.getYaw();
+                    // TODO Hack, just to check the end orientation problem due to discretization.
+                    if(i == mConfig.mNumPosesPerPrim -1 ) {
+                        intermediate_pose[2] = it->mEndPose[2] * mRadPerDiscreteAngle;
+                    } else {
+                        intermediate_pose[2] = rbs_intermediate.getYaw();
+                    }
                     break;
                 }
                 default: {
@@ -482,6 +520,7 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
             while(intermediate_pose[2] > M_PI)
                 intermediate_pose[2] -= 2*M_PI;
             
+            /*
             // TODO Hack! Sometimes because of the transf. cor2base (as it seems) the intermediate endpose may
             // not reach the discrete end pose precisely which is not accepted by SBPL.
             // Because of that we set the last intermediate point regarding the discrete end pose.
@@ -499,6 +538,7 @@ does not reach the expected end position (%4.2f, %4.2f) precisely (> 0.01), will
                     intermediate_pose[1] = expected_end_pose_y;
                 }
             }
+            */
                          
             ss << "Intermediate pose (x,y,theta) has been added: " << 
                     intermediate_pose[0] << ", " << 
@@ -514,7 +554,7 @@ does not reach the expected end position (%4.2f, %4.2f) precisely (> 0.01), will
         }
         //it->mIntermediatePoses.push_back(end_pose_local);
     }
-    LOG_DEBUG("%s", ss.str().c_str());
+    printf("%s", ss.str().c_str());
 }
 
 void SbplMotionPrimitives::storeToFile(std::string path) {
@@ -547,33 +587,27 @@ void SbplMotionPrimitives::storeToFile(std::string path) {
 }
 
 /**
-    * Forward and turning speed does already contain the scale factor.
-    * Uses grid_local.
-    */
-bool SbplMotionPrimitives::createCurvePrimForAngle0(double const forward_speed, double const turning_speed, 
-        int const prim_id, int const multiplier, Primitive& primitive) {
+ * Creates a curve within the grid space.
+ */
+bool SbplMotionPrimitives::createCurvePrimForAngle0(double const turning_radius_discrete, 
+        double const angle_rad_discrete, 
+        int const prim_id, 
+        int const multiplier, 
+        Primitive& primitive) {
     
-    // TODO Is this radius calculation correct?
-    double turning_radius = forward_speed / turning_speed;
-    
-    // Avoid using too sharp curves.
-    if(mConfig.mSpeeds.mMinTurningRadius > 0 && 
-            fabs(turning_radius) < mConfig.mSpeeds.mMinTurningRadius) {
-        LOG_WARN("Turning radius of %4.2f (forward speed %4.2f, turning speed %4.2f) is too sharp for the system and will be ignored.",
-               turning_radius, forward_speed, turning_speed); 
-        return false;
-    }
-    
-    base::Vector3d center_of_rotation(0.0, turning_radius, 0.0);
+    base::Vector3d center_of_rotation(0.0, turning_radius_discrete, 0.0);
     base::Vector3d vec_endpos(0.0, 0.0, 0.0);
+    double angle_rad = angle_rad_discrete * (2*M_PI / (double)mConfig.mNumAngles);
     vec_endpos -= center_of_rotation;
-    vec_endpos = Eigen::AngleAxis<double>(turning_speed,          
-            Eigen::Vector3d::UnitZ()) * vec_endpos;
+    vec_endpos = Eigen::AngleAxis<double>(angle_rad, Eigen::Vector3d::UnitZ()) * vec_endpos;
     vec_endpos += center_of_rotation;
-    // Adds the end orientation.
-    vec_endpos[2] = turning_speed;
+    // Adds the discrete end orientation.
+    vec_endpos[2] = angle_rad_discrete;
     
-    enum MovementType mov_type = forward_speed > 0 ? MOV_FORWARD_TURN :  MOV_BACKWARD_TURN;
+    enum MovementType mov_type = MOV_BACKWARD_TURN;
+    if((turning_radius_discrete > 0 && angle_rad > 0) || (turning_radius_discrete < 0 && angle_rad < 0)) {
+        mov_type = MOV_FORWARD_TURN;
+    }
     
     primitive = Primitive(prim_id, 
         0,
@@ -581,7 +615,7 @@ bool SbplMotionPrimitives::createCurvePrimForAngle0(double const forward_speed, 
         multiplier, 
         mov_type);
     // Store center of rotation.
-    primitive.mCenterOfRotationLocal = center_of_rotation;
+    primitive.mCenterOfRotation = center_of_rotation;
     
     return true;
 }

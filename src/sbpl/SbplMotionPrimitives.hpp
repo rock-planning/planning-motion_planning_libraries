@@ -13,6 +13,40 @@
 #include <motion_planning_libraries/Config.hpp>
 
 namespace motion_planning_libraries {
+    
+/**
+ * Uses to check for discrete end poses copies and 
+ * to avoid c++11 (tuples).
+ */
+struct Triple {
+ public:
+    int a,b,c;
+    
+    Triple() : a(0), b(0), c(0) {}
+    Triple(int a_, int b_, int c_) : a(a_), b(b_), c(c_) {}
+    
+    bool operator==(const Triple& triple) const {
+        return this->a == triple.a && this->b == triple.b && this->c == triple.c;
+    }
+    
+    bool operator!=(const Triple& triple) const {
+        return !operator==(triple);
+    }
+    
+    bool operator<(const Triple& triple) const {
+        if(this->a < triple.a) 
+            return true;
+        if(this->a == triple.a) {
+            if(this->b < triple.b) 
+                return true;
+            if(this->b == triple.b) {
+                if(this->c < triple.c) 
+                    return true;
+            }
+        }
+        return false;
+    }
+};
 
 /**
  * Speed in m/sec or rad/sec.
@@ -67,19 +101,19 @@ struct Primitive {
     // Will be used to calculate the orientation of the intermediate poses.
     // This orientation is not truncated to 0 to 15.
     int mDiscreteEndOrientationNotTruncated;
-    // Stores the center of rotation for curves (non discrete). 
+    // Stores the center of rotation for curves.
     // Used to calculate the intermediate poses.
-    base::Vector3d mCenterOfRotationLocal;
+    base::Vector3d mCenterOfRotation;
     // Contains the speeds which have been used to create the prim.
     struct Speeds mSpeeds;
      
     Primitive() : mId(0), mStartAngle(0), mEndPose(), 
             mCostMultiplier(0), mIntermediatePoses(), mMovType(MOV_UNDEFINED), 
-            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotationLocal(),
+            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation(),
             mSpeeds()
     {
         mEndPose.setZero();
-        mCenterOfRotationLocal.setZero();
+        mCenterOfRotation.setZero();
     }
     
     /**
@@ -93,10 +127,10 @@ struct Primitive {
             mId(id), mStartAngle(start_angle), mEndPose(end_pose), 
             mCostMultiplier(cost_multiplier), 
             mIntermediatePoses(), mMovType(mov_type),
-            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotationLocal(),
+            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation(),
             mSpeeds()
     {
-        mCenterOfRotationLocal.setZero();
+        mCenterOfRotation.setZero();
     }
     
     bool operator==(Primitive& prim) {
@@ -195,8 +229,16 @@ struct SbplMotionPrimitives {
      * Forward and turning speed does already contain the scale factor.
      * Uses grid_local.
      */
+    /*
     bool createCurvePrimForAngle0(double const forward_speed, double const turning_speed, 
         int const prim_id, int const multiplier, Primitive& primitive);
+    */
+    
+    bool createCurvePrimForAngle0(double const turning_radius_discrete, 
+        double const angle_rad_discrete, 
+        int const prim_id, 
+        int const multiplier, 
+        Primitive& primitive);
     
     /**
      * Each primitive type got its own speed values.
