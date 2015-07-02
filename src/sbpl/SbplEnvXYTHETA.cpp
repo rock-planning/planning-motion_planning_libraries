@@ -76,11 +76,7 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
                 boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
         try {
             // SBPL does not allow the definition of forward AND backward velocity.
-            double speed = fabs(mConfig.mSpeeds.mSpeedForward);
-            
-            if(mConfig.mSpeeds.mSpeedForward != mConfig.mSpeeds.mSpeedBackward) {
-                LOG_WARN("SBPL does not use backward velocity, only forward velocity will be used for cost calculations");
-            }
+            double speed = fabs(mConfig.mMobility.mSpeed);
             
             if(speed == 0.0) {
                 LOG_WARN("Speed of zero is not allowed, abort");
@@ -89,7 +85,7 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
           
             // The average turning speed (forward-turn and point-turn) is used for the
             // cost calculation.
-            double turning_speed = (mConfig.mSpeeds.mSpeedTurn + mConfig.mSpeeds.mSpeedPointTurn) / 2.0;
+            double turning_speed = mConfig.mMobility.mTurningSpeed;
             if(turning_speed == 0) {
                 LOG_WARN("Rotational velocity of zero is not allowed, abort");
                 return false;
@@ -330,15 +326,19 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
     // If a mprim file is used mPrims may be NULL!
     for(;it_state < path.end() && it_action < action_list.end(); it_state += inc_state, it_action++) {
         prim_id = it_action->aind;
-        Speeds speed;
+        double speed;
         
         if(mPrims != NULL) {
-            mPrims->getSpeeds(prim_id, speed);
-            LOG_DEBUG("Assigns to prim id %d the following speeds: %s", prim_id, speed.toString().c_str());
+            if(mPrims->getSpeed(prim_id, speed)) {
+                LOG_DEBUG("Assigns to prim id %d the speed %4.2f", prim_id, speed);
+            } else {
+                LOG_ERROR("No speed has been stored for prim id %d", prim_id);
+                return false;
+            }
         }
         
         it_state->mSBPLPrimId = prim_id;
-        it_state->mSpeeds = speed;
+        it_state->mSpeed = speed;
     }
     
     return true;

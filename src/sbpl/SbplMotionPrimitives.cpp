@@ -4,13 +4,13 @@
 
 namespace motion_planning_libraries {
 
-SbplMotionPrimitives::SbplMotionPrimitives() : mConfig(), 
-        mListPrimitives(), mRadPerDiscreteAngle(0), mMapPrimID2Speeds() 
+SbplMotionPrimitives::SbplMotionPrimitives() : mConfig(), mListPrimitivesAngle0(),
+        mListPrimitives(), mRadPerDiscreteAngle(0), mPrim_id2Speed()
 {
 }
     
 SbplMotionPrimitives::SbplMotionPrimitives(struct MotionPrimitivesConfig config) : mConfig(config),
-        mListPrimitives(), mRadPerDiscreteAngle(0), mMapPrimID2Speeds()
+        mListPrimitivesAngle0(), mListPrimitives(), mRadPerDiscreteAngle(0), mPrim_id2Speed()
 {
     mRadPerDiscreteAngle = (M_PI*2.0) / (double)mConfig.mNumAngles;
 }
@@ -30,17 +30,15 @@ void SbplMotionPrimitives::createPrimitives() {
         LOG_WARN("Currently only 1, 2, 4 or 8 are valid for mNumPrimPartition!");
     }
     
+    if(!mConfig.mMobility.isSet()) {
+        LOG_WARN("No primitives will be created, all multipliers within the mobility struct are 0");
+        return;
+    }
+    
     std::vector<struct Primitive> prim_angle_0 = createMPrimsForAngle0();
     createMPrims(prim_angle_0); // Stores to global prim list mListPrimitives as well.
     createIntermediatePoses(mListPrimitives); // Adds intermediate poses.
 }
-
-/**
- * Creates a dense set of prims within the grid frame. The length of the prim / 
- * length of the turning radius is increased by 0.1 starting from 1.0 / mMinTurningRadius.
- * When turning this dense set, only the best prims will be used.
- * As closer a prim reaches a discrete position as more valuable it is.
- */
 
 /**
  * Creates unit vectors for all movements respectively discrete minimal turning radius for curves. 
@@ -52,149 +50,143 @@ void SbplMotionPrimitives::createPrimitives() {
 std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() { 
     
     mListPrimitivesAngle0.clear();
-    mMapPrimID2Speeds.clear();
+    mPrim_id2Speed.clear();
         
     int primId = 0;
     Primitive prim;
     
     assert (mConfig.mNumPrimPartition >= 1);
-
-    // All prims of one type will receive their defined max speed regardless  of their length.
-    // Only for the curves it is required to use the correct speeds.
     
     // Forward
-    if(mConfig.mSpeeds.mSpeedForward > 0) {
+    if(mConfig.mMobility.mMultiplierForward > 0) {
         prim = Primitive(primId, 
                 0, 
                 base::Vector3d(1.0, 0.0, 0.0),
-                mConfig.mSpeeds.mMultiplierForward, 
+                mConfig.mMobility.mMultiplierForward, 
                 MOV_FORWARD);
-        prim.mSpeeds.mSpeedForward = mConfig.mSpeeds.mSpeedForward;
-        mMapPrimID2Speeds.push_back(prim.mSpeeds);
         mListPrimitivesAngle0.push_back(prim);
+        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
     }
     
     // Backward
-    if(mConfig.mSpeeds.mSpeedBackward > 0) {
+    if(mConfig.mMobility.mMultiplierBackward > 0) {
         prim = Primitive(primId,
                 0,
                 base::Vector3d(-1.0, 0.0, 0.0),
-                mConfig.mSpeeds.mMultiplierBackward, 
+                mConfig.mMobility.mMultiplierBackward, 
                 MOV_BACKWARD);
-        prim.mSpeeds.mSpeedBackward = -mConfig.mSpeeds.mSpeedBackward; 
         mListPrimitivesAngle0.push_back(prim);
+        mPrim_id2Speed.push_back(-mConfig.mMobility.mSpeed);
         primId++;         
     }
     
     // Lateral
-    if(mConfig.mSpeeds.mSpeedLateral > 0) {
+    if(mConfig.mMobility.mMultiplierLateral > 0) {
         // Lateral Left
         prim = Primitive(primId, 
                 0,
                 base::Vector3d(0.0, 1.0, 0.0),
-                mConfig.mSpeeds.mMultiplierLateral,
+                mConfig.mMobility.mMultiplierLateral,
                 MOV_LATERAL);
-        prim.mSpeeds.mSpeedLateral = mConfig.mSpeeds.mSpeedLateral;
-        mMapPrimID2Speeds.push_back(prim.mSpeeds);
         mListPrimitivesAngle0.push_back(prim);
+        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
         
         // Lateral Right
         prim = Primitive(primId, 
                 0,
                 base::Vector3d(0.0, -1.0, 0.0),
-                mConfig.mSpeeds.mMultiplierLateral, 
+                mConfig.mMobility.mMultiplierLateral, 
                 MOV_LATERAL);
-        prim.mSpeeds.mSpeedLateral = -mConfig.mSpeeds.mSpeedLateral;
-        mMapPrimID2Speeds.push_back(prim.mSpeeds);
         mListPrimitivesAngle0.push_back(prim);
+        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
     }
     
-    if(mConfig.mSpeeds.mSpeedPointTurn > 0) {
+    if(mConfig.mMobility.mMultiplierPointTurn > 0) {
         // Pointturn
         prim = Primitive(primId,
                 0,
                 base::Vector3d(0.0, 0.0, 1.0),
-                mConfig.mSpeeds.mMultiplierPointTurn,
+                mConfig.mMobility.mMultiplierPointTurn,
                 MOV_POINTTURN);
-        prim.mSpeeds.mSpeedPointTurn = mConfig.mSpeeds.mSpeedPointTurn;
-        mMapPrimID2Speeds.push_back(prim.mSpeeds);
         mListPrimitivesAngle0.push_back(prim);
+        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
         
-        prim = Primitive(primId, 
+        prim = Primitive(primId,
                 0,
                 base::Vector3d(0.0, 0.0, -1.0),
-                mConfig.mSpeeds.mMultiplierPointTurn,
+                mConfig.mMobility.mMultiplierPointTurn,
                 MOV_POINTTURN);
-        prim.mSpeeds.mSpeedPointTurn = -mConfig.mSpeeds.mSpeedPointTurn;
-        mMapPrimID2Speeds.push_back(prim.mSpeeds);
         mListPrimitivesAngle0.push_back(prim);
+        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
     }
           
     // Forward and Backward Curves.
     // Calculates the minimal turning radius in grids.
-    double start_turning_radius = std::max(1.0, mConfig.mSpeeds.mMinTurningRadius / mConfig.mGridSize);
+    double start_turning_radius = std::max(1.0, mConfig.mMobility.mMinTurningRadius / mConfig.mGridSize);
     
-    if(mConfig.mSpeeds.mSpeedForward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
+    if(mConfig.mMobility.mMultiplierForwardTurn) {
         // Forward left hand bend
         prim = Primitive(primId, 
             0,
             base::Vector3d(0.0, 0.0, 1.0),
-            mConfig.mSpeeds.mMultiplierTurn,
+            mConfig.mMobility.mMultiplierForwardTurn,
             MOV_FORWARD_TURN);
         prim.mCenterOfRotation = base::Vector3d(0.0, start_turning_radius, 0.0);
-        prim.mSpeeds.mSpeedForward = mConfig.mSpeeds.mSpeedForward;
-        prim.mSpeeds.mSpeedTurn = mConfig.mSpeeds.mSpeedTurn;
-        mMapPrimID2Speeds.push_back(prim.mSpeeds);
         mListPrimitivesAngle0.push_back(prim);
+        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
         
         // Forward right hand bend
         prim = Primitive(primId, 
             0,
             base::Vector3d(0.0, 0.0, -1.0),
-            mConfig.mSpeeds.mMultiplierTurn,
+            mConfig.mMobility.mMultiplierForwardTurn,
             MOV_FORWARD_TURN);
         prim.mCenterOfRotation = base::Vector3d(0.0, -start_turning_radius, 0.0);
-        prim.mSpeeds.mSpeedForward = mConfig.mSpeeds.mSpeedForward;
-        prim.mSpeeds.mSpeedTurn = -mConfig.mSpeeds.mSpeedTurn;
-        mMapPrimID2Speeds.push_back(prim.mSpeeds);
         mListPrimitivesAngle0.push_back(prim);
+        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
     }
     
-    if(mConfig.mSpeeds.mSpeedBackward > 0 && mConfig.mSpeeds.mSpeedTurn > 0) {
+    if(mConfig.mMobility.mMultiplierBackwardTurn > 0) {
         // Backward left hand bend
         prim = Primitive(primId, 
             0,
             base::Vector3d(0.0, 0.0, 1.0),
-            mConfig.mSpeeds.mMultiplierTurn,
+            mConfig.mMobility.mMultiplierBackwardTurn,
             MOV_BACKWARD_TURN);
         prim.mCenterOfRotation = base::Vector3d(0.0, -start_turning_radius, 0.0);
-        prim.mSpeeds.mSpeedBackward = -mConfig.mSpeeds.mSpeedBackward;
-        prim.mSpeeds.mSpeedTurn = -mConfig.mSpeeds.mSpeedTurn;
-        mMapPrimID2Speeds.push_back(prim.mSpeeds);
         mListPrimitivesAngle0.push_back(prim);
+        mPrim_id2Speed.push_back(-mConfig.mMobility.mSpeed);
         primId++;
         
         // Backward right hand bend
         prim = Primitive(primId, 
             0,
             base::Vector3d(0.0, 0.0, -1.0),
-            mConfig.mSpeeds.mMultiplierTurn,
+            mConfig.mMobility.mMultiplierBackwardTurn,
             MOV_BACKWARD_TURN);
         prim.mCenterOfRotation = base::Vector3d(0.0, start_turning_radius, 0.0);
-        prim.mSpeeds.mSpeedBackward = -mConfig.mSpeeds.mSpeedBackward;
-        prim.mSpeeds.mSpeedTurn = mConfig.mSpeeds.mSpeedTurn;
-        mMapPrimID2Speeds.push_back(prim.mSpeeds);
         mListPrimitivesAngle0.push_back(prim);
+        mPrim_id2Speed.push_back(-mConfig.mMobility.mSpeed);
         primId++;  
     }
-
+    
+    // From each base prim mNumPrimPartition prims will be created.
+    // So each speed value will be repeated mNumPrimPartition times.
+    std::vector<double> mPrim_id2Speed_tmp;
+    for(int i=0; i<mPrim_id2Speed.size(); i++) {
+        for(int j=0; j<mConfig.mNumPrimPartition; j++) {
+            mPrim_id2Speed_tmp.push_back(mPrim_id2Speed[i]);
+        }
+    }
+    mPrim_id2Speed = mPrim_id2Speed_tmp;
+    
     return mListPrimitivesAngle0;
 }
 
@@ -222,13 +214,9 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
     // Runs through all discrete angles (default 16)
     for(unsigned int angle=0; angle < mConfig.mNumAngles; ++angle) {
         std::vector< struct Primitive >::iterator it = prims_angle_0.begin();
-
-        // For each base prim mNumPrimPartition primitives are created.
-        // TODO Get each prim the correct id?
-        int new_id = 0;
         
         // Runs through all endposes in grid-local which have been defined for angle 0.
-        for(int id=0; it != prims_angle_0.end(); ++it, ++id) {
+        for(; it != prims_angle_0.end(); ++it) {
             
             ss << "Use primitives " << it->toString() << " to create the prim for angle " << angle << std::endl;
             
@@ -253,6 +241,10 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
             int prims_added = 0;
             
             while(prims_added < mConfig.mNumPrimPartition) {
+                // For each base prim mNumPrimPartition primitives should be created.
+                // Even if for some base prims not all sub-prims could be created we
+                // have to take care that correct ids are assigned.
+                int id = it->mId * mConfig.mNumPrimPartition + prims_added;
                 
                 discrete_end_pose.setZero();
                 discrete_end_pose_rounded.setZero();
@@ -353,13 +345,12 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                 }
                 
                 // Prim not already added?   
-                // TODO add typedef
                 std::pair<std::set< struct Triple >::iterator,bool> set_ret;
                 set_ret = reached_end_positions.insert(Triple((int)discrete_end_pose_rounded[0], 
                         (int)discrete_end_pose_rounded[1], discrete_angle));
                 if(set_ret.second) { // New element inserted.
                     ss << "New primitive added" << std::endl;
-                    Primitive prim_discrete(new_id++, angle, discrete_end_pose_rounded, it->mCostMultiplier, it->mMovType);
+                    Primitive prim_discrete(id, angle, discrete_end_pose_rounded, it->mCostMultiplier, it->mMovType);
                     // The orientation of the discrete endpose still can exceed the borders 0 to mNumAngles.
                     // We will store this for the intermediate point calculation, but the orientation
                     // of the discrete end pose will be truncated to [0,mNumAngles).
@@ -368,7 +359,6 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                     // TODO check
                     prim_discrete.mCenterOfRotation = turned_center_of_rotation;// + diff_end_to_rounded;
                     mListPrimitives.push_back(prim_discrete);
-                    
                     prims_added++;
                 } else {
                     ss << "Primitive with this discrete end positionis already available" << std::endl;
@@ -376,7 +366,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
             } 
         }
     }
-    //std::cout << ss.str() << std::endl;
+    LOG_DEBUG("%s\n", ss.str().c_str());
     return mListPrimitives;
 }
 
@@ -463,6 +453,10 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
             angle = discrete_rot_diff < 0 ? -angle : angle; 
             angle_delta = angle / ((double)mConfig.mNumPosesPerPrim-1);
             
+            // TODO Use the old discrete angles for the intermediate orientation.
+            // E.g even if we get 92° due to the discretization we turn from 0 to 90 degree.
+            // So we will get along the curve small orientation errors but at start and end the correct orientation.
+            
             ss << "Angle between vectors: " << angle << ", angle delta " << angle_delta << std::endl;
         }
         
@@ -500,7 +494,10 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
                     rbs_intermediate.setTransform(cor2base * rbs_intermediate.getTransform() );
                     intermediate_pose[0] = rbs_intermediate.position[0];
                     intermediate_pose[1] = rbs_intermediate.position[1];
+                    
                     // TODO Hack, just to check the end orientation problem due to discretization.
+                    // Problem: There may be no circle between the start and the discretized end pose.
+                    // Actually we have to use a straight line and a circle.
                     if(i == mConfig.mNumPosesPerPrim -1 ) {
                         intermediate_pose[2] = it->mEndPose[2] * mRadPerDiscreteAngle;
                     } else {
@@ -519,26 +516,6 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
                 intermediate_pose[2] += 2*M_PI;
             while(intermediate_pose[2] > M_PI)
                 intermediate_pose[2] -= 2*M_PI;
-            
-            /*
-            // TODO Hack! Sometimes because of the transf. cor2base (as it seems) the intermediate endpose may
-            // not reach the discrete end pose precisely which is not accepted by SBPL.
-            // Because of that we set the last intermediate point regarding the discrete end pose.
-            if(i == mConfig.mNumPosesPerPrim-1) {
-                double expected_end_pose_x = it->mEndPose[0] * mConfig.mGridSize;
-                double expected_end_pose_y = it->mEndPose[1] * mConfig.mGridSize;
-                if (fabs(intermediate_pose[0] - expected_end_pose_x) > 0.01 ||
-                        fabs(intermediate_pose[1] - expected_end_pose_y) > 0.01) {
-                    LOG_WARN("Angle %d prim ID %d: Intermediate positions (%4.2f, %4.2f) \
-does not reach the expected end position (%4.2f, %4.2f) precisely (> 0.01), will be adapted", 
-                            it->mStartAngle, it->mId,
-                            intermediate_pose[0], intermediate_pose[1],
-                            expected_end_pose_x, expected_end_pose_y);
-                    intermediate_pose[0] = expected_end_pose_x;
-                    intermediate_pose[1] = expected_end_pose_y;
-                }
-            }
-            */
                          
             ss << "Intermediate pose (x,y,theta) has been added: " << 
                     intermediate_pose[0] << ", " << 
@@ -552,9 +529,8 @@ does not reach the expected end position (%4.2f, %4.2f) precisely (> 0.01), will
             
             it->mIntermediatePoses.push_back(intermediate_pose);
         }
-        //it->mIntermediatePoses.push_back(end_pose_local);
     }
-    printf("%s", ss.str().c_str());
+    LOG_DEBUG("%s", ss.str().c_str());
 }
 
 void SbplMotionPrimitives::storeToFile(std::string path) {
@@ -620,15 +596,6 @@ bool SbplMotionPrimitives::createCurvePrimForAngle0(double const turning_radius_
     return true;
 }
 
-bool SbplMotionPrimitives::getSpeeds(unsigned int prim_id, struct Speeds& speeds) {
-    if(prim_id > mMapPrimID2Speeds.size()-1) {
-        LOG_WARN("Prim id %d unknown, no speed structure available");
-        return false;
-    }
-    speeds = mMapPrimID2Speeds[prim_id];
-    return true;
-}
-
 int SbplMotionPrimitives::calcDiscreteEndOrientation(double yaw_rad) {
     int discrete_theta = round(yaw_rad / (double)mConfig.mNumAngles);
     while (discrete_theta >= (int)mConfig.mNumAngles)
@@ -636,6 +603,16 @@ int SbplMotionPrimitives::calcDiscreteEndOrientation(double yaw_rad) {
     while (discrete_theta < 0)
         discrete_theta += mConfig.mNumAngles;
     return discrete_theta;
+}
+
+bool SbplMotionPrimitives::getSpeed(unsigned int const prim_id, double& speed) {
+    if(prim_id >= mPrim_id2Speed.size()) {
+        LOG_WARN("Speed for primitive id %d is not available\n", prim_id);
+        return false;
+    }
+
+    speed = mPrim_id2Speed.at(prim_id);
+    return true;
 }
 
 } // end namespace motion_planning_libraries

@@ -104,6 +104,10 @@ class MotionPlanningLibraries
     
     /** 
      * Returns the path stored in mPath as a trajectory (spline). 
+     * If the speed parameter is set it will be used, otherwise
+     * the speed which have been defined within the mobility struct.
+     * If no speed has been defined
+     * 
      * If speed values are available within the state for each new
      * speed a new trajectory will be created. Otherwise a single 
      * trajectory will be created using the passed speed value.
@@ -111,14 +115,14 @@ class MotionPlanningLibraries
      * positions and also handles equal positions and equal positions but 
      * different speeds. 
      */
-    std::vector<base::Trajectory> getTrajectoryInWorld(double speed=0);
+    std::vector<base::Trajectory> getTrajectoryInWorld();
     
     /**
      * Inverts the last trajectory and searches from goal to start for the next valid pose.
      * This can be used if the robot stucks within an obstacle.
      * Returns an empty vector if an error occurred.
      */
-    std::vector<base::Trajectory> getEscapeTrajectoryInWorld(double speed=0);
+    std::vector<base::Trajectory> getEscapeTrajectoryInWorld();
     
     /** Prints the current path to the console. */
     void printPathInWorld();

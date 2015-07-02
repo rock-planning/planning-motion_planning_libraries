@@ -53,7 +53,7 @@ struct Triple {
  */
 struct MotionPrimitivesConfig {
     MotionPrimitivesConfig() :
-            mSpeeds(),
+            mMobility(),
             mNumPrimPartition(4),
             mNumPosesPerPrim(2),
             mNumAngles(0),
@@ -63,7 +63,7 @@ struct MotionPrimitivesConfig {
     }
     
     MotionPrimitivesConfig(Config config, int trav_map_width, int trav_map_height, double grid_size) :
-        mSpeeds(config.mSpeeds),
+        mMobility(config.mMobility),
         mNumPrimPartition(config.mNumPrimPartition),
         mNumPosesPerPrim(config.mNumIntermediatePoints + 2), // intermediate points + start pose + end pose
         mNumAngles(16),
@@ -73,7 +73,7 @@ struct MotionPrimitivesConfig {
     }   
     
   public:
-    struct Speeds mSpeeds;
+    struct Mobility mMobility;
     double mNumPrimPartition;
     
     unsigned int mNumPosesPerPrim; // Number of points a primitive consists of.
@@ -104,13 +104,10 @@ struct Primitive {
     // Stores the center of rotation for curves.
     // Used to calculate the intermediate poses.
     base::Vector3d mCenterOfRotation;
-    // Contains the speeds which have been used to create the prim.
-    struct Speeds mSpeeds;
      
     Primitive() : mId(0), mStartAngle(0), mEndPose(), 
             mCostMultiplier(0), mIntermediatePoses(), mMovType(MOV_UNDEFINED), 
-            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation(),
-            mSpeeds()
+            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation()
     {
         mEndPose.setZero();
         mCenterOfRotation.setZero();
@@ -127,8 +124,7 @@ struct Primitive {
             mId(id), mStartAngle(start_angle), mEndPose(end_pose), 
             mCostMultiplier(cost_multiplier), 
             mIntermediatePoses(), mMovType(mov_type),
-            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation(),
-            mSpeeds()
+            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation()
     {
         mCenterOfRotation.setZero();
     }
@@ -188,8 +184,7 @@ struct SbplMotionPrimitives {
     std::vector<struct Primitive> mListPrimitivesAngle0; // Contains non discrete primitives for angle 0.
     std::vector<struct Primitive> mListPrimitives;
     double mRadPerDiscreteAngle;
-    // The prim id describes the position in this vector.
-    std::vector<struct Speeds> mMapPrimID2Speeds; 
+    std::vector<double> mPrim_id2Speed;
      
     SbplMotionPrimitives();
      
@@ -241,16 +236,15 @@ struct SbplMotionPrimitives {
         Primitive& primitive);
     
     /**
-     * Each primitive type got its own speed values.
-     * This method fills the passed speed structure.
-     * \return false if the is is unknown.
-     */
-    bool getSpeeds(unsigned int prim_id, struct Speeds& speeds);
-    
-    /**
      * Calculates the discrete angle to the passed non-discrete one.
      */
     int calcDiscreteEndOrientation(double yaw_rad);
+    
+    /**
+     * Each prim id has been assigned a speed value.
+     * Currently one speed is used, just inverted for backward movements.
+     */
+    bool getSpeed(unsigned int const prim_id, double& speed);
 };
 
 } // end namespace motion_planning_libraries

@@ -50,14 +50,13 @@ bool OmplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
     ompl::base::RealVectorBounds cbounds(2);
     // Requires a control-planner.
     
-    // Uses the average turning speed.
-    double turning_speed = (mConfig.mSpeeds.mSpeedTurn + mConfig.mSpeeds.mSpeedPointTurn) / 2.0;
+    double turning_speed = mConfig.mMobility.mTurningSpeed;
     if(turning_speed == 0) {
         LOG_WARN("Rotational velocity of zero is not allowed, abort");
         return false;
     }
-    cbounds.setLow(0, -mConfig.mSpeeds.mSpeedBackward);
-    cbounds.setHigh(0, mConfig.mSpeeds.mSpeedForward);
+    cbounds.setLow(0, -mConfig.mMobility.mSpeed);
+    cbounds.setHigh(0, mConfig.mMobility.mSpeed);
     cbounds.setLow(1, -turning_speed);
     cbounds.setHigh(1, turning_speed);
     mpControlSpace->as<ompl::control::RealVectorControlSpace>()->setBounds(cbounds);

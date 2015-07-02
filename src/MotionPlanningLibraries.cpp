@@ -452,9 +452,14 @@ std::vector<base::Waypoint> MotionPlanningLibraries::getPathInWorld() {
     return path;
 }
 
-std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(double speed) {
+std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld() {
     
     std::vector<base::Trajectory> trajectories;
+    
+    if(mConfig.mMobility.mSpeed == 0) {
+        LOG_WARN("No speed has been defined within the mobility struct, trajectory will be empty");
+        return trajectories;
+    }
    
     double use_this_speed = 0.0;
     double last_speed = nan("");
@@ -465,36 +470,10 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(doub
     last_position[0] = last_position[1] = last_position[2] = nan("");
     
     std::vector<State>::iterator it = mPlannedPathInWorld.begin();  
-    // If the states contain speed values they will be used (can be checked by checking the first state).
-    // So for each different forward and backward speed a single tranjectory will be created.
-    // Otherwise just a single trajectory will be created using the passed speed parameter.
-    bool create_one_trajectory_with_one_speed = !it->mSpeeds.isSet();
-    if( create_one_trajectory_with_one_speed) {
-        LOG_DEBUG("Creates one trajectory with speed %4.2f", speed);
-    } else {
-        LOG_DEBUG("Trajectories use the speed of the planner library");
-    }
-    
     for(;it != mPlannedPathInWorld.end(); it++) {
-        if(create_one_trajectory_with_one_speed) {
-            use_this_speed = speed;
-        } else if(it->mSpeeds.isSet()) { // Just regards states with new, not-empty speeds. 
-            // Forward and backward speed are not allowed to be set at the same time.
-            if(it->mSpeeds.mSpeedForward && it->mSpeeds.mSpeedBackward) {
-                LOG_ERROR("Trajetory cannot be created properly, forward and backward speed are set (%4.2f, %4.2f)!", 
-                        it->mSpeeds.mSpeedForward, it->mSpeeds.mSpeedBackward);
-                return std::vector<base::Trajectory>();
-            }
-            use_this_speed = it->mSpeeds.mSpeedForward + it->mSpeeds.mSpeedBackward;
-            // TODO Temp. fix: In case of a pointturn speed would be 0, which is not 
-            // accepted by the current follower.
-            if(use_this_speed == 0) {
-                LOG_WARN("Speed would be zero, set to %4.2f", mConfig.mSpeeds.mSpeedForward);
-                use_this_speed = mConfig.mSpeeds.mSpeedForward;
-            }
-            LOG_DEBUG("New trajectory speed: %4.2f", use_this_speed);
+        if(!isnan(it->mSpeed)) {
+            use_this_speed = it->mSpeed;
         }
-        
         // Add positions to path.
         base::Vector3d position = it->getPose().position;
         // Prevents to add the same position consecutively, otherwise
@@ -505,8 +484,10 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(doub
         } 
         last_position = position;
         
-        // For each new speed a new trajectory will be created (if already points have been added)
-        if(use_this_speed != last_speed && path.size() > 1) {
+        // For each new speed a new trajectory will be created (if already more than one point have been added)
+        // If the last point have been reached a trajectory will be created with all the remaining points
+        // (or all points if only one speed has been used).
+        if((use_this_speed != last_speed && path.size() > 1) || it+1 == mPlannedPathInWorld.end()) {
             LOG_DEBUG("Add trajectory with speed: %4.2f", last_speed);
             base::Trajectory trajectory;
             trajectory.speed = last_speed;  
@@ -529,6 +510,7 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(doub
         last_speed = use_this_speed;
     }   
     
+    /*
     // Create a trajectory with all remaining points or actually all points
     // if only one speed has been used.
     // Last point does not contain any speed (endpoint), so the path should at
@@ -544,11 +526,11 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld(doub
         }
         trajectories.push_back(trajectory);
     }
-            
+    */      
     return trajectories;
 }
 
-std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorld(double speed) {
+std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorld() {
     
     if(mPlannedPathInWorld.size() == 0) {
         LOG_WARN("No path available, escape trajectory cannot be created");
@@ -560,7 +542,7 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorl
         return std::vector<base::Trajectory>();
     }
     
-    std::vector<base::Trajectory> trajectories = getTrajectoryInWorld(speed);
+    std::vector<base::Trajectory> trajectories = getTrajectoryInWorld();
     std::vector<base::Trajectory> inverted_trajectories;
     GridCalculations grid_calc;
     grid_calc.setTravGrid(mpTravGrid, mpTravData);
@@ -657,9 +639,9 @@ void MotionPlanningLibraries::printPathInWorld() {
         printf("%s %s %s %s %s %s %s\n", "       #", "       X", "       Y",
                 "       Z", "   THETA", " PRIM ID", "  SPEEDS");
         for(; it != waypoints.end() && it_state != mPlannedPathInWorld.end(); it++, counter++, it_state++) {
-            printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2d %s\n", counter, 
+            printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2d %4.2f\n", counter, 
                     it->position[0], it->position[1], it->position[2], 
-                    it->heading, it_state->mSBPLPrimId, it_state->mSpeeds.toString().c_str()
+                    it->heading, it_state->mSBPLPrimId, it_state->mSpeed
                   );
         }
     } 

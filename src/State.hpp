@@ -37,7 +37,7 @@ struct State {
     int mSBPLPrimId;
     // Contains the speeds which belong to the primitive.
     // Like the id only used for the first state of each primitive.
-    Speeds mSpeeds;
+    double mSpeed;
     
     State() {
         mPose.initUnknown();
@@ -46,18 +46,21 @@ struct State {
         mStateType = STATE_EMPTY;
         mFootprintRadius = 0.0;
         mSBPLPrimId = -1;
+        mSpeed = nan("");
     }
 
     State(base::samples::RigidBodyState rbs) : mPose(rbs) {
         mStateType = STATE_POSE;
         mFootprintRadius = 0.0;
         mSBPLPrimId = -1;
+        mSpeed = nan("");
     }
     
     State(base::samples::RigidBodyState rbs, double footprint_radius) : 
             mPose(rbs), mFootprintRadius(footprint_radius) {
         mStateType = STATE_POSE;
         mSBPLPrimId = -1;
+        mSpeed = nan("");
     }
     
     State(std::vector<double> joint_angles) : mJointAngles(joint_angles) {
@@ -67,6 +70,7 @@ struct State {
         mFootprintRadius = 0.0;
         mStateType = STATE_ARM;
         mSBPLPrimId = -1;
+        mSpeed = nan("");
     }
     
     enum StateType getStateType() {

@@ -13,17 +13,15 @@ int main(int argc, char** argv)
     using namespace motion_planning_libraries;
     
     struct MotionPrimitivesConfig config;
-    config.mSpeeds.mSpeedForward = 1.0;
-    config.mSpeeds.mSpeedBackward = 0.8;
-    config.mSpeeds.mSpeedLateral = 0.0;
-    config.mSpeeds.mSpeedTurn = 0.4;
-    config.mSpeeds.mSpeedPointTurn = 0.0;
+    config.mMobility.mSpeed = 1.0;
+    config.mMobility.mTurningSpeed = 0.1;
+    config.mMobility.mMinTurningRadius = 1.0;
     
-    config.mSpeeds.mMultiplierForward = 1;
-    config.mSpeeds.mMultiplierBackward = 5;
-    config.mSpeeds.mMultiplierLateral = 10;
-    config.mSpeeds.mMultiplierTurn = 2;
-    config.mSpeeds.mMultiplierPointTurn = 8;
+    config.mMobility.mMultiplierForward = 1;
+    config.mMobility.mMultiplierBackward = 2;
+    config.mMobility.mMultiplierLateral = 3;
+    config.mMobility.mMultiplierForwardTurn = 4;
+    config.mMobility.mMultiplierPointTurn = 5;
     
     config.mNumPrimPartition = 2;
     config.mNumPosesPerPrim = 10;

@@ -49,17 +49,15 @@ BOOST_FIXTURE_TEST_SUITE( s, Fixture )
 BOOST_AUTO_TEST_CASE(sbpl_mprims)
 {
     struct MotionPrimitivesConfig config;
-    config.mSpeeds.mSpeedForward = 1.0;
-    config.mSpeeds.mSpeedBackward = 1.0;
-    config.mSpeeds.mSpeedLateral = 0.0;
-    config.mSpeeds.mSpeedTurn = 0.1;
-    config.mSpeeds.mSpeedPointTurn = 0.1;
+    config.mMobility.mSpeed = 1.0;
+    config.mMobility.mTurningSpeed = 0.1;
+    config.mMobility.mMinTurningRadius = 1.0;
     
-    config.mSpeeds.mMultiplierForward = 1;
-    config.mSpeeds.mMultiplierBackward = 2;
-    config.mSpeeds.mMultiplierLateral = 3;
-    config.mSpeeds.mMultiplierTurn = 4;
-    config.mSpeeds.mMultiplierPointTurn = 5;
+    config.mMobility.mMultiplierForward = 1;
+    config.mMobility.mMultiplierBackward = 2;
+    config.mMobility.mMultiplierLateral = 3;
+    config.mMobility.mMultiplierForwardTurn = 4;
+    config.mMobility.mMultiplierPointTurn = 5;
     
     config.mNumPrimPartition = 2;
     config.mNumPosesPerPrim = 10;

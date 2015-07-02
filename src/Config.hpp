@@ -62,71 +62,77 @@ enum MplErrors {
 };
 
 /**
- * All speeds should be >= 0, multipliers have to be >=1.
- * 
+ * Describes the mobility of the system.
+ * If a speed has been defined it will be used to define the 
+ * forward/backward speed for the trajectory.
+ * The minimal turning radius is used to create valid curves.
+ * The multipliers are used by SBPL during planning. In addition
+ * if a multiplier is set to 0 this movement will be deactivated.
  */
-struct Speeds {
+struct Mobility {
     
-    double mSpeedForward; // m/sec.
-    double mSpeedBackward; // m/sec., positive value!
-    double mSpeedLateral; // m/sec.
-    double mSpeedTurn; // rad/sec.
-    double mSpeedPointTurn; // rad/sec.
+    // Defines the forward/backward speed of the system which will be assigned
+    // to the trajectory.
+    double mSpeed; // m/sec.
+    // Used for cost calculations.
+    double mTurningSpeed; // rad/sec
+    // If > 0 allows to specify the minimal turning radius of the system in meter.
+    // Without this not valid curves may be created.
+    double mMinTurningRadius; 
+    // Multipliers: Allows to define multipliers for each movement (used by SBPL).
+    // If a multiplier is set to 0, this movement type will be deactivated.
     unsigned int mMultiplierForward;
     unsigned int mMultiplierBackward;
     unsigned int mMultiplierLateral;
-    unsigned int mMultiplierTurn;
+    unsigned int mMultiplierForwardTurn;
     unsigned int mMultiplierBackwardTurn;
     unsigned int mMultiplierPointTurn;
-    // If > 0 allows to specify the minimal turning radius of the system.
-    // Without this not valid curves may be created, especially with higher values 
-    // for mNumPrimPartition.
-    double mMinTurningRadius; 
-    // The speed is not allowed to drop below this value.
-    // If > 0 this parameter takes care that the forward speed 
-    // during a turn does not drop below this border.
-    double mMinSpeed;
     
-    Speeds() : 
-           mSpeedForward(0.0),
-           mSpeedBackward(0.0),
-           mSpeedLateral(0.0),
-           mSpeedTurn(0.0),
-           mSpeedPointTurn(0.0),
-           mMultiplierForward(1),
-           mMultiplierBackward(1),
-           mMultiplierLateral(1),
-           mMultiplierTurn(1),
-           mMultiplierBackwardTurn(1),
-           mMultiplierPointTurn(1),
+    Mobility() : 
+           mSpeed(0.0),
+           mTurningSpeed(0.0),
            mMinTurningRadius(0.0),
-           mMinSpeed(0.0) {
+           mMultiplierForward(0),
+           mMultiplierBackward(0),
+           mMultiplierLateral(0),
+           mMultiplierForwardTurn(0),
+           mMultiplierBackwardTurn(0),
+           mMultiplierPointTurn(0) {
     }
     
-    Speeds(double forward, double backward, double lateral, double turn, double pointturn, double turning_radius=0.0) :
-            mSpeedForward(forward), mSpeedBackward(backward), mSpeedLateral(lateral), 
-            mSpeedTurn(turn), mSpeedPointTurn(pointturn), mMinTurningRadius(turning_radius) {
+    Mobility(double speed, double turning_speed, double min_turning_radius, 
+             unsigned int mult_forward=0, 
+             unsigned int mult_backward=0, 
+             unsigned int mult_lateral=0, 
+             unsigned int mult_forward_turn=0, 
+             unsigned int mult_backward_turn=0, 
+             unsigned int mult_pointturn=0) :
+            mSpeed(speed), 
+            mTurningSpeed(turning_speed),
+            mMinTurningRadius(min_turning_radius),
+            mMultiplierForward(mult_forward), 
+            mMultiplierBackward(mult_backward),
+            mMultiplierLateral(mult_lateral), 
+            mMultiplierForwardTurn(mult_forward_turn), 
+            mMultiplierBackwardTurn(mult_backward_turn),
+            mMultiplierPointTurn(mult_pointturn) {
     }
     
-    // Checks if any speed value has been set.
+    // Checks if any movement type has been set.
     bool isSet() {
-        return (mSpeedForward != 0 || mSpeedBackward != 0 || 
-                mSpeedLateral != 0 || mSpeedTurn != 0 || 
-                mSpeedPointTurn != 0);
+        return (mMultiplierForward || mMultiplierBackward || mMultiplierLateral || 
+                mMultiplierForwardTurn || mMultiplierBackwardTurn || mMultiplierPointTurn);
     }
     
     std::string toString() {
-        if(!isSet()) {
-            return "";
-        } else {
-            std::stringstream ss;
-            ss << "F B L T PT: " << std::setw(8) << std::setprecision(3) << mSpeedForward << " " <<
-                    std::setw(8) << std::setprecision(3) << mSpeedBackward << " " << 
-                    std::setw(8) << std::setprecision(3) << mSpeedLateral << " " << 
-                    std::setw(8) << std::setprecision(3) << mSpeedTurn << " " << 
-                    std::setw(8) << std::setprecision(3) << mSpeedPointTurn;
-            return ss.str();
-        }
+        std::stringstream ss;
+        ss << "Speed: " << mSpeed << ", Min Turning Radius: " << mMinTurningRadius << 
+                ", Multipliers (F B L FT BT PT): " << 
+                mMultiplierForward << " " << mMultiplierBackward << " " << 
+                mMultiplierLateral << " " << mMultiplierForwardTurn << " " << 
+                mMultiplierBackwardTurn << " " << mMultiplierPointTurn << std::endl; 
+
+        return ss.str();
     }
 };
 
@@ -144,7 +150,7 @@ struct Config {
             mReplanOnNewStartPose(false),
             mReplanMinDistStartGoal(0.0),
             mMaxAllowedSampleDist(-1),
-            mSpeeds(),
+            mMobility(),
             mFootprintRadiusMinMax(0,0),  
             mFootprintLengthMinMax(0,0),
             mFootprintWidthMinMax(0,0),
@@ -187,7 +193,7 @@ struct Config {
     double mMaxAllowedSampleDist;
     
     // NAVIGATION
-    struct Speeds mSpeeds;
+    struct Mobility mMobility;
     
     // FOOTPRINT
     // Either a radius or a rectangle has to be defined. If the system cannot adapt it's
