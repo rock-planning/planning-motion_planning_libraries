@@ -162,6 +162,7 @@ struct Config {
             mSBPLForwardSearch(true),
             mNumIntermediatePoints(0),
             mNumPrimPartition(2),
+            mPrimAccuracy(0.25),
             mJointBorders() {
        if(mNumPrimPartition < 1) {
            LOG_WARN("Number of sub-primitives (mNumPrimPartition) has to be at least 1 ");
@@ -218,6 +219,8 @@ struct Config {
     unsigned int mNumIntermediatePoints;
     // Each primitive is divided into sub-movements.
     unsigned int mNumPrimPartition;
+    // Max distance in grids from the reached end position to the next discrete one.
+    double mPrimAccuracy;
     
     // ARM MOTION PLANNING
     // defines the number and borders of the joints.  <low,high> in rad

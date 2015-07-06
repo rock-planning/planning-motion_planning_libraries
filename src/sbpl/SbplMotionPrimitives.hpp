@@ -69,7 +69,8 @@ struct MotionPrimitivesConfig {
         mNumAngles(16),
         mMapWidth(trav_map_width),
         mMapHeight(trav_map_height),
-        mGridSize(grid_size) {   
+        mGridSize(grid_size),
+        mPrimAccuracy(config.mPrimAccuracy) {   
     }   
     
   public:
@@ -82,6 +83,7 @@ struct MotionPrimitivesConfig {
     unsigned int mMapWidth;
     unsigned int mMapHeight;
     double mGridSize; // Width/length of a grid cell in meter.
+    double mPrimAccuracy;
 };
 
 /**
@@ -245,6 +247,11 @@ struct SbplMotionPrimitives {
      * Currently one speed is used, just inverted for backward movements.
      */
     bool getSpeed(unsigned int const prim_id, double& speed);
+    
+    bool calculateOrthogonalIntersection(
+        base::samples::RigidBodyState start_pose, 
+        base::samples::RigidBodyState end_pose,
+        base::Vector3d& cof);
 };
 
 } // end namespace motion_planning_libraries
