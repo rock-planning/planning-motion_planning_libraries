@@ -159,6 +159,32 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
         
             // Add transformer containing the spehere and the triangle to the passed group.
             group->addChild(transform);
+
+            if(it->mMovType == motion_planning_libraries::MOV_FORWARD_TURN || 
+                    it->mMovType == motion_planning_libraries::MOV_BACKWARD_TURN) {
+                // Adds a circle for the center of rotation.
+                osg::ref_ptr<osg::Geode> geode_cof = new osg::Geode();
+                
+                double x_cof = it->mCenterOfRotation[0] * primitives.mConfig.mGridSize;
+                double y_cof = it->mCenterOfRotation[1] * primitives.mConfig.mGridSize;
+                osg::ref_ptr<osg::Sphere> sp_cof = new osg::Sphere(osg::Vec3d(x_cof, y_cof, 0), mRadiusEndpoints);
+                osg::ref_ptr<osg::ShapeDrawable> sd_cof = new osg::ShapeDrawable(sp_cof.get());
+                sd_cof->setColor(color);
+                geode_cof->addDrawable(sd_cof.get());
+                
+                // Adds a line from the cof to the end point.
+                osg::ref_ptr<osg::Geometry> cof_geometry = new osg::Geometry();
+                osg::ref_ptr<osg::Vec3Array> cof_vertices = new osg::Vec3Array();
+                cof_vertices->push_back(osg::Vec3(x_cof, y_cof, 0));
+                cof_vertices->push_back(osg::Vec3(x, y, 0));
+                cof_geometry->setVertexArray(cof_vertices);
+                cof_geometry->setColorArray(colors);
+                cof_geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+                cof_geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,2));
+                geode_cof->addDrawable(cof_geometry);
+                
+                group->addChild(geode_cof);
+            }
         }
         
         // Draw intermediate lines representing the mprim within the world.

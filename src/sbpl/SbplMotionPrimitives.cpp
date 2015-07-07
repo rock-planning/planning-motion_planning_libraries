@@ -205,6 +205,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
     base::Vector3d turned_end_position;
     double theta_tmp = 0.0;
     double max_dist_to_center_grids = 100;
+    double increase_value_grids = 0.1;
     
     assert(mConfig.mNumAngles != 0);
     
@@ -239,6 +240,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
             std::set< struct Triple > reached_end_positions;
             int prims_added = 0;
             base::Vector3d scaled_center_of_rotation;
+            scaled_center_of_rotation.setZero();
             
             while(prims_added < mConfig.mNumPrimPartition) {
                 // For each base prim mNumPrimPartition primitives should be created.
@@ -256,7 +258,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                     case MOV_LATERAL: {
                         discrete_end_pose = turned_end_position * (1.0 + d);
                         discrete_angle = angle;
-                        d += 0.1;
+                        d += increase_value_grids;
                         break;
                     }
                     // Increaes the angle by one discrete step in one direction.
@@ -276,7 +278,8 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                         double angle_rad = current_discrete_angle * theta_tmp * mRadPerDiscreteAngle;
                         ss << "Turning angle in rad " << angle_rad << std::endl;
                         // TODO Scaling depends of the initial turning radius length, always small steps should be used
-                        scaled_center_of_rotation = turned_center_of_rotation  * (1.0 + d);
+                        double scale_factor = (turned_center_of_rotation.norm() + d) / turned_center_of_rotation.norm();
+                        scaled_center_of_rotation = turned_center_of_rotation  * scale_factor;
                         ss << "Scaled center of rotation " << scaled_center_of_rotation.transpose() << std::endl;
                         discrete_end_pose -= scaled_center_of_rotation;
                         discrete_end_pose = Eigen::AngleAxis<double>(angle_rad, Eigen::Vector3d::UnitZ()) * discrete_end_pose;
@@ -289,7 +292,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                         // Test from small to large angles and increases the vector length afterwards.
                         if(current_discrete_angle > upper_discrete_angle) {
                             current_discrete_angle = 1;//upper_discrete_angle;
-                            d += 0.1;
+                            d += increase_value_grids;
                         }
                         break;
                     }
