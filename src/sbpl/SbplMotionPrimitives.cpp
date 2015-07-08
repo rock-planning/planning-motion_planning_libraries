@@ -299,8 +299,8 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                     }
                 }
                 
-                discrete_end_pose_rounded[0] = std::round(discrete_end_pose[0]);
-                discrete_end_pose_rounded[1] = std::round(discrete_end_pose[1]);
+                discrete_end_pose_rounded[0] = round(discrete_end_pose[0]);
+                discrete_end_pose_rounded[1] = round(discrete_end_pose[1]);
                 // Stores diff between rounded and not rounded end pose and calculates
                 // the value of the position (distance to the next discrete grid cell).
                 base::Vector3d diff_end_to_rounded = discrete_end_pose_rounded - discrete_end_pose;
