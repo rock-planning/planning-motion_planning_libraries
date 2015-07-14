@@ -248,10 +248,17 @@ struct SbplMotionPrimitives {
      */
     bool getSpeed(unsigned int const prim_id, double& speed);
     
+    /**
+     * Calculates the center of rotation for the new discretized end position.
+     * Transforms the end pose into the start frame and
+     * calculates the intersection of the orthogonal line of the end pose
+     * with the y-axis. This takes care that we reach the end position
+     * with the correct discrete angle.
+     */
     bool calculateOrthogonalIntersection(
-        base::samples::RigidBodyState start_pose, 
-        base::samples::RigidBodyState end_pose,
-        base::Vector3d& cof);
+        base::Vector3d start_position, double start_theta_rad, 
+        base::Vector3d end_position, double end_theta_rad,
+        base::Vector3d& cof_grids);
 };
 
 } // end namespace motion_planning_libraries

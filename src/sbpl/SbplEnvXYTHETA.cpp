@@ -126,6 +126,9 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
                     mprim_file.c_str(),
                     e->what());
             return false;
+        } catch ( ... ) {
+             LOG_ERROR("EnvironmentNAVXYTHETAMLEVLAT initialization: catched a exception");
+             return false;
         }
         std::cout << "SBPL Init done!" << std::endl;
     }

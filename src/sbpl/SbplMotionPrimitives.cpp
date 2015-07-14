@@ -277,9 +277,12 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                         // theta_tmp defines the turning direction.
                         double angle_rad = current_discrete_angle * theta_tmp * mRadPerDiscreteAngle;
                         ss << "Turning angle in rad " << angle_rad << std::endl;
-                        // TODO Scaling depends of the initial turning radius length, always small steps should be used
-                        double scale_factor = (turned_center_of_rotation.norm() + d) / turned_center_of_rotation.norm();
-                        scaled_center_of_rotation = turned_center_of_rotation  * scale_factor;
+                        // TODO Scaling depends of the initial turning radius length, always small steps should be used.
+                        // Actually minRadius dependent scaling takes care that less sharper curves are created.
+                        //double scale_factor = (turned_center_of_rotation.norm() + d) / turned_center_of_rotation.norm();
+                        //scaled_center_of_rotation = turned_center_of_rotation  * scale_factor;
+                        scaled_center_of_rotation = turned_center_of_rotation  * (1.0 + d);
+                        
                         ss << "Scaled center of rotation " << scaled_center_of_rotation.transpose() << std::endl;
                         discrete_end_pose -= scaled_center_of_rotation;
                         discrete_end_pose = Eigen::AngleAxis<double>(angle_rad, Eigen::Vector3d::UnitZ()) * discrete_end_pose;
@@ -302,6 +305,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                     }
                 }
                 
+                // TODO End to start transformation and use ceiling(), to avoid getting sharper curves? 
                 discrete_end_pose_rounded[0] = round(discrete_end_pose[0]);
                 discrete_end_pose_rounded[1] = round(discrete_end_pose[1]);
                 // Stores diff between rounded and not rounded end pose and calculates
@@ -311,13 +315,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                 
                 ss << "New discrete end pose " << discrete_end_pose_rounded.transpose() << 
                         ", discrete_angle " << discrete_angle << ", value " << value_end_position << std::endl; 
-                        
-                // Due to discretization we have to adapt the the center of rotation.
-                // Otherwise the orientation in the end pose may not match a discrete one anymore.
-                // For that we have to find the intersection of the orthogonal lines of start and end pose.
-                // First Transform end to start.
-                        
-                        
+     
                 // Used to check the curves: Turned back discrete end position have 
                 // to be on the same side like the center of rotation and greater 0.
                 base::Vector3d discrete_pose_rotate_back;
@@ -349,17 +347,38 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                 
                 // If dist to center exceeds a certain value we have to skip.
                 if(discrete_end_pose.norm() > max_dist_to_center_grids) {
-                    ss << "Primitive becomes too long, only " << prims_added << 
-                            " prims have been found for angle " << angle << " / prim id " << id << std::endl;
+                    LOG_WARN("Primitive becomes too long, only %d prims have been found for angle %d / id %d\n", 
+                             prims_added, angle, id);
                     break;
                 }
                 
+                // If it is a turn and if the end position has been changed due to discretization 
+                // we have to adapt the center of rotation.
+                // Otherwise the orientation in the end pose may not match a discrete one anymore.
+                // For that we have to find the intersection of the orthogonal lines of start and end pose.
+                // TODO Does not work yet
+                /*
+                if((it->mMovType == MOV_FORWARD_TURN || it->mMovType == MOV_BACKWARD_TURN) && value_end_position > 0) {
+                    base::Vector3d correted_cof;     
+                    bool orthogonal_intersection = calculateOrthogonalIntersection(
+                            base::Vector3d(0,0,0), angle * mRadPerDiscreteAngle,
+                            discrete_end_pose_rounded, discrete_angle * mRadPerDiscreteAngle,
+                            correted_cof);
+                    if(!orthogonal_intersection) {
+                        LOG_WARN("Current primitive %d for angle %d is a line not a curve and will be ignored\n", id, angle);
+                        continue;
+                    } 
+                    scaled_center_of_rotation = correted_cof;   
+                }
+                */
+                      
                 // Prim not already added?   
                 std::pair<std::set< struct Triple >::iterator,bool> set_ret;
                 set_ret = reached_end_positions.insert(Triple((int)discrete_end_pose_rounded[0], 
                         (int)discrete_end_pose_rounded[1], discrete_angle));
                 if(set_ret.second) { // New element inserted.
                     ss << "New primitive added" << std::endl;
+                            
                     Primitive prim_discrete(id, angle, discrete_end_pose_rounded, it->mCostMultiplier, it->mMovType);
                     // The orientation of the discrete endpose still can exceed the borders 0 to mNumAngles.
                     // We will store this for the intermediate point calculation, but the orientation
@@ -427,7 +446,7 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
         theta_step = (discrete_rot_diff * mRadPerDiscreteAngle) / ((double)mConfig.mNumPosesPerPrim-1);
         
         if(it->mMovType == MOV_FORWARD_TURN || it->mMovType == MOV_BACKWARD_TURN) {
-            // Transform center of rotatin to grid local.
+            // Transform center of rotatin to grid local.calculateOrthogonalIntersection
             center_of_rotation_local[0] = it->mCenterOfRotation[0] * mConfig.mGridSize;
             center_of_rotation_local[1] = it->mCenterOfRotation[1] * mConfig.mGridSize;
             center_of_rotation_local[2] = 0;
@@ -462,11 +481,7 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
             // Add the direction of rotation.
             angle = discrete_rot_diff < 0 ? -angle : angle; 
             angle_delta = angle / ((double)mConfig.mNumPosesPerPrim-1);
-            
-            // TODO Use the old discrete angles for the intermediate orientation.
-            // E.g even if we get 92° due to the discretization we turn from 0 to 90 degree.
-            // So we will get along the curve small orientation errors but at start and end the correct orientation.
-            
+                       
             ss << "Angle between vectors: " << angle << ", angle delta " << angle_delta << std::endl;
         }
         
@@ -508,6 +523,7 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
                     // TODO Hack, just to check the end orientation problem due to discretization.
                     // Problem: There may be no circle between the start and the discretized end pose.
                     // Actually we have to use a straight line and a circle.
+                    // Remove as soon as calculateOrthogonalIntersection works.
                     if(i == mConfig.mNumPosesPerPrim -1 ) {
                         intermediate_pose[2] = it->mEndPose[2] * mRadPerDiscreteAngle;
                     } else {
@@ -625,21 +641,28 @@ bool SbplMotionPrimitives::getSpeed(unsigned int const prim_id, double& speed) {
     return true;
 }
 
-// TODO TEST!
+// TODO Does not work yet!
 bool SbplMotionPrimitives::calculateOrthogonalIntersection(
-        base::samples::RigidBodyState start_pose, 
-        base::samples::RigidBodyState end_pose,
-        base::Vector3d& cof) {
+        base::Vector3d start_position, double start_theta_rad, 
+        base::Vector3d end_position, double end_theta_rad,
+        base::Vector3d& cof_grids) {
+    
+    base::samples::RigidBodyState start_pose_rbs;
+    start_pose_rbs.position = start_position;
+    start_pose_rbs.orientation = Eigen::AngleAxis<double>(start_theta_rad, Eigen::Vector3d::UnitZ());
+    base::samples::RigidBodyState end_pose_rbs;
+    end_pose_rbs.position = end_position;
+    end_pose_rbs.orientation = Eigen::AngleAxis<double>(end_theta_rad, Eigen::Vector3d::UnitZ());
     
     base::Affine3d start2end, end2start;
     
-    start2end = start_pose.getTransform();
+    start2end = start_pose_rbs.getTransform();
     end2start = start2end.inverse();
     
     // Calculates end pose within the start frame.
-    end_pose.setTransform(end2start * end_pose.getTransform());
+    end_pose_rbs.setTransform(end2start * end_pose_rbs.getTransform());
     
-    double theta_end = end_pose.getYaw();
+    double theta_end = end_pose_rbs.getYaw();
     if(theta_end == 0) {
         LOG_WARN("Intersection not possible\n");
         return false;
@@ -649,14 +672,14 @@ bool SbplMotionPrimitives::calculateOrthogonalIntersection(
     // Create orthogonal line.
     base::Vector3d ortho_vec(1,0,0);
     ortho_vec = Eigen::AngleAxis<double>(rot, Eigen::Vector3d::UnitZ()) * ortho_vec;
-    ortho_vec += end_pose.position;
+    ortho_vec += end_pose_rbs.position;
     
-    double t = -end_pose.position[0] / ortho_vec[0];
-    
-    base::Vector3d cof_tmp = end_pose.position + t * ortho_vec;
+    // Solves 0 = end_position_vec_x + t * directional_vector_x
+    double t = -end_pose_rbs.position[0] / ortho_vec[0];
+    base::Vector3d cof_tmp = end_pose_rbs.position + t * ortho_vec;
     
     // Transform back to base.
-    cof = start2end * cof_tmp;
+    cof_grids = start2end * cof_tmp;
     
     return true;
 }
