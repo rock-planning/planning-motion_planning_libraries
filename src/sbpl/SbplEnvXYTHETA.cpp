@@ -268,6 +268,8 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
         }
         state.mPose.orientation =  Eigen::AngleAxis<double>(theta_rad, base::Vector3d(0,0,1));
         
+        state.mSBPLPrimId = *it;
+        
         if(mConfig.mNumIntermediatePoints == 0) {
             path.push_back(state);
         }
@@ -315,19 +317,14 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
     std::vector<struct State>::iterator it_state = path.begin();
     unsigned int prim_id = 0;
     
-    // Counter to increase the state iterator.
-    int inc_state = 1;
-    if(mConfig.mNumIntermediatePoints > 0) {
-        inc_state = mPrims->mConfig.mNumPosesPerPrim;
-    }
-    
     LOG_INFO("Path consist of %d poses / %d primitives (each primitive contains %d poses)", 
             path.size(), action_list.size(), mPrims->mConfig.mNumPosesPerPrim);
+    
     
     // Runs through all states and assigns the prim id and its speed values
     // to the first state of each primitive.
     // If a mprim file is used mPrims may be NULL!
-    for(;it_state < path.end() && it_action < action_list.end(); it_state += inc_state, it_action++) {
+    for(;it_action < action_list.end(); it_action++) {
         prim_id = it_action->aind;
         double speed;
         
@@ -340,8 +337,16 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
             }
         }
         
-        it_state->mSBPLPrimId = prim_id;
-        it_state->mSpeed = speed;
+        
+        for (int ipind = 0; ipind < ((int)it_action->intermptV.size()) - 1; ipind++) {
+            if(it_state == path.end())
+            {
+                throw std::runtime_error("Error, path to action mismatch");
+            }
+            it_state->mSBPLPrimId = prim_id;
+            it_state->mSpeed = speed;
+            it_state++;
+        }
     }
     
     return true;
