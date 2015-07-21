@@ -33,7 +33,7 @@ enum MovementType {
     MOV_LATERAL
 };
 
-// TODO Add OMPL planners
+/// \todo "Add OMPL planners"
 enum Planners {
     UNDEFINED_PLANNER, // Let the environment decide.
     ANYTIME_DSTAR, // AD*
@@ -80,7 +80,7 @@ struct Mobility {
     // Without this not valid curves may be created.
     double mMinTurningRadius; 
     // Multipliers: Allows to define multipliers for each movement (used by SBPL).
-    // If a multiplier is set to 0, this movement type will be deactivated.
+    // If a multiplier is set to 0, this movement type will be deaAbstractMotionPlanningLibraryctivated.
     unsigned int mMultiplierForward;
     unsigned int mMultiplierBackward;
     unsigned int mMultiplierLateral;
@@ -139,7 +139,7 @@ struct Mobility {
 /**
  *  Contains the configuration for all planning libraries.
  *  Just ignore the non relevant parameters.
- * TODO: Split into PlanningConfig and RobotConfig
+ * \todo "Split into PlanningConfig and RobotConfig?"
  */
 struct Config {
     Config() : mPlanningLibType(LIB_SBPL), 
@@ -149,7 +149,6 @@ struct Config {
             mReplanDuringEachUpdate(false),
             mReplanOnNewStartPose(false),
             mReplanMinDistStartGoal(0.0),
-            mMaxAllowedSampleDist(-1),
             mMobility(),
             mFootprintRadiusMinMax(0,0),  
             mFootprintLengthMinMax(0,0),
@@ -157,6 +156,7 @@ struct Config {
             mNumFootprintClasses(10),
             mTimeToAdaptFootprint(40.0),
             mAdaptFootprintPenalty(20.0),
+            mMaxAllowedSampleDist(-1),
             mSBPLEnvFile(),
             mSBPLMotionPrimitivesFile(), 
             mSBPLForwardSearch(true),
@@ -188,10 +188,6 @@ struct Config {
     // Especially for SBPL XYTHETA this parameter is meaningful by preventing unwanted 
     // circle paths.  
     double mReplanMinDistStartGoal;
-    // If mSearchUntilFirstSolution is set to false this parameter can be used to 
-    // define the maximal allowed distance between two samples.
-    // If it is set to a negative value or nan it will be ignored.
-    double mMaxAllowedSampleDist;
     
     // NAVIGATION
     struct Mobility mMobility;
@@ -209,6 +205,12 @@ struct Config {
     // If the footprint is changed this time (sec) will be added to the costs.
     double mAdaptFootprintPenalty;
     
+    // OMPL
+    // If mSearchUntilFirstSolution is set to false this parameter can be used to 
+    // define the maximal allowed distance between two samples.
+    // If it is set to a negative value or nan it will be ignored.
+    double mMaxAllowedSampleDist;
+     
     // SBPL
     std::string mSBPLEnvFile;
     std::string mSBPLMotionPrimitivesFile;

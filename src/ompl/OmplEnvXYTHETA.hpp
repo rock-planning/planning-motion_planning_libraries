@@ -51,7 +51,7 @@ class OmplEnvXYTHETA : public Ompl
     virtual bool fillPath(std::vector<struct State>& path, bool& pos_defined_in_local_grid);
     
  private:
-    // Definition of the ODE for the kinematic car. Calculates the delt/opt/software_transterra/install/log/planning/motion_planning_libraries-build.loga.
+    // Definition of the ODE for the kinematic car. Calculates the delta.
     static const void kinematicCarOde (const ompl::control::ODESolver::StateType& q, 
             const ompl::control::Control* control, 
             ompl::control::ODESolver::StateType& qdot)

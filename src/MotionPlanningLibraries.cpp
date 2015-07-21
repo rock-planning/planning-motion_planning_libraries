@@ -552,7 +552,7 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorl
     // Checks all cells within the radius.. can be very expensive.
     // Footprint radius is increased a little bit to add some extra safety distance.
     robot_max_radius_in_grid *= 1.2;
-    // TODO Could use false here, so that just the center and the border of the circle.
+    /// \todo "Could use false here, so that just the center and the border of the circle are used."
     grid_calc.setFootprintCircleInGrid(robot_max_radius_in_grid, true);
     LOG_DEBUG("Robot max radius %4.2f, min cell size %4.2f, robot max radius in grid %4.2f\n", 
             max_radius, min_cell_size, robot_max_radius_in_grid);
@@ -741,7 +741,7 @@ bool MotionPlanningLibraries::grid2world(envire::TraversabilityGrid const* trav,
     
     // Transformation GRID2LOCAL       
     //trav->fromGrid(x_grid, y_grid, x_local, y_local);
-    // TODO Is it ok: Do not use fromGrid() to avoid shifting to the cell center.
+    /// \todo "Check if it is it ok: Do not use fromGrid() to avoid shifting to the cell center."
     x_local = x_grid * trav->getScaleX() + trav->getOffsetX();
     y_local = y_grid * trav->getScaleY() + trav->getOffsetY();
     

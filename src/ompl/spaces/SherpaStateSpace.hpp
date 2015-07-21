@@ -67,9 +67,6 @@ public:
         }
     };
 
-    /**
-     * TODO Set longest valid fraction?
-     */
     SherpaStateSpace(Config config = Config()) : ompl::base::CompoundStateSpace(),
             mConfig(config)
     {

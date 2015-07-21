@@ -58,7 +58,6 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
         
         // If no mprim file is specified it will be generated using the available
         // speed informations.
-        // TODO test
         if(mprim_file.empty()) {
             LOG_INFO("No sbpl mprim file specified, it will be generated");
             assert(scale_x == scale_y);
@@ -286,7 +285,6 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
     // are already adapted to (-PI,PI].
     if(mConfig.mNumIntermediatePoints > 0) {         
         // The returned path is already transformed to grid-local.   
-        // TODO Does not support all states, e.g. got 16 ids but just supports 14 waypoints.
         env_xytheta->ConvertStateIDPathintoXYThetaPath(&path_ids, &path_xytheta);
         pos_defined_in_local_grid = true;
         

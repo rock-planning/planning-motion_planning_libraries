@@ -64,14 +64,13 @@ bool OmplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
     // Control space information inherits from base space informartion.
     mpControlSpaceInformation = ompl::control::SpaceInformationPtr(
             new ompl::control::SpaceInformation(mpStateSpace,mpControlSpace));
-    // TODO Test the other ODE solvers.
     mpODESolver = ompl::control::ODESolverPtr(
             new ompl::control::ODEAdaptiveSolver<> (mpControlSpaceInformation, &simpleOde));
     // setStatePropagator can also be used to define a post-propagator.
     mpControlSpaceInformation->setStatePropagator(
             ompl::control::ODESolver::getStatePropagator(mpODESolver, &postPropagate));
             
-    // TODO What does these methods do?
+    /// \todo "What does these methods do?"
     mpControlSpaceInformation->setPropagationStepSize(4);
     mpControlSpaceInformation->setMinMaxControlDuration(1,10);
 

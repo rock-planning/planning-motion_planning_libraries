@@ -35,7 +35,7 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
      * \param enable_motion_cost_interpolation Defines if only start and end state
      * are used for cost calculations or smaller intermediate steps. By default false.
      * Not required for correct collision detection.
-     * TODO Currently only the cost of the center of the robot is used.
+     * \todo "Currently only the cost of the center of the robot is used."
      */
     TravGridObjective(const ompl::base::SpaceInformationPtr& si, 
                         bool enable_motion_cost_interpolation,
@@ -103,7 +103,7 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
             }
         }
         
-        // TODO Assuming: only valid states are passed?
+        /// \todo "Assuming: only valid states are passed?"
         if(x < 0 || x >= mpTravGrid->getCellSizeX() || 
                 y < 0 || y >= mpTravGrid->getCellSizeY()) {
             LOG_WARN("Invalid state (%4.2f, %4.2f) has been passed and will be ignored", 

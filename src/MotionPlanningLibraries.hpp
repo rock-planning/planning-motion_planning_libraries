@@ -17,15 +17,122 @@ namespace motion_planning_libraries
 typedef envire::TraversabilityGrid::ArrayType TravData;
     
 /**
- * Allows x,y,theta path planning for navigation and motion planning for arm control.
- * Path planning is meant to work on a single traversability map.
- * The start/goal poses are transformed from world to local grid and the
- * resulting trajectory from local grid to world.
- * SBPL should be used for navigation and OMPL for arm control.
+ * \mainpage MPL - Motion Planning Libraries
+ * \section Introduction
+ * This library integrates motion planning libraries mainly for navigation.
+ * In general it realizes path planning on a 2D Envire traversability maps. 
+ * If you want to add your own planning library you have to inheret from 
+ * AbstractMotionPlanningLibrary and implement the core virtual functions.
+ * See Config.hpp to get a list of the available planning libraries, planners and 
+ * environments. See the module documentation how to set up a small navigation 
+ * stack in ROCK. In the \ref sec_libraries section the available planning libraries
+ * and their configuration are described.
  * 
- * TODO: Integrate: remove obstacles within the start position, 
- *       if the goal lies on an obstacle use next valid goal position
- * TODO: Split State and Config to classes using inheritance.
+ * \section Frames
+ * Three types of coordinate frames are used within this library: 
+ * - First the world frame which defines the position of the system in meter 
+ *   within the root node of the received traversability map. 
+ * - Second the grid local frame which defines the position within the
+ *   traversability map in meters.
+ * - And third the grid frame in which the position is described 
+ *   within the traversability map in grid cells.
+ * 
+ * In general the user just works with the world frame. The following code example
+ * shows the complete transformation from world2grid. 
+ * \code{.cpp}
+ *       Eigen::Affine3d world2local = trav->getEnvironment()->relativeTransform(
+ *           trav->getEnvironment()->getRootNode(),
+ *           trav->getFrameNode());
+ *       local_pose.setTransform(world2local * world_pose.getTransform());
+ *       trav->toGrid(local_pose.position.x(), local_pose.position.y(), x_grid, y_grid, ...);
+ * \endcode
+ * After the traversability map has been set (MotionPlanningLibraries::setTravGrid) 
+ * the start and goal position/pose within the world can be defined 
+ * (MotionPlanningLibraries::setStartState, MotionPlanningLibraries::setGoalState). 
+ * The integrated planning libraries will just work within the grid frame.
+ * If the planning library requires grid local cordinates (e.g. SBPL)
+ * the cell size in meters can be extracted from the received traversability map.
+ * Each library has to implement AbstractMotionPlanningLibrary::fillPath to
+ * support the found path which can be specified within the grid or the grid local 
+ * frame.
+ * 
+ * \section sec_libraries Libraries
+ * \subsection ompl OMPL Sample-Based Planning
+ * http://ompl.kavrakilab.org/
+ * OMPL is a very flexible library for Sample-Based Planning
+ * which is mainly be used for high-dimensional planning. Additional spaces, validators and 
+ * objectives (costs) can be added without any great effort. The following environments
+ * have been implemted:
+ * - ENV_XY: Simple point-based optimizing planning.
+ * - ENV_XYTHETA: Control based planning using a simple ODE or a car like ODE to 
+ * build up the navigation tree. OMPL does not support optimization for this environment,
+ * so no usable results are produced yet. Instead SBPL ENV_XYTHETA 
+ * should be used for planning which regards the orientation of the system.
+ * - ENV_SHERPA: This environment allows circle based planning regarding an adaptive footprint.
+ * The planner tries to maximise the footprint for a safe stand, just shrinks it 
+ * for narrow passages. This is a first test implementation for body embedded planning which
+ * will be extended in the future.
+ * - ENV_ARM: In general OMPL is used for manipulation / arm movement. This has been integrated
+ * just for testing. For a meaningful use a robot model and octomaps have to be integrated into MPL.
+ * 
+ * \subsection spbl SBPL Search-Based Planning
+ * SBPL is a library mainly used for orientation based navigation within a discrete map supporting powerful
+ * planning algorithms like Anytime-DStar. This is done by using so called motion primitives.
+ * This primitives are small defined motions which are combined and optimized to the overall 
+ * trajectory by the planner. The SBPL library supports a MATLAB script to generate 
+ * the motion primitives. For that the user has to define all motion primites for the first
+ * three discrete angles by hand (if overall 16 discrete angles are used) which are used
+ * to create all primitives for all angles. This has been replaced by a complete automatic
+ * primitive generation for which only the speed, the multipliers and the turning radius 
+ * of the system have to be defined. Each movement type (forward, backward, lateral, forward-turn, backward-turn, pointturn) 
+ * got its own multiplier.
+ * - ENV_XY: Simple point-based optimizing planning.
+ * - ENV_XYTHETA: Orientation based optimized planning. The forward- and turning-speed, 
+ * the turning radius and the multipliers have to be defined which are used to generate
+ * the primitive which are used to generate the final path. An internal epsilion is used 
+ * by SBPL to describe the optimality of the current solution. An optimal path 
+ * has been found if the epsilon reaches 1.0.
+ * 
+ * \section Configuration
+ * The following section describes the minimal required configuration for each environment.
+ * \subsection General
+ * | Parameter        | Description |
+ * | ---------------- | ----------- |
+ * | mPlanningLibType | Defines the planning library, see motion_planning_libraries::PlanningLibraryType |
+ * | mEnvType         | Defines the environment, see motion_planning_libraries::EnvType | 
+ * \subsection OMPL
+ * | Environment | Parameter              | Description |
+ * | ----------- | ---------------------- | ----------- |
+ * | ENV_XYTHETA | mMobilty               | mSpeed and mTurningSpeed are used to define the control space and to calculate the cost traversing a grid cell. |
+ * |             | mFootprintLengthMinMax | Used for the car ODE. | 
+ * | ENV_SHERPA  | mFootprintRadiusMinMax | Footprint is defined as a circle here. |
+ * |             | mNumFootprintClasses   | To reduce the plannign dimension the footprint radius is descretized. |
+ * |             | mTimeToAdaptFootprint  | Time to change the system from min to max footprint. |
+ * |             | mAdaptFootprintPenalty | Additional costs which are added if the footprint changes between two states. | 
+ * | ENV_ARM     | mJointBorders          | Borders of the arm joints. |
+ * \subsection SBPL
+ * | Environment | Parameter | Description |
+ * | ----------- | ------------------------- | ----------- |
+ * | ENV_XY      | mSBPLEnvFile              | (optional) Allows to load an SBPL environment instead of using the Envire traversability map. | 
+ * | ENV_XYTHETA | mMobilty                  | Speeds are used together with the multipliers for the cost calculation. In addition the multipliers are used to activates the movement types (>0). mMinTurnignRadius takes care that the curve primitives are driveable for the system. | 
+ * |             | mSBPLEnvFile              | (optional) Allows to load an SBPL environment instead of using the Envire traversability map. | 
+ * |             | mSBPLMotionPrimitivesFile | (optional) Allows to use an existing SBPL primitive file instead of creating one based on the mMobility parameters. |
+ * |             | mFootprintLengthMinMax    | The max value is used to define the robot length in SBPL. |
+ * |             | mFootprintWidthMinMax     | The max value is used to define the robot width in SBPL. |
+ * |             | mNumIntermediatePoints    | Sets the number of intermediate points which are added to each primitive to create smoother trajectories. |
+ * |             | mNumPrimPartition         | Defines how much primitive for each movement type should be created. More primitives will optimize the result but increase the planning time. |
+ * |             | mPrimAccuracy             | Defines how close a primitive has to reach a discrete end position. If this parameter is reduced towards 0, the discretization error will be reduced but the length of the primitives will be increased and the overall number of primitive for each movement type could also be reduced. | 
+ * 
+ * \section TODOs
+ * \todo "Adds method to remove obstacles within the start pose."
+ * \todo "Optional: If the goal lies on an obstacle use next valid goal position."
+ * \todo "Split State and Config to classes using inheritance. Possible?"
+ * \todo "Calculate correct center of rotation in SBPL MotionPrimitives."
+ * \todo "Add struct to combine all replanning parameters."
+ * \todo "Config: Add boolean whether a new map should initiate a replanning."
+ * \todo "Config: Add boolean whether a new goal pose should initiate a replanning."
+ * \todo "Config: Add boolean if only optimal trajectories (epsilon == 1) should be supported."
+ * \todo "Adds new trajectory format to integrate all type of movements."
  */
 class MotionPlanningLibraries
 {

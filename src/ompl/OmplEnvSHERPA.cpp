@@ -70,7 +70,6 @@ bool OmplEnvSHERPA::initialize(envire::TraversabilityGrid* trav_grid,
     } else { // Optimizing planners use all the available time to improve the solution.
         mpPlanner = ob::PlannerPtr(new og::RRTstar(mpSpaceInformation));
         // Allows to configure the max allowed dist between two samples.
-        /// If e.g. 1.0 is used to footprint radius will not be changed anymore. TODO Why?
         if(mConfig.mMaxAllowedSampleDist > 0 && !isnan(mConfig.mMaxAllowedSampleDist)) {
             ompl::base::ParamSet param_set = mpPlanner->params();
             std::stringstream ss;
