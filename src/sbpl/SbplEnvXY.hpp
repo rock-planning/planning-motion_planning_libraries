@@ -32,6 +32,8 @@ class SbplEnvXY : public Sbpl
      * 
      */
     virtual bool fillPath(std::vector<struct State>& path, bool& pos_defined_in_local_grid);       
+    
+    enum MplErrors isStartGoalValid();
 };
     
 } // end namespace motion_planning_libraries

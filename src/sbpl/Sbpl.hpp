@@ -24,8 +24,8 @@ namespace motion_planning_libraries
 class Sbpl : public AbstractMotionPlanningLibrary
 {      
  protected:
-    // Driveability 0.0 to 1.0 will be mapped to SBPL_MAX_COST to 0 
-    // with obstacle threshold of SBPL_MAX_COST.
+    // Driveability 0.0 to 1.0 will be mapped to SBPL_MAX_COST + 1 to 1 
+    // with obstacle threshold of SBPL_MAX_COST + 1.
     static const unsigned char SBPL_MAX_COST = 20;
     
     boost::shared_ptr<DiscreteSpaceInformation> mpSBPLEnv;
@@ -49,7 +49,8 @@ class Sbpl : public AbstractMotionPlanningLibrary
    
     /**
      * Converts the trav map to a sbpl map using the driveability value.
-     * Driveability 0.0 to 1.0 is mapped to costs 100 to 0 with obstacle threshold 100.
+     * Driveability 0.0 to 1.0 is mapped to costs SBPL_MAX_COST + 1  to 1 with obstacle threshold SBPL_MAX_COST + 1.
+     * (+1 because costs of 0 should be avoided).
      */
     void createSBPLMap(envire::TraversabilityGrid* trav_grid, 
             boost::shared_ptr<TravData> trav_data);

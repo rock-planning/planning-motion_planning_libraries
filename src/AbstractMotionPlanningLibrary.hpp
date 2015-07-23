@@ -84,7 +84,7 @@ class AbstractMotionPlanningLibrary
      * should be returned.
      */
     virtual enum MplErrors isStartGoalValid() {
-        return MPL_ERR_UNDEFINED;
+        return MPL_ERR_NONE;
     }
     
     /**

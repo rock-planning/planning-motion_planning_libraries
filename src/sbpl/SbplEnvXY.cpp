@@ -32,7 +32,7 @@ bool SbplEnvXY::initialize(envire::TraversabilityGrid* trav_grid,
             LOG_INFO("Create SBPL EnvironmentNAV2D environment");
             boost::shared_ptr<EnvironmentNAV2D> env_xy =
                     boost::dynamic_pointer_cast<EnvironmentNAV2D>(mpSBPLEnv);
-            env_xy->InitializeEnv(grid_width, grid_height, mpSBPLMapData, SBPL_MAX_COST);
+            env_xy->InitializeEnv(grid_width, grid_height, mpSBPLMapData, SBPL_MAX_COST + 1);
         }
     } catch (SBPL_Exception* e) {
         LOG_ERROR("SBPL environment '%s' could not be loaded (%s)", 
@@ -146,6 +146,26 @@ bool SbplEnvXY::fillPath(std::vector<struct State>& path, bool& pos_defined_in_l
     }
     
     return true;
+}
+
+enum MplErrors SbplEnvXY::isStartGoalValid() {
+     LOG_INFO("Check discrete start (%d, %d) and goal position (%d, %d) for validity",
+            mStartGrid[0], mStartGrid[1], mGoalGrid[0], mGoalGrid[1]);
+     
+    boost::shared_ptr<EnvironmentNAV2D> env_xy =
+            boost::dynamic_pointer_cast<EnvironmentNAV2D>(mpSBPLEnv);
+        
+    int err = (int)MPL_ERR_NONE;
+    
+    if(!env_xy->IsObstacle(mStartGrid[0], mStartGrid[1])) {
+        err += (int)MPL_ERR_START_ON_OBSTACLE;
+    }
+    
+    if(!env_xy->IsObstacle(mGoalGrid[0], mGoalGrid[1])) {
+        err += (int)MPL_ERR_GOAL_ON_OBSTACLE;
+    }
+    
+    return (enum MplErrors)err;
 }
 
 } // namespace motion_planning_libraries

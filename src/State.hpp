@@ -14,6 +14,10 @@ namespace motion_planning_libraries
 
 enum StateType {STATE_EMPTY, STATE_POSE, STATE_ARM};
 
+#define REPLANNING_DIST_THRESHOLD 0.05
+#define REPLANNING_TURN_THRESHOLD 0.017
+#define REPLANNING_JOINT_ANGLE_THRESHOLD 0.017
+
 /**
  * Defines the state of the system which could be the pose (xytheta) 
  * OR the joint angles of the arm. Angles have always be defined in rad from -M_PI to M_PI.
@@ -23,7 +27,6 @@ enum StateType {STATE_EMPTY, STATE_POSE, STATE_ARM};
  * points and the endpoint).
  */
 struct State {
-
  public:
     // Has to be public to be used in ROCK, should not be modified directly.
     enum StateType mStateType;
@@ -128,7 +131,9 @@ struct State {
      * If the states are not pose-states a negative number will be returned.
      */
     double dist(State state) {
-        if(this->mStateType != STATE_POSE || state.mStateType != STATE_POSE) {
+        
+        if(!this->mPose.hasValidPosition() || !state.mPose.hasValidPosition()) {
+            LOG_WARN("Distance cannot be calculated, position(s) are not valid");
             return -1;
         }
         return (this->mPose.position - state.mPose.position).norm();
@@ -160,6 +165,39 @@ struct State {
             }  
         }
         return ss.str();
+    }
+    
+    bool differs(State state) {
+        if(this->mStateType != state.mStateType) {
+            return true;
+        }
+        
+        switch(state.mStateType) {
+            case STATE_EMPTY: 
+                return false;
+            case STATE_POSE: {
+                double dist = (this->getPose().position - state.getPose().position).norm();
+                double turn = fabs(this->getPose().getYaw() - state.getPose().getYaw());
+                if (dist > REPLANNING_DIST_THRESHOLD || turn > REPLANNING_TURN_THRESHOLD) {
+                    return true;
+                }
+                break;
+            }
+            case STATE_ARM: {
+                std::vector<double>::iterator it = this->getJointAngles().begin();
+                std::vector<double>::iterator it_new = state.getJointAngles().begin();
+                if(this->getJointAngles().size() != state.getJointAngles().size()) {
+                    return true;
+                }
+                for(; it != this->getJointAngles().end(); it++, it_new++) {
+                    if(fabs(*it - *it_new) > REPLANNING_JOINT_ANGLE_THRESHOLD) {
+                       return true;
+                    }
+                }
+                break;
+            }
+        }
+        return false;
     }
 };
 

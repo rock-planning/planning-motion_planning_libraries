@@ -334,8 +334,7 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
                 return false;
             }
         }
-        
-        
+           
         for (int ipind = 0; ipind < ((int)it_action->intermptV.size()) - 1; ipind++) {
             if(it_state == path.end())
             {
@@ -357,18 +356,19 @@ enum MplErrors SbplEnvXYTHETA::isStartGoalValid() {
     LOG_INFO("Check discrete start (%d, %d, %d) and goal pose (%d, %d, %d) for validity",
             mStartGrid[0], mStartGrid[1], mStartGrid[2], mGoalGrid[0], mGoalGrid[1], mGoalGrid[2]);
         
-    bool start_not_valid = !(env_xytheta->IsValidConfiguration(mStartGrid[0], mStartGrid[1], mStartGrid[2]));
-    bool goal_not_valid = !(env_xytheta->IsValidConfiguration(mGoalGrid[0], mGoalGrid[1], mGoalGrid[2]));
+    int err = (int)MPL_ERR_NONE;
     
-    if(start_not_valid && goal_not_valid) {
-        return MPL_ERR_START_GOAL_ON_OBSTACLE;
-    } else if(start_not_valid) {
-        return MPL_ERR_START_ON_OBSTACLE;
-    } else if (goal_not_valid) {
-        return MPL_ERR_GOAL_ON_OBSTACLE;
-    } else {
-        return MPL_ERR_UNDEFINED;
+    if(!env_xytheta->IsValidConfiguration(mStartGrid[0], mStartGrid[1], mStartGrid[2])) {
+        LOG_WARN("Start lies on an obstacle");
+        err += (int)MPL_ERR_START_ON_OBSTACLE;
     }
+    
+    if(!env_xytheta->IsValidConfiguration(mGoalGrid[0], mGoalGrid[1], mGoalGrid[2])) {
+        LOG_WARN("Goal lies on an obstacle");
+        err += (int)MPL_ERR_GOAL_ON_OBSTACLE;
+    }
+    
+    return (enum MplErrors)err;
 }
 
 } // namespace motion_planning_libraries

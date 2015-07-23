@@ -51,13 +51,13 @@ enum MplErrors {
     MPL_ERR_MISSING_START_TRAV,
     MPL_ERR_MISSING_GOAL_TRAV,
     MPL_ERR_MISSING_START_GOAL_TRAV=9,
+    MPL_ERR_START_ON_OBSTACLE,
+    MPL_ERR_GOAL_ON_OBSTACLE,
+    MPL_ERR_START_GOAL_ON_OBSTACLE=21, // Do not enter another error before this entry!
     MPL_ERR_PLANNING_FAILED,
     MPL_ERR_WRONG_STATE_TYPE,
     MPL_ERR_INITIALIZE_MAP,
     MPL_ERR_SET_START_GOAL,
-    MPL_ERR_START_ON_OBSTACLE,
-    MPL_ERR_GOAL_ON_OBSTACLE,
-    MPL_ERR_START_GOAL_ON_OBSTACLE,
     MPL_ERR_REPLANNING_NOT_REQUIRED
 };
 
@@ -70,7 +70,6 @@ enum MplErrors {
  * if a multiplier is set to 0 this movement will be deactivated.
  */
 struct Mobility {
-    
     // Defines the forward/backward speed of the system which will be assigned
     // to the trajectory.
     double mSpeed; // m/sec.
@@ -136,6 +135,30 @@ struct Mobility {
     }
 };
 
+struct Replanning {
+    // If set to true each call to plan() will try to solve the current problem / improve
+    // the solution.
+    bool mReplanDuringEachUpdate;
+    bool mReplanOnNewStartPose;
+    bool mReplanOnNewGoalPose;
+    bool mReplanOnNewMap;
+    // If > 0 this describes the minimal distance in the world frame in meter between start 
+    // and goal to initiate a replanning if a new trav map or start pose has been received.
+    // In other words: This parameter allows you to define a area around the
+    // goal which prevents replanning (except a new goal pose has been received).
+    // Especially for SBPL XYTHETA this parameter is meaningful by preventing unwanted 
+    // circle paths.
+    double mReplanMinDistStartGoal;
+    
+    Replanning() :
+        mReplanDuringEachUpdate(false),
+        mReplanOnNewStartPose(false),
+        mReplanOnNewGoalPose(true),
+        mReplanOnNewMap(true),
+        mReplanMinDistStartGoal(0.0) {
+    }
+};
+
 /**
  *  Contains the configuration for all planning libraries.
  *  Just ignore the non relevant parameters.
@@ -145,10 +168,8 @@ struct Config {
     Config() : mPlanningLibType(LIB_SBPL), 
             mEnvType(ENV_XY),
             mPlanner(UNDEFINED_PLANNER),
-            mSearchUntilFirstSolution(false),
-            mReplanDuringEachUpdate(false),
-            mReplanOnNewStartPose(false),
-            mReplanMinDistStartGoal(0.0),
+            mSearchUntilFirstSolution(false), // use to 'just provide ptimal trajectories'?
+            mReplanning(),
             mMobility(),
             mFootprintRadiusMinMax(0,0),  
             mFootprintLengthMinMax(0,0),
@@ -177,17 +198,7 @@ struct Config {
     // Defines whether the planner accepts the first found solution or uses the
     // complete available time.
     bool mSearchUntilFirstSolution; 
-    // If set to true each call to plan() will try to solve the current problem / improve
-    // the solution.
-    bool mReplanDuringEachUpdate;
-    bool mReplanOnNewStartPose;
-    // If > 0 this describes the minimal distance between start and goal to
-    // initiate a replanning if a new trav map or start pose has been received.
-    // In other words: This parameter allows you to define a area around the
-    // goal which prevents replanning (except a new goal pose has been received).
-    // Especially for SBPL XYTHETA this parameter is meaningful by preventing unwanted 
-    // circle paths.  
-    double mReplanMinDistStartGoal;
+    struct Replanning mReplanning;
     
     // NAVIGATION
     struct Mobility mMobility;

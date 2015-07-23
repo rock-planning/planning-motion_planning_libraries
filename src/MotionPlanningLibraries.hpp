@@ -133,14 +133,10 @@ typedef envire::TraversabilityGrid::ArrayType TravData;
  * \todo "Config: Add boolean whether a new goal pose should initiate a replanning."
  * \todo "Config: Add boolean if only optimal trajectories (epsilon == 1) should be supported."
  * \todo "Adds new trajectory format to integrate all type of movements."
+ * \todo "Escape trajectory cannt be created correctly anymore since Janoschs cahnges."
  */
 class MotionPlanningLibraries
-{
- protected:
-    static const double REPLANNING_DIST_THRESHOLD;
-    static const double REPLANNING_TURN_THRESHOLD;
-    static const double REPLANNING_JOINT_ANGLE_THRESHOLD;
-    
+{   
     Config mConfig;
     
     boost::shared_ptr<AbstractMotionPlanningLibrary> mpPlanningLib;
@@ -150,40 +146,71 @@ class MotionPlanningLibraries
     struct State mStartState, mGoalState; // Pose in world coordinates.
     struct State mStartStateGrid, mGoalStateGrid;
     std::vector<State> mPlannedPathInWorld; // Pose in world coordinates.
-    bool mReceivedNewTravGrid;
-    bool mReceivedNewStart;
-    bool mReceivedNewGoal;
-    bool mGoalReached;
-    bool mArmInitialized;
     bool mReplanRequired;
+    bool mNewGoalReceived;
     double mLostX; // Used to trac discretization error.
     double mLostY;
-    enum MplErrors mError;
     
  public: 
+    enum MplErrors mError; 
+     
     MotionPlanningLibraries(Config config = Config());
     ~MotionPlanningLibraries();
     
     /**
      * Sets the traversability map to plan on. Required for robot navigation.
      * The pose, scale and size of the map are used for the world2grid and
-     * grid2world transformation.
+     * grid2world transformation. 
+     * Currently a new map will reinitialize the complete planning library.
+     * \todo "If possible cell updates should be used."
      */
     bool setTravGrid(envire::Environment* env, std::string trav_map_id);
+    
+    inline bool travGridAvailable() {
+        return mpTravGrid != NULL;
+    }
     
     /**
      * Sets the start state. If the start state contains a pose it has to be defined 
      * within the world frame. This pose is transformed to the traversability 
      * grid and is used to set mStartGrid.
      */
-    bool setStartState(struct State start_state);
+    bool setStartState(struct State new_state);
+    
+    inline bool startStateAvailable() {
+        return (mStartState.mStateType != STATE_EMPTY);
+    }
     
     /**
      * Sets the goal state. If the goal state contains a pose it has to be defined 
      * within the world frame. This pose is transformed to the traversability 
      * grid and is used to set mGoalGrid.
+     * \param reset A reset does not set mReplanningRequired and mNewGoalReceived to true.
+     * This is used in setTravGrid to reset the old start/goal pose within the new environment.
      */
-    bool setGoalState(struct State goal_state);
+    bool setGoalState(struct State new_state, bool reset = false);
+    
+    inline bool goalStateAvailable() {
+        return (mGoalState.mStateType != STATE_EMPTY);
+    }
+    
+    /**
+     * Checks if the trav map, start pose and goal pose are available.
+     * The trav map is required to set start and goal.
+     */
+    bool allInputsAvailable(enum MplErrors& err);
+    
+    /**
+     * Can be used before plan() to check if a replanning is required.
+     */
+    bool replanningRequired();
+    
+    /**
+     * Can be used to request whether an optimal solution has been found.
+     * If the planning library does not support this functionality
+     * or it has not been implemented, true will be returned.
+     */
+    bool foundFinalSolution();
     
     /**
      * Tries to find a trajectory within the passed time.
