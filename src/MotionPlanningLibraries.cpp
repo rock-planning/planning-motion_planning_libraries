@@ -170,12 +170,7 @@ bool MotionPlanningLibraries::setStartState(struct State new_state) {
     bool new_state_received = mStartState.differs(new_state);
     
     switch (new_state.getStateType()) {
-        case STATE_EMPTY: {if(mConfig.mReplanning.mReplanOnNewGoalPose && new_state_received) {
-        mReplanRequired = true;
-    }
-    
-    mNewGoalReceived = true;
-    
+        case STATE_EMPTY: {
             LOG_WARN("States contain no valid values and could not be set");
             return false;
         }
