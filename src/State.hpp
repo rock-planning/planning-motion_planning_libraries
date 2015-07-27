@@ -4,6 +4,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <boost/concept_check.hpp>
 
 #include <base/samples/RigidBodyState.hpp>
 
@@ -124,6 +125,10 @@ struct State {
         assert (num_fp_classes > 0);
         mFootprintRadius = fp_radius_min + (fp_radius_max - fp_radius_min) * 
                 fp_class / (num_fp_classes - 1);
+    }
+    
+    bool hasValidPosition() {
+        return mPose.hasValidPosition();
     }
 
     /**

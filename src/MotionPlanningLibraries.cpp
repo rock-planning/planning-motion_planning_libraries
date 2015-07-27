@@ -136,25 +136,27 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
         return false;
     }
     
-    // Reset current start and goal state within the new environment!
+    // Reset current start and goal state within the new environment if they are valid!
     // The new trav grid can contain another transformation, so 
     // the old start and goal pose have to be transformed into the grid again.
     // The boolean in setGoalState() prevents an unwanted replanning.
-    if(!setStartState(mStartState) || !setGoalState(mGoalState, true)) {
-        LOG_ERROR("Old start and goal pose could not be transformed into the new environment");
-        mError = MPL_ERR_SET_START_GOAL;
-        return false;
-    }
-    
-    if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
-        LOG_WARN("Start/goal state could not be set after reinitialization");
-        mError = MPL_ERR_SET_START_GOAL;
-        return false;
-    }
-    
-
-    if(mConfig.mReplanning.mReplanOnNewMap) {
-        mReplanRequired = true;
+    if(mStartState.hasValidPosition() && mGoalState.hasValidPosition()) {
+        if(!setStartState(mStartState) || !setGoalState(mGoalState, true)) {
+            LOG_ERROR("Old start and goal pose could not be transformed into the new environment");
+            mError = MPL_ERR_SET_START_GOAL;
+            return false;
+        }
+        
+        if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
+            LOG_WARN("Start/goal state could not be set after reinitialization");
+            mError = MPL_ERR_SET_START_GOAL;
+            return false;
+        }
+        
+        // Replanning without valid start/goal is not necessary.
+        if(mConfig.mReplanning.mReplanOnNewMap) {
+            mReplanRequired = true;
+        }
     }
     
     return true;
