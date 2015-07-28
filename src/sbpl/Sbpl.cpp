@@ -103,7 +103,6 @@ void Sbpl::createSBPLMap(envire::TraversabilityGrid* trav_grid,
     }
 }
 
-// \todo "Check whether x == length and y == width are correct."
 std::vector<sbpl_2Dpt_t> Sbpl::createFootprint(double robot_width, double robot_length) {
 
     LOG_DEBUG("SBPL createFootprint");
