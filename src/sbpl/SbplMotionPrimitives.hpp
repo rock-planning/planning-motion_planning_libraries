@@ -14,6 +14,19 @@
 
 namespace motion_planning_libraries {
     
+struct PrimInfo {
+    unsigned int mId;
+    enum MovementType mMovType;
+    double mSpeed;
+    
+    Id2PrimInfo() : mId(0), mMovType(MOV_UNDEFINED), mSpeed(0.0) {
+    }
+    
+    Id2PrimInfo(unsigned int id, enum MovementType mov_type, double speed) : 
+        mId(id), mMovType(mov_type), mSpeed(speed) {
+    }
+};
+    
 /**
  * Uses to check for discrete end poses copies and 
  * to avoid c++11 (tuples).
@@ -106,10 +119,11 @@ struct Primitive {
     // Stores the center of rotation for curves.
     // Used to calculate the intermediate poses.
     base::Vector3d mCenterOfRotation;
+    double mSpeed;
      
     Primitive() : mId(0), mStartAngle(0), mEndPose(), 
             mCostMultiplier(0), mIntermediatePoses(), mMovType(MOV_UNDEFINED), 
-            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation()
+            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation(), mSpeed(0.0)
     {
         mEndPose.setZero();
         mCenterOfRotation.setZero();
@@ -122,11 +136,11 @@ struct Primitive {
      * \param cost_multiplier Cost multiplier of this kind of motion.
      */
     Primitive(unsigned int id, unsigned int start_angle, base::Vector3d end_pose, 
-            unsigned int cost_multiplier, enum MovementType mov_type) : 
+            unsigned int cost_multiplier, enum MovementType mov_type, double speed) : 
             mId(id), mStartAngle(start_angle), mEndPose(end_pose), 
             mCostMultiplier(cost_multiplier), 
             mIntermediatePoses(), mMovType(mov_type),
-            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation()
+            mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation(), mSpeed(speed)
     {
         mCenterOfRotation.setZero();
     }
@@ -186,7 +200,7 @@ struct SbplMotionPrimitives {
     std::vector<struct Primitive> mListPrimitivesAngle0; // Contains non discrete primitives for angle 0.
     std::vector<struct Primitive> mListPrimitives;
     double mRadPerDiscreteAngle;
-    std::vector<double> mPrim_id2Speed;
+    std::vector<struct PrimInfo> mId2PrimInfo;
      
     SbplMotionPrimitives();
      
@@ -259,6 +273,20 @@ struct SbplMotionPrimitives {
         base::Vector3d start_position, double start_theta_rad, 
         base::Vector3d end_position, double end_theta_rad,
         base::Vector3d& cof_grids);
+    
+    /**
+     * Returns the movement type and speed of the passed primitive id.
+     */
+    bool getPrimInfo(unsigned int id, struct PrimInfo& info) {
+
+        if(id >= mId2PrimInfo.size()) {
+            LOG_WARN("Only %d primitive types are available", mId2PrimInfo.size());
+            return false;
+        }
+        
+        info = mId2PrimInfo[id];
+        return true;
+    }
 };
 
 } // end namespace motion_planning_libraries

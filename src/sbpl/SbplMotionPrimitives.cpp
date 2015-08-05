@@ -5,12 +5,12 @@
 namespace motion_planning_libraries {
 
 SbplMotionPrimitives::SbplMotionPrimitives() : mConfig(), mListPrimitivesAngle0(),
-        mListPrimitives(), mRadPerDiscreteAngle(0), mPrim_id2Speed()
+        mListPrimitives(), mRadPerDiscreteAngle(0), mId2PrimInfo()
 {
 }
     
 SbplMotionPrimitives::SbplMotionPrimitives(struct MotionPrimitivesConfig config) : mConfig(config),
-        mListPrimitivesAngle0(), mListPrimitives(), mRadPerDiscreteAngle(0), mPrim_id2Speed()
+        mListPrimitivesAngle0(), mListPrimitives(), mRadPerDiscreteAngle(0), mId2PrimInfo()
 {
     mRadPerDiscreteAngle = (M_PI*2.0) / (double)mConfig.mNumAngles;
 }
@@ -50,7 +50,7 @@ void SbplMotionPrimitives::createPrimitives() {
 std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() { 
     
     mListPrimitivesAngle0.clear();
-    mPrim_id2Speed.clear();
+    mId2PrimInfo.clear();
         
     int primId = 0;
     Primitive prim;
@@ -63,9 +63,9 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 0, 
                 base::Vector3d(1.0, 0.0, 0.0),
                 mConfig.mMobility.mMultiplierForward, 
-                MOV_FORWARD);
+                MOV_FORWARD,
+                mConfig.mMobility.mSpeed);
         mListPrimitivesAngle0.push_back(prim);
-        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
     }
     
@@ -75,9 +75,8 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 0,
                 base::Vector3d(-1.0, 0.0, 0.0),
                 mConfig.mMobility.mMultiplierBackward, 
-                MOV_BACKWARD);
+                MOV_BACKWARD, -mConfig.mMobility.mSpeed);
         mListPrimitivesAngle0.push_back(prim);
-        mPrim_id2Speed.push_back(-mConfig.mMobility.mSpeed);
         primId++;         
     }
     
@@ -88,9 +87,8 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 0,
                 base::Vector3d(0.0, 1.0, 0.0),
                 mConfig.mMobility.mMultiplierLateral,
-                MOV_LATERAL);
+                MOV_LATERAL, mConfig.mMobility.mSpeed);
         mListPrimitivesAngle0.push_back(prim);
-        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
         
         // Lateral Right
@@ -98,9 +96,8 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 0,
                 base::Vector3d(0.0, -1.0, 0.0),
                 mConfig.mMobility.mMultiplierLateral, 
-                MOV_LATERAL);
+                MOV_LATERAL, mConfig.mMobility.mSpeed);
         mListPrimitivesAngle0.push_back(prim);
-        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
     }
     
@@ -110,18 +107,16 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 0,
                 base::Vector3d(0.0, 0.0, 1.0),
                 mConfig.mMobility.mMultiplierPointTurn,
-                MOV_POINTTURN);
+                MOV_POINTTURN, mConfig.mMobility.mSpeed);
         mListPrimitivesAngle0.push_back(prim);
-        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
         
         prim = Primitive(primId,
                 0,
                 base::Vector3d(0.0, 0.0, -1.0),
                 mConfig.mMobility.mMultiplierPointTurn,
-                MOV_POINTTURN);
+                MOV_POINTTURN, mConfig.mMobility.mSpeed);
         mListPrimitivesAngle0.push_back(prim);
-        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
     }
           
@@ -135,10 +130,9 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             0,
             base::Vector3d(0.0, 0.0, 1.0),
             mConfig.mMobility.mMultiplierForwardTurn,
-            MOV_FORWARD_TURN);
+            MOV_FORWARD_TURN, mConfig.mMobility.mSpeed);
         prim.mCenterOfRotation = base::Vector3d(0.0, start_turning_radius, 0.0);
         mListPrimitivesAngle0.push_back(prim);
-        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
         
         // Forward right hand bend
@@ -146,10 +140,9 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             0,
             base::Vector3d(0.0, 0.0, -1.0),
             mConfig.mMobility.mMultiplierForwardTurn,
-            MOV_FORWARD_TURN);
+            MOV_FORWARD_TURN, mConfig.mMobility.mSpeed);
         prim.mCenterOfRotation = base::Vector3d(0.0, -start_turning_radius, 0.0);
         mListPrimitivesAngle0.push_back(prim);
-        mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
         primId++;
     }
     
@@ -159,10 +152,9 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             0,
             base::Vector3d(0.0, 0.0, 1.0),
             mConfig.mMobility.mMultiplierBackwardTurn,
-            MOV_BACKWARD_TURN);
+            MOV_BACKWARD_TURN, -mConfig.mMobility.mSpeed);
         prim.mCenterOfRotation = base::Vector3d(0.0, -start_turning_radius, 0.0);
         mListPrimitivesAngle0.push_back(prim);
-        mPrim_id2Speed.push_back(-mConfig.mMobility.mSpeed);
         primId++;
         
         // Backward right hand bend
@@ -170,22 +162,24 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
             0,
             base::Vector3d(0.0, 0.0, -1.0),
             mConfig.mMobility.mMultiplierBackwardTurn,
-            MOV_BACKWARD_TURN);
+            MOV_BACKWARD_TURN, -mConfig.mMobility.mSpeed);
         prim.mCenterOfRotation = base::Vector3d(0.0, start_turning_radius, 0.0);
         mListPrimitivesAngle0.push_back(prim);
-        mPrim_id2Speed.push_back(-mConfig.mMobility.mSpeed);
         primId++;  
     }
     
     // From each base prim mNumPrimPartition prims will be created.
-    // So each speed value will be repeated mNumPrimPartition times.
-    std::vector<double> mPrim_id2Speed_tmp;
-    for(unsigned int i=0; i<mPrim_id2Speed.size(); i++) {
+    // \todo "Check!"
+    mId2PrimInfo.clear();
+    int id = 0;
+    for(unsigned int i=0; i<mListPrimitivesAngle0.size(); i++) {
         for(int j=0; j<mConfig.mNumPrimPartition; j++) {
-            mPrim_id2Speed_tmp.push_back(mPrim_id2Speed[i]);
+            PrimInfo prim_info(id++, 
+                    mListPrimitivesAngle0[i].mMovType, 
+                    mListPrimitivesAngle0[i].speed);
+            mId2PrimInfo.push_back(prim_info);
         }
     }
-    mPrim_id2Speed = mPrim_id2Speed_tmp;
     
     return mListPrimitivesAngle0;
 }

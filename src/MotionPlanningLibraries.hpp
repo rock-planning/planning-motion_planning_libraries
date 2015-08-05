@@ -7,6 +7,8 @@
 
 #include <envire/maps/TraversabilityGrid.hpp>
 
+#include <dwa/DWA.hpp>
+
 #include "Config.hpp"
 #include "State.hpp"
 #include "AbstractMotionPlanningLibrary.hpp"
@@ -257,6 +259,8 @@ class MotionPlanningLibraries
      * Returns an empty vector if an error occurred.
      */
     std::vector<base::Trajectory> getEscapeTrajectoryInWorld();
+    
+    dwa::Trajectory getHolonomicTrajectoryInWorld();
     
     /** Prints the current path to the console. */
     void printPathInWorld();

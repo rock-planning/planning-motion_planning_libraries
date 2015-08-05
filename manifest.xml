@@ -12,5 +12,6 @@
   <depend package="slam/envire" />
   <depend package="external/ompl" />
   <depend package="external/sbpl" />
+  <depend package="control/dwa" />
   <depend package="gui/vizkit3d" optional="1" />
 </package>
