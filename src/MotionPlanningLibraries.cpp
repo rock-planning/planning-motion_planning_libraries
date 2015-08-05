@@ -250,7 +250,7 @@ bool MotionPlanningLibraries::setGoalState(struct State new_state, bool reset) {
             
             // Start
             base::samples::RigidBodyState new_grid;
-            if(!world2grid(mpTravGrid, new_state.getPose(), new_grid)) {
+            if(!world2grid(mpTravGrid, new_state.getPose(), new_grid, &mLostX, &mLostY)) {
                 LOG_WARN("Goal pose could not be transformed into the grid");
                 return false;
             }
