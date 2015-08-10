@@ -26,8 +26,8 @@ enum EnvType {
 enum MovementType {
     MOV_UNDEFINED,
     MOV_FORWARD,
-    MOV_BACKWARD,
     MOV_FORWARD_TURN,
+    MOV_BACKWARD,
     MOV_BACKWARD_TURN,
     MOV_POINTTURN,
     MOV_LATERAL
@@ -59,6 +59,22 @@ enum MplErrors {
     MPL_ERR_INITIALIZE_MAP,
     MPL_ERR_SET_START_GOAL,
     MPL_ERR_REPLANNING_NOT_REQUIRED
+};
+
+/**
+ * Used in SBPL to combine the relevant primitive infos.
+ */
+struct PrimInfo {
+    unsigned int mId;
+    enum MovementType mMovType;
+    double mSpeed;
+    
+    PrimInfo() : mId(0), mMovType(MOV_UNDEFINED), mSpeed(0.0) {
+    }
+    
+    PrimInfo(unsigned int id, enum MovementType mov_type, double speed) : 
+        mId(id), mMovType(mov_type), mSpeed(speed) {
+    }
 };
 
 /**

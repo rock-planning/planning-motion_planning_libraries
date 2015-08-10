@@ -267,8 +267,9 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
         }
         state.mPose.orientation =  Eigen::AngleAxis<double>(theta_rad, base::Vector3d(0,0,1));
         
-        state.mSBPLPrimId = *it;
+        state.mPrimInfo.mId = *it;
         
+        // If we do not use intermediate points the complete path will be filled here.
         if(mConfig.mNumIntermediatePoints == 0) {
             path.push_back(state);
         }
@@ -319,29 +320,29 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
             path.size(), action_list.size(), mPrims->mConfig.mNumPosesPerPrim);
     
     
-    // Runs through all states and assigns the prim id and its speed values
-    // to the first state of each primitive.
-    // If a mprim file is used mPrims may be NULL!
+    // Runs through all used primitives and assigns the prim infos (id, speed, mov type) 
+    // to each pose. If a mprim file is used mPrims may be NULL!
     for(;it_action < action_list.end(); it_action++) {
         prim_id = it_action->aind;
-        double speed;
+        struct PrimInfo prim_info;
         
         if(mPrims != NULL) {
-            if(mPrims->getSpeed(prim_id, speed)) {
-                LOG_DEBUG("Assigns to prim id %d the speed %4.2f", prim_id, speed);
+            if(mPrims->getPrimInfo(prim_id, prim_info)) {
+                LOG_DEBUG("Assigns to prim id %d the speed %4.2f", prim_id, prim_info.mSpeed);
             } else {
                 LOG_ERROR("No speed has been stored for prim id %d", prim_id);
                 return false;
             }
         }
-           
+        
+        // it_action->intermptV.size() is at least two if no intermediate poses are used.
+        // \todo "Last state will not receive a prim info?"
         for (int ipind = 0; ipind < ((int)it_action->intermptV.size()) - 1; ipind++) {
             if(it_state == path.end())
             {
                 throw std::runtime_error("Error, path to action mismatch");
             }
-            it_state->mSBPLPrimId = prim_id;
-            it_state->mSpeed = speed;
+            it_state->mPrimInfo = prim_info;
             it_state++;
         }
     }

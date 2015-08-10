@@ -176,7 +176,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
         for(int j=0; j<mConfig.mNumPrimPartition; j++) {
             PrimInfo prim_info(id++, 
                     mListPrimitivesAngle0[i].mMovType, 
-                    mListPrimitivesAngle0[i].speed);
+                    mListPrimitivesAngle0[i].mSpeed);
             mId2PrimInfo.push_back(prim_info);
         }
     }
@@ -373,7 +373,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                 if(set_ret.second) { // New element inserted.
                     ss << "New primitive added" << std::endl;
                             
-                    Primitive prim_discrete(id, angle, discrete_end_pose_rounded, it->mCostMultiplier, it->mMovType);
+                    Primitive prim_discrete(id, angle, discrete_end_pose_rounded, it->mCostMultiplier, it->mMovType, it->mSpeed);
                     // The orientation of the discrete endpose still can exceed the borders 0 to mNumAngles.
                     // We will store this for the intermediate point calculation, but the orientation
                     // of the discrete end pose will be truncated to [0,mNumAngles).
@@ -588,6 +588,7 @@ bool SbplMotionPrimitives::createCurvePrimForAngle0(double const turning_radius_
         double const angle_rad_discrete, 
         int const prim_id, 
         int const multiplier, 
+        double speed,
         Primitive& primitive) {
     
     base::Vector3d center_of_rotation(0.0, turning_radius_discrete, 0.0);
@@ -608,7 +609,9 @@ bool SbplMotionPrimitives::createCurvePrimForAngle0(double const turning_radius_
         0,
         vec_endpos,  
         multiplier, 
-        mov_type);
+        mov_type,
+        speed);
+    
     // Store center of rotation.
     primitive.mCenterOfRotation = center_of_rotation;
     
@@ -625,12 +628,22 @@ int SbplMotionPrimitives::calcDiscreteEndOrientation(double yaw_rad) {
 }
 
 bool SbplMotionPrimitives::getSpeed(unsigned int const prim_id, double& speed) {
-    if(prim_id >= mPrim_id2Speed.size()) {
+    if(prim_id >= mId2PrimInfo.size()) {
         LOG_WARN("Speed for primitive id %d is not available\n", prim_id);
         return false;
     }
 
-    speed = mPrim_id2Speed.at(prim_id);
+    speed = mId2PrimInfo[prim_id].mSpeed;
+    return true;
+}
+
+bool SbplMotionPrimitives::getPrimInfo(unsigned int const prim_id, struct PrimInfo& info) {
+    if(prim_id >= mId2PrimInfo.size()) {
+        LOG_WARN("Only %d primitive types are available", mId2PrimInfo.size());
+        return false;
+    }
+    
+    info = mId2PrimInfo[prim_id];
     return true;
 }
 

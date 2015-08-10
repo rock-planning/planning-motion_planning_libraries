@@ -35,13 +35,17 @@ struct State {
     std::vector<double> mJointAngles;
     // Currently used to represent width and length.
     double mFootprintRadius;
-    // Currently just used by SBPL
+    // Currently just used by SBPL, contains the prim id, speed and movement type.
+    struct PrimInfo mPrimInfo;
+    
+    /*
     // The first state of each primitive receives a prim id
     // and its speeds. The id of all other states stays -1.
     int mSBPLPrimId;
     // Contains the speeds which belong to the primitive.
     // Like the id only used for the first state of each primitive.
     double mSpeed;
+    */
     
     State() {
         mPose.initUnknown();
@@ -49,22 +53,16 @@ struct State {
         mPose.invalidatePosition();
         mStateType = STATE_EMPTY;
         mFootprintRadius = 0.0;
-        mSBPLPrimId = -1;
-        mSpeed = nan("");
     }
 
     State(base::samples::RigidBodyState rbs) : mPose(rbs) {
         mStateType = STATE_POSE;
         mFootprintRadius = 0.0;
-        mSBPLPrimId = -1;
-        mSpeed = nan("");
     }
     
     State(base::samples::RigidBodyState rbs, double footprint_radius) : 
             mPose(rbs), mFootprintRadius(footprint_radius) {
         mStateType = STATE_POSE;
-        mSBPLPrimId = -1;
-        mSpeed = nan("");
     }
     
     State(std::vector<double> joint_angles) : mJointAngles(joint_angles) {
@@ -73,8 +71,6 @@ struct State {
         mPose.invalidatePosition();
         mFootprintRadius = 0.0;
         mStateType = STATE_ARM;
-        mSBPLPrimId = -1;
-        mSpeed = nan("");
     }
     
     enum StateType getStateType() {
@@ -158,7 +154,7 @@ struct State {
                         mPose.position[2] << " " << 
                         mPose.getYaw() << " " << 
                         mFootprintRadius << " " <<
-                        mSBPLPrimId;
+                        mPrimInfo.mId;
                 break;
             }  
             case STATE_ARM: {

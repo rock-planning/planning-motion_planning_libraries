@@ -472,8 +472,8 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld() {
     
     std::vector<State>::iterator it = mPlannedPathInWorld.begin();  
     for(;it != mPlannedPathInWorld.end(); it++) {
-        if(!isnan(it->mSpeed)) {
-            use_this_speed = it->mSpeed;
+        if(!isnan(it->mPrimInfo.mSpeed)) {
+            use_this_speed = it->mPrimInfo.mSpeed;
         }
         // Add positions to path.
         base::Vector3d position = it->getPose().position;
@@ -562,6 +562,7 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorl
     base::samples::RigidBodyState rbs_world, rbs_grid;
     rbs_world.orientation.setIdentity();
     
+    // \todo "trajectories.size() can be 0 even if mPlannedPathInWorld.size() != 0"
     for(unsigned int i=trajectories.size()-1; i>=0; i--) {
         double inverted_speed = -trajectories[i].speed; // Invert speed.
         base::geometry::Spline<3> spline = trajectories[i].spline;
@@ -618,19 +619,56 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorl
     return inverted_trajectories;
 }
 
-dwa::Trajectory getHolonomicTrajectoryInWorld() {
-       
-    dwa::Trajectory traj;
+dwa::Trajectory MotionPlanningLibraries::getHolonomicTrajectoryInWorld() {
     
+    dwa::Trajectory traj;
+    enum MovementType last_mov_type = MOV_UNDEFINED;
+    std::vector<base::Pose2D> poses;
     std::vector<State>::iterator it = mPlannedPathInWorld.begin();
     for(; it < mPlannedPathInWorld.end(); it++) {
+        bool new_sub_traj = false;
+        if(it->mPrimInfo.mMovType != last_mov_type) {
+            new_sub_traj = true;
+            enum MovementType min_mov_type = std::min(it->mPrimInfo.mMovType, last_mov_type);
+            enum MovementType max_mov_type = std::max(it->mPrimInfo.mMovType, last_mov_type);
+            
+            if((min_mov_type == MOV_FORWARD && max_mov_type == MOV_FORWARD_TURN) ||
+                (min_mov_type == MOV_BACKWARD && max_mov_type == MOV_BACKWARD_TURN)) {
+                new_sub_traj = false;
+            }
+        }
         
-        
-        SubTrajectory sub_traj;
-        
+        if(new_sub_traj && poses.size() > 0) {
+            SubTrajectory sub_traj;
+            sub_traj.interpolate(poses);
+            poses.clear();
+            switch(last_mov_type) {
+                case MOV_FORWARD:
+                case MOV_FORWARD_TURN:
+                case MOV_BACKWARD:
+                case MOV_BACKWARD_TURN:
+                    sub_traj.controllerHint = "Ackerman";
+                    break;
+                case MOV_POINTTURN:
+                    sub_traj.controllerHint = "PointTurnController";
+                    break;
+                case MOV_LATERAL:
+                default: 
+                    LOG_WARN("No controler available for movement type %d", (int)last_mov_type);
+                    break;
+            }
+            traj.addSubtrajectory(sub_traj);
+        } else {
+            base::Pose2D pose2d;
+            pose2d.position[0] = it->mPose.position[0];
+            pose2d.position[1] = it->mPose.position[1];
+            pose2d.orientation = it->mPose.getYaw();
+            poses.push_back(pose2d);
+        }
+        last_mov_type = it->mPrimInfo.mMovType;
     }
     
-    return trajectory;
+    return traj;
 }
 
 void MotionPlanningLibraries::printPathInWorld() {
@@ -657,7 +695,7 @@ void MotionPlanningLibraries::printPathInWorld() {
         for(; it != waypoints.end() && it_state != mPlannedPathInWorld.end(); it++, counter++, it_state++) {
             printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2d %4.2f\n", counter, 
                     it->position[0], it->position[1], it->position[2], 
-                    it->heading, it_state->mSBPLPrimId, it_state->mSpeed
+                    it->heading, it_state->mPrimInfo.mId, it_state->mPrimInfo.mSpeed
                   );
         }
     } 

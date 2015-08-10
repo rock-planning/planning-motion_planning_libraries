@@ -13,20 +13,7 @@
 #include <motion_planning_libraries/Config.hpp>
 
 namespace motion_planning_libraries {
-    
-struct PrimInfo {
-    unsigned int mId;
-    enum MovementType mMovType;
-    double mSpeed;
-    
-    Id2PrimInfo() : mId(0), mMovType(MOV_UNDEFINED), mSpeed(0.0) {
-    }
-    
-    Id2PrimInfo(unsigned int id, enum MovementType mov_type, double speed) : 
-        mId(id), mMovType(mov_type), mSpeed(speed) {
-    }
-};
-    
+        
 /**
  * Uses to check for discrete end poses copies and 
  * to avoid c++11 (tuples).
@@ -245,10 +232,14 @@ struct SbplMotionPrimitives {
         int const prim_id, int const multiplier, Primitive& primitive);
     */
     
+    /**
+     * \deprecated
+     */
     bool createCurvePrimForAngle0(double const turning_radius_discrete, 
         double const angle_rad_discrete, 
         int const prim_id, 
         int const multiplier, 
+        double speed,
         Primitive& primitive);
     
     /**
@@ -263,6 +254,11 @@ struct SbplMotionPrimitives {
     bool getSpeed(unsigned int const prim_id, double& speed);
     
     /**
+     * Returns the movement type and speed of the passed primitive id.
+     */
+    bool getPrimInfo(unsigned int const prim_id, struct PrimInfo& info);
+    
+    /**
      * Calculates the center of rotation for the new discretized end position.
      * Transforms the end pose into the start frame and
      * calculates the intersection of the orthogonal line of the end pose
@@ -273,20 +269,6 @@ struct SbplMotionPrimitives {
         base::Vector3d start_position, double start_theta_rad, 
         base::Vector3d end_position, double end_theta_rad,
         base::Vector3d& cof_grids);
-    
-    /**
-     * Returns the movement type and speed of the passed primitive id.
-     */
-    bool getPrimInfo(unsigned int id, struct PrimInfo& info) {
-
-        if(id >= mId2PrimInfo.size()) {
-            LOG_WARN("Only %d primitive types are available", mId2PrimInfo.size());
-            return false;
-        }
-        
-        info = mId2PrimInfo[id];
-        return true;
-    }
 };
 
 } // end namespace motion_planning_libraries
