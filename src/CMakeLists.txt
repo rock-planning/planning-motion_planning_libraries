@@ -35,6 +35,7 @@ rock_library(motion_planning_libraries
     DEPS_PKGCONFIG envire
     DEPS_PKGCONFIG ompl
     DEPS_PKGCONFIG sbpl
+    DEPS_PKGCONFIG dwa
 )
 
 rock_executable(motion_planning_libraries_bin Main.cpp
