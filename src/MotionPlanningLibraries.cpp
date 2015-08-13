@@ -230,8 +230,6 @@ bool MotionPlanningLibraries::setGoalState(struct State new_state, bool reset) {
         LOG_WARN("Planning library has not been allocated yet");
         return false;
     }
-   
-    bool new_state_received = mGoalState.differs(new_state);
     
     switch (new_state.getStateType()) {
         case STATE_EMPTY: {
@@ -279,7 +277,7 @@ bool MotionPlanningLibraries::setGoalState(struct State new_state, bool reset) {
     }
     
     if(!reset) {
-        if(mConfig.mReplanning.mReplanOnNewGoalPose && new_state_received) {
+        if(mConfig.mReplanning.mReplanOnNewGoalPose) {
             mReplanRequired = true;
         }  
         mNewGoalReceived = true;
