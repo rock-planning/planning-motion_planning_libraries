@@ -467,8 +467,9 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld() {
     std::vector<base::geometry::SplineBase::CoordinateType> coord_types;
     base::Vector3d last_position;
     last_position[0] = last_position[1] = last_position[2] = nan("");
-    
+     
     std::vector<State>::iterator it = mPlannedPathInWorld.begin();  
+    LOG_DEBUG("mPlannedPathInWorld size %d", mPlannedPathInWorld.size()); 
     for(;it != mPlannedPathInWorld.end(); it++) {
         if(!isnan(it->mSpeed)) {
             use_this_speed = it->mSpeed;
@@ -487,9 +488,10 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld() {
         // If the last point have been reached a trajectory will be created with all the remaining points
         // (or all points if only one speed has been used).
         if((use_this_speed != last_speed && path.size() > 1) || it+1 == mPlannedPathInWorld.end()) {
-            LOG_DEBUG("Add trajectory with speed: %4.2f", last_speed);
             base::Trajectory trajectory;
             trajectory.speed = last_speed;  
+            LOG_DEBUG("Adds trajectory with speed %4.2f, path contains %d coordinates", 
+                    last_speed, path.size());
             try {
                 trajectory.spline.interpolate(path, parameters, coord_types);
             } catch (std::runtime_error& e) {
@@ -550,7 +552,7 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorl
     double robot_max_radius_in_grid =   max_radius / min_cell_size; 
     // Checks all cells within the radius.. can be very expensive.
     // Footprint radius is increased a little bit to add some extra safety distance.
-    robot_max_radius_in_grid *= 1.2;
+    robot_max_radius_in_grid *= 1.1;
     /// \todo "Could use false here, so that just the center and the border of the circle are used."
     grid_calc.setFootprintCircleInGrid(robot_max_radius_in_grid, true);
     LOG_DEBUG("Robot max radius %4.2f, min cell size %4.2f, robot max radius in grid %4.2f\n", 
@@ -560,7 +562,13 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorl
     base::samples::RigidBodyState rbs_world, rbs_grid;
     rbs_world.orientation.setIdentity();
     
-    for(unsigned int i=trajectories.size()-1; i>=0; i--) {
+    if(trajectories.size() == 0) {
+        LOG_ERROR("Trajectories size is 0, escape trajectory could not be created");
+        return std::vector<base::Trajectory>();
+    }
+    
+    for(int i=(int)(trajectories.size())-1; i>=0; i--) {
+        LOG_DEBUG("Trajectory %u", i);
         double inverted_speed = -trajectories[i].speed; // Invert speed.
         base::geometry::Spline<3> spline = trajectories[i].spline;
         
@@ -589,11 +597,13 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorl
             grid_calc.setFootprintPoseInGrid(rbs_grid.position[0], rbs_grid.position[1], 0);
             try {
                 free_point_found = grid_calc.isValid();
+                LOG_DEBUG("Free point found: %s", free_point_found ? "true" : "false");
             } catch (std::runtime_error& e) {
                 LOG_ERROR("Exception in isValid: %s, escape trajectory cannot be created", e.what());
                 return std::vector<base::Trajectory>();
             }
             if(free_point_found && inverted_points.size() >= 2) {
+                LOG_DEBUG("Free point found and at least two inverted points are available");
                 break;
             }
         }
@@ -611,9 +621,14 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorl
             break;
         }
     }
-    LOG_INFO("Escape trajectory contains %d splines\n", inverted_trajectories.size());
-    LOG_INFO("First safe point is at %4.2f %4.2f\n", rbs_world.position[0], rbs_world.position[1]);
-    return inverted_trajectories;
+    if(free_point_found) {
+        LOG_INFO("Escape trajectory contains %d splines\n", inverted_trajectories.size());
+        LOG_INFO("First safe point is at %4.2f %4.2f\n", rbs_world.position[0], rbs_world.position[1]);
+        return inverted_trajectories;
+    } else {
+        LOG_INFO("Escape trajectory could NOT be found, empty trajectory will be returned");
+        return std::vector<base::Trajectory>();
+    }
 }
 
 void MotionPlanningLibraries::printPathInWorld() {
