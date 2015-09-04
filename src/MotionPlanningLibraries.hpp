@@ -254,7 +254,8 @@ class MotionPlanningLibraries
     /**
      * Inverts the last trajectory and searches from goal to start for the next valid pose.
      * This can be used if the robot stucks within an obstacle.
-     * Returns an empty vector if an error occurred.
+     * \return At the moment: Even if all positions on the escape trajectory are invalid 
+     * the found escape trajectory will be returned.
      */
     std::vector<base::Trajectory> getEscapeTrajectoryInWorld();
     

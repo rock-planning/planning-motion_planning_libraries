@@ -184,7 +184,8 @@ struct Config {
             mNumIntermediatePoints(0),
             mNumPrimPartition(2),
             mPrimAccuracy(0.25),
-            mJointBorders() {
+            mJointBorders(),
+            mEscapeTrajRadiusFactor(1.0) {
        if(mNumPrimPartition < 1) {
            LOG_WARN("Number of sub-primitives (mNumPrimPartition) has to be at least 1 ");
            mNumPrimPartition = 1;
@@ -234,6 +235,9 @@ struct Config {
     unsigned int mNumPrimPartition;
     // Max distance in grids from the reached end position to the next discrete one.
     double mPrimAccuracy;
+    // Can be used to increase the radius of the robot when creating an escape trajectory.
+    // Greater values (>1.0) will lead to a longer trajectory, smaller (<1.0) values to a short one.
+    double mEscapeTrajRadiusFactor;
     
     // ARM MOTION PLANNING
     // defines the number and borders of the joints.  <low,high> in rad

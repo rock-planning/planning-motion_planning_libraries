@@ -552,7 +552,7 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorl
     double robot_max_radius_in_grid =   max_radius / min_cell_size; 
     // Checks all cells within the radius.. can be very expensive.
     // Footprint radius is increased a little bit to add some extra safety distance.
-    robot_max_radius_in_grid *= 1.1;
+    robot_max_radius_in_grid *= mConfig.mEscapeTrajRadiusFactor;
     /// \todo "Could use false here, so that just the center and the border of the circle are used."
     grid_calc.setFootprintCircleInGrid(robot_max_radius_in_grid, true);
     LOG_DEBUG("Robot max radius %4.2f, min cell size %4.2f, robot max radius in grid %4.2f\n", 
@@ -624,11 +624,14 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorl
     if(free_point_found) {
         LOG_INFO("Escape trajectory contains %d splines\n", inverted_trajectories.size());
         LOG_INFO("First safe point is at %4.2f %4.2f\n", rbs_world.position[0], rbs_world.position[1]);
-        return inverted_trajectories;
+        //return inverted_trajectories;
     } else {
         LOG_INFO("Escape trajectory could NOT be found, empty trajectory will be returned");
-        return std::vector<base::Trajectory>();
+        //return std::vector<base::Trajectory>();
     }
+    // TODO Currently we support an escape trajectory even if all positions are invalid.
+    // We need sth. to escape.. 
+    return inverted_trajectories;
 }
 
 void MotionPlanningLibraries::printPathInWorld() {
