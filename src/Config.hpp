@@ -184,8 +184,8 @@ struct Config {
             mNumIntermediatePoints(0),
             mNumPrimPartition(2),
             mPrimAccuracy(0.25),
-            mJointBorders(),
-            mEscapeTrajRadiusFactor(1.0) {
+            mEscapeTrajRadiusFactor(1.0),
+            mJointBorders() {
        if(mNumPrimPartition < 1) {
            LOG_WARN("Number of sub-primitives (mNumPrimPartition) has to be at least 1 ");
            mNumPrimPartition = 1;
