@@ -622,7 +622,8 @@ bool SbplMotionPrimitives::createCurvePrimForAngle0(double const turning_radius_
 }
 
 int SbplMotionPrimitives::calcDiscreteEndOrientation(double yaw_rad) {
-    int discrete_theta = round(yaw_rad / (double)mConfig.mNumAngles);
+    double rad_per_discrete_step = (2*M_PI) / (double)mConfig.mNumAngles;
+    int discrete_theta = round(yaw_rad / rad_per_discrete_step);
     while (discrete_theta >= (int)mConfig.mNumAngles)
         discrete_theta -= mConfig.mNumAngles;
     while (discrete_theta < 0)
