@@ -101,6 +101,59 @@ void Sbpl::createSBPLMap(envire::TraversabilityGrid* trav_grid,
         sbpl_cost = SBPL_MAX_COST - (int)(driveability * (double)SBPL_MAX_COST) + 1.0;
         *sbpl_map_p = sbpl_cost;
     }
+    
+    mTravInfos.setTravInfo(trav_grid);
+}
+
+bool Sbpl::sbplMapToTravGrid(envire::TraversabilityGrid** trav_grid, 
+        envire::FrameNode** frame_node = NULL)
+{
+    
+    if(!mTravInfos.isDataValid()) {
+        LOG_WARN("Internal trav data is not valid, SBPL trav map cannot be created");
+        return false;
+    }
+    
+    // Initializing exploreMap that is going to be dumped.
+    *trav_grid = new envire::TraversabilityGrid(
+            mTravInfos.cellSizeX, mTravInfos.cellSizeY, 
+            mTravInfos.scaleX, mTravInfos.scaleY, 
+            mTravInfos.offsetX, mTravInfos.offsetY);
+    (*trav_grid)->setTraversabilityClass(0, envire::TraversabilityClass (1.0)); // unknown
+    (*trav_grid)->setTraversabilityClass(1, envire::TraversabilityClass (0.0)); // obstacle
+    (*trav_grid)->setTraversabilityClass(2, envire::TraversabilityClass (0.5)); // robot cells
+    
+    envire::TraversabilityGrid::ArrayType& trav_array = (*trav_grid)->getGridData();
+    
+    // Copy SBPL map (just the obstacles) into the trav grid.
+    for(size_t y = 0; y < mTravInfos.cellSizeY; y++){
+        for (size_t x = 0; x < mTravInfos.cellSizeX; x++){
+            (*trav_grid)->setProbability(1.0, x, y);
+            if(mpSBPLMapData[x+y*mTravInfos.cellSizeX] == SBPL_MAX_COST + 1) {
+                trav_array[y][x] = 1; // obstacle
+            }
+        } 
+    }
+    
+    // Add the passed cells. Used to visualize the robot rectangle which 
+    // is used for collision checking by SBPL.
+    std::set< std::pair<int, int> >::iterator it = mAllCheckedCells.begin();
+    int x_i=0, y_i=0;
+    for(; it != mAllCheckedCells.end(); it++) {
+        x_i = it->first;
+        y_i = it->second;
+        unsigned int pos = x_i + y_i * mTravInfos.cellSizeX;
+        if(pos < mTravInfos.cellSizeX * mTravInfos.cellSizeY) {
+            trav_array[y_i][x_i] = 2; // robot cells.
+        } else {
+            LOG_WARN("Cell position (%d,%d) lies outside of the map", x_i, y_i);
+        }
+    }
+    
+    // Creates copy of the frame node.
+    *frame_node = new envire::FrameNode(*mTravInfos.frameNode);
+    
+    return true;
 }
 
 std::vector<sbpl_2Dpt_t> Sbpl::createFootprint(double robot_width, double robot_length) {
@@ -131,6 +184,23 @@ std::vector<sbpl_2Dpt_t> Sbpl::createFootprint(double robot_width, double robot_
 bool Sbpl::foundFinalSolution() {
     LOG_INFO("Current epsilon is %4.2f", mEpsilon);
     return (mEpsilon == 1.0);
+}
+
+bool Sbpl::addLastCheckedCells() {
+    boost::shared_ptr<EnvironmentNAVXYTHETALATTICE> env_sbpl =
+        boost::dynamic_pointer_cast<EnvironmentNAVXYTHETALATTICE>(mpSBPLEnv);  
+    
+    if(env_sbpl == NULL) {
+        LOG_WARN("No SBL EnvironmentNAVXYTHETALATTICE environment seems to be used, last cells could not be added");
+        return false;
+    }
+        
+    std::vector<sbpl_2Dcell_t> last_checked_cells = env_sbpl->GetCheckedCells();
+    std::vector<sbpl_2Dcell_t>::iterator it = last_checked_cells.begin();
+    for(; it != last_checked_cells.end(); it++) {
+        mAllCheckedCells.insert(std::pair<int,int>(it->x, it->y));
+    }
+    return true;
 }
 
 } // namespace motion_planning_libraries

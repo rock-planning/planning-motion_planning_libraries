@@ -300,6 +300,12 @@ class MotionPlanningLibraries
         base::samples::RigidBodyState const& grid_local_pose,
         base::samples::RigidBodyState& world_pose);
     
+    /**
+     * If available the internal SBPL map is returned containing
+     * just the obstacles and the rectangles at the checked goal poses.
+     */
+    bool getInternalSBPLMapDebug(envire::TraversabilityGrid** trav_grid, envire::FrameNode ** fr);
+    
  private:
     /**
      * Extracts the traversability map \a trav_map_id from the passed environment.

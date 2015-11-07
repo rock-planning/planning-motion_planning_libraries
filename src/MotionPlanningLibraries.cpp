@@ -146,7 +146,7 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
             mError = MPL_ERR_SET_START_GOAL;
             return false;
         }
-        
+        printf("Goal orientation %4.2f", mGoalStateGrid.getPose().getYaw());
         if(!mpPlanningLib->setStartGoal(mStartStateGrid, mGoalStateGrid)) {
             LOG_WARN("Start/goal state could not be set after reinitialization");
             mError = MPL_ERR_SET_START_GOAL;
@@ -207,6 +207,7 @@ bool MotionPlanningLibraries::setStartState(struct State new_state) {
     if(goalStateAvailable()) {
         goal_state = mGoalStateGrid;
     } else {
+        printf("Goal state not available\n");
         goal_state.mPose.position = base::Vector3d(0,0,0);
     }
     
@@ -267,6 +268,7 @@ bool MotionPlanningLibraries::setGoalState(struct State new_state, bool reset) {
     if(startStateAvailable()) {
         start_state = mStartStateGrid;
     } else {
+        printf("Start state not available\n");
         start_state.mPose.position = base::Vector3d(0,0,0);
     }
     
@@ -806,6 +808,21 @@ bool MotionPlanningLibraries::gridlocal2world(envire::TraversabilityGrid const* 
     world_pose.setTransform(local2world * grid_local_pose_tmp.getTransform() );
     
     return true;
+}
+
+bool MotionPlanningLibraries::getInternalSBPLMapDebug(envire::TraversabilityGrid** trav_grid, envire::FrameNode ** fr) {
+    Sbpl* sbpl = dynamic_cast<Sbpl*>(mpPlanningLib.get());
+    
+    if(sbpl != NULL) {
+        if(sbpl->sbplMapToTravGrid(trav_grid, fr)) {
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        LOG_WARN("Planning library is not SBPL, no internal map can be returned");
+        return false;
+    }
 }
 
 // PRIVATE

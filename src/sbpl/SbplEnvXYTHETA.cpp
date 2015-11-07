@@ -190,6 +190,7 @@ bool SbplEnvXYTHETA::setStartGoal(struct State start_state, struct State goal_st
     int goal_id = 0;
     
     // Start/goal have to be defined in meters (grid_local).
+    // TODO So we got a double discretization.. not good.
     boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
             boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
     
@@ -200,7 +201,7 @@ bool SbplEnvXYTHETA::setStartGoal(struct State start_state, struct State goal_st
     double goal_y = goal_state.getPose().position[1] * mSBPLScaleY;
     double goal_yaw = goal_state.getPose().getYaw();
     
-    LOG_INFO("Change start/goal within SBPL env and planner to (%4.2f, %4.2f, %4.2f), (%4.2f, %4.2f, %4.2f)",
+    printf("Change start/goal within SBPL env and planner to (%4.2f, %4.2f, %4.2f), (%4.2f, %4.2f, %4.2f)",
         start_x, start_y, start_yaw, goal_x, goal_y, goal_yaw);
     
     start_id = env_xytheta->SetStart(start_x, start_y, start_yaw);
@@ -225,9 +226,11 @@ bool SbplEnvXYTHETA::setStartGoal(struct State start_state, struct State goal_st
     mStartGrid[0] = start_state.getPose().position[0];
     mStartGrid[1] = start_state.getPose().position[1];
     mStartGrid[2] = mPrims->calcDiscreteEndOrientation(start_state.getPose().getYaw());
+    printf("Start mprim pose %d, %d, %d\n", mStartGrid[0], mStartGrid[1], mStartGrid[2]);
     mGoalGrid[0] = goal_state.getPose().position[0];
     mGoalGrid[1] = goal_state.getPose().position[1];
     mGoalGrid[2] = mPrims->calcDiscreteEndOrientation(goal_state.getPose().getYaw());
+    printf("Goal mprim pose %d, %d, %d\n", mGoalGrid[0], mGoalGrid[1], mGoalGrid[2]);
       
     return true;
 }
@@ -367,7 +370,8 @@ enum MplErrors SbplEnvXYTHETA::isStartGoalValid() {
         LOG_WARN("Goal lies on an obstacle");
         err += (int)MPL_ERR_GOAL_ON_OBSTACLE;
     }
-    
+    addLastCheckedCells();
+        
     return (enum MplErrors)err;
 }
 

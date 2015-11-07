@@ -18,6 +18,36 @@
 namespace motion_planning_libraries
 {
     
+struct StoreTravInfos {
+    StoreTravInfos() { 
+        cellSizeX = 0;
+        cellSizeY = 0;
+        scaleX = 0;
+        scaleY = 0; 
+        offsetX = 0;
+        offsetY = 0;
+    }
+    
+    void setTravInfo(envire::TraversabilityGrid* trav_p) {
+        cellSizeX = trav_p->getCellSizeX();
+        cellSizeY = trav_p->getCellSizeY();
+        scaleX = trav_p->getScaleX();
+        scaleY = trav_p->getScaleY();
+        offsetX = trav_p->getOffsetX();
+        offsetY = trav_p->getOffsetY();        
+        frameNode = new envire::FrameNode(trav_p->getFrameNode()->getTransform());
+    }
+    
+    bool isDataValid() {
+        return cellSizeX && cellSizeX && scaleX && scaleY;
+    }
+    
+    size_t cellSizeX, cellSizeY;
+    double scaleX, scaleY;
+    double offsetX, offsetY;
+    envire::FrameNode* frameNode;
+};
+    
 /**
  * Finds the path with minimal cost from start to goal using a traversability map. 
  */
@@ -38,6 +68,8 @@ class Sbpl : public AbstractMotionPlanningLibrary
     // - after planning have failed - whether the states intersect with an obstacle.
     Eigen::Vector3i mStartGrid, mGoalGrid;
     double mEpsilon;
+    struct StoreTravInfos mTravInfos;
+    std::set< std::pair<int,int> > mAllCheckedCells;
         
  public: 
     Sbpl(Config config = Config());
@@ -56,6 +88,16 @@ class Sbpl : public AbstractMotionPlanningLibrary
             boost::shared_ptr<TravData> trav_data);
     
     /**
+     * Converts the current SBPL map into a trav grid.
+     * Can be used for debugging.
+     * \warning Allocates memory for both map and frame-node.
+     * \param cells Passed cells will be clored in a median driveability.
+     * \param frame_node Is set to the stored frame node of the 
+     * last received trav map.
+     */
+    bool sbplMapToTravGrid(envire::TraversabilityGrid** trav_grid, envire::FrameNode** frame_node);
+    
+    /**
      * The footprint has to be defined in meter.
      */
     std::vector<sbpl_2Dpt_t> createFootprint(double robot_width, double robot_height);
@@ -65,6 +107,19 @@ class Sbpl : public AbstractMotionPlanningLibrary
      * (starting at a higher number).
      */
     bool foundFinalSolution();
+    
+    /**
+     * Inserts the last cells which have been checked for validity by SBPL into a set.
+     */
+    bool addLastCheckedCells();
+    
+    inline std::set< std::pair<int,int> > getAllCheckedCells() {
+        return mAllCheckedCells;
+    }
+    
+    inline void clearAllCheckedCells() {
+        mAllCheckedCells.clear();
+    }
 };
     
 } // end namespace motion_planning_libraries
