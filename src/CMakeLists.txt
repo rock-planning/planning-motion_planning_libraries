@@ -1,4 +1,4 @@
-set( CMAKE_BUILD_TYPE Debug )
+#set( CMAKE_BUILD_TYPE Debug )
 
 rock_library(motion_planning_libraries
     SOURCES MotionPlanningLibraries.cpp 
