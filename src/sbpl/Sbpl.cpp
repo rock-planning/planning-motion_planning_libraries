@@ -77,24 +77,30 @@ void Sbpl::createSBPLMap(envire::TraversabilityGrid* trav_grid,
     unsigned char* sbpl_map_p = mpSBPLMapData;
     uint8_t* stop_p = trav_data->origin() + trav_data->num_elements();
     
-    // The calculated costs of unknown areas (mean value of all grids)
+
+    // The calculated costs of unknown areas (mean value of all grids, see 
+    // slam/envire/src/operators/SimpleTraversability)
     // is set to a close-to-obstacle-cost to prevent using unknown areas.
-    std::vector <envire::TraversabilityClass > trav_classes = trav_grid->getTraversabilityClasses();
-    double highest_driveability = 0.0;
-    double last_highest_driveability = 0.0;
+    // TODO Actually it should work without this.
+    /*
+    std::vector <envire::TraversabilityClass> trav_classes = trav_grid->getTraversabilityClasses();
+    double bad_driveability = std::numeric_limits< double >::max();
     for(unsigned int i=0; i<trav_classes.size(); i++) {
-        double driveability = (trav_grid->getTraversabilityClass(i)).getDrivability();
-        if(driveability > highest_driveability) {
-            last_highest_driveability = highest_driveability; 
-            highest_driveability = driveability;
+        double cur_driv = (trav_grid->getTraversabilityClass(i)).getDrivability();
+        if(cur_driv != 0 && cur_driv < bad_driveability) {
+            bad_driveability = cur_driv;
         }
     }
+    LOG_WARN("Driveability of unknown areas is increased to %4.2f in SBPL", bad_driveability);
+    */
+    // Currently the default driveability of unkonwn areas (mean) is used.
+    double bad_driveability = (trav_grid->getTraversabilityClass(envire::SimpleTraversability::CLASS_UNKNOWN)).getDrivability();
     
-    LOG_WARN("Driveability of unknown areas is increased to %4.2f in SBPL", last_highest_driveability);
+    // Fill map.
     for(uint8_t* p = trav_data->origin(); p < stop_p; p++, sbpl_map_p++) {
         uint8_t class_value = *p;
         if(class_value == envire::SimpleTraversability::CLASS_UNKNOWN) {
-            driveability = last_highest_driveability;
+            driveability = bad_driveability;
         } else {
             driveability = (trav_grid->getTraversabilityClass(class_value)).getDrivability();
         }

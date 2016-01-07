@@ -110,32 +110,27 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
         LOG_WARN("Planning library has not been allocated yet");
         return false;
     }
-    
     envire::TraversabilityGrid* trav_grid = extractTravGrid(env, trav_map_id);
     if(trav_grid == NULL) {
         LOG_WARN("Traversability map could not be extracted");
         return false;
     } 
-    
     // Currently if you start the grap-slam-module and do not wait a few seconds
     // you get a map with sizex/sizey 0.1.
     if(trav_grid->getSizeX() < 1 || trav_grid->getSizeY() < 1) {
         LOG_ERROR("Size of the extracted map is incorrect (%4.2f, %4.2f)", trav_grid->getSizeX(), trav_grid->getSizeY());
         return false;
     }
-    
     mpTravGrid = trav_grid;
     // Creates a copy of the current grid data.
     mpTravData = boost::shared_ptr<TravData>(new TravData(
         mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY)));
-    
     // Reinitialize the complete planning environment.
     if(!mpPlanningLib->initialize(mpTravGrid, mpTravData)) {
         LOG_WARN("Initialization (navigation) failed"); 
         mError = MPL_ERR_INITIALIZE_MAP;
         return false;
     }
-    
     // Reset current start and goal state within the new environment if they are valid!
     // The new trav grid can contain another transformation, so 
     // the old start and goal pose have to be transformed into the grid again.
@@ -158,7 +153,6 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
             mReplanRequired = true;
         }
     }
-    
     return true;
 }
 
@@ -288,32 +282,34 @@ bool MotionPlanningLibraries::setGoalState(struct State new_state, bool reset) {
 
 bool MotionPlanningLibraries::allInputsAvailable(enum MplErrors& err) {
     int err_i = (int)MPL_ERR_NONE;
-    
+    // TODO CHECK
     if(!travGridAvailable()) {
-        LOG_WARN("No traversability map available");
+        LOG_INFO("No traversability map available");
         err_i += (int)MPL_ERR_MISSING_TRAV;
     }
     
     if(!startStateAvailable()) {
-        LOG_WARN("No start state available");
+        LOG_INFO("No start state available");
         err_i += (int)MPL_ERR_MISSING_START;
     }
     
     if(!goalStateAvailable()) {
-        LOG_WARN("No goal state available");
+        LOG_INFO("No goal state available");
         err_i += (int)MPL_ERR_MISSING_GOAL;
     }
     
     err = (enum MplErrors)err_i;
     
     if(err != MPL_ERR_NONE) {
-        LOG_WARN("Planning cannot be executed");
+        LOG_WARN("Input is missing, planning cannot be executed");
         return false;
     }
     return true;
 }
 
 bool MotionPlanningLibraries::replanningRequired() {
+    // TODO If foundFinalSolution is not implemented it will always return true.
+    // So we only plan once even the solution may not be the final one.
     bool ret = mReplanRequired || 
                     mConfig.mReplanning.mReplanDuringEachUpdate || 
                     !mpPlanningLib->foundFinalSolution();

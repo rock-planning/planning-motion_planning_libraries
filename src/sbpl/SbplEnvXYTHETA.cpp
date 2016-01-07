@@ -67,9 +67,7 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             mPrims->createPrimitives();
             mPrims->storeToFile(mprim_file);
         }
-        
         createSBPLMap(trav_grid, grid_data);
-       
         LOG_INFO("Create SBPL EnvironmentNAVXYTHETAMLEVLAT environment");
         boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
                 boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
@@ -108,7 +106,6 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             LOG_INFO("SBPL does not support variable footprints, using max width,length (%4.2f, %4.2f)", 
                     robot_width, robot_length);
             std::vector<sbpl_2Dpt_t> fp_vec = createFootprint(robot_width, robot_length);
-            
             env_xytheta->InitializeEnv(grid_width, grid_height, 
                 mpSBPLMapData, // initial map
                 0,0,0, //mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
@@ -129,7 +126,6 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
              LOG_ERROR("EnvironmentNAVXYTHETAMLEVLAT initialization: catched a exception");
              return false;
         }
-        std::cout << "SBPL Init done!" << std::endl;
     }
  
     // Create planner.
@@ -167,7 +163,6 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             return false;
         }
            
-        std::cout << "SBPL: About to set start and goal, startid" << mdp_cfg.startstateid << std::endl;
         if (mpSBPLPlanner->set_start(mdp_cfg.startstateid) == 0) {
             LOG_ERROR("Failed to set start state");
             return false;
