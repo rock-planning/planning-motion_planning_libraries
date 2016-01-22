@@ -92,6 +92,26 @@ bool SbplEnvXY::initialize(envire::TraversabilityGrid* trav_grid,
     return true;
 }
 
+bool SbplEnvXY::partialMapUpdate(std::vector<CellUpdate>& cell_updates) {
+    if(cell_updates.size() == 0) {
+        return true;
+    }
+    
+    boost::shared_ptr<EnvironmentNAV2D> env_xy =
+        boost::dynamic_pointer_cast<EnvironmentNAV2D>(mpSBPLEnv);
+    
+    // Runs through all the cell updates and uses the stored driveability for the 
+    // SBPL cost calculation.
+    std::vector<CellUpdate>::iterator it = cell_updates.begin();
+    for(; it != cell_updates.end(); it++) {
+        if(!env_xy->UpdateCost(it->x, it->y, driveability2sbpl_cost(it->driveability))) {
+            LOG_WARN("SBPL cell (%d, %d) could not be updated", it->x, it->y);
+            return false;
+        }
+    }
+    return true;
+}
+
 bool SbplEnvXY::setStartGoal(struct State start_state, struct State goal_state) {
     
     LOG_DEBUG("SBPLEnvXY setStartGoal");

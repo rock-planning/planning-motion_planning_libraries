@@ -17,6 +17,7 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) :
         mConfig(config),
         mpTravGrid(NULL), 
         mpTravData(),
+        mpLastTravGrid(NULL),
         mStartState(), mGoalState(), 
         mStartStateGrid(), mGoalStateGrid(), 
         mPlannedPathInWorld(),
@@ -105,7 +106,7 @@ MotionPlanningLibraries::~MotionPlanningLibraries() {
 }
 
 bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string trav_map_id) {
-    
+
     if(mpPlanningLib == NULL) {
         LOG_WARN("Planning library has not been allocated yet");
         return false;
@@ -121,16 +122,50 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
         LOG_ERROR("Size of the extracted map is incorrect (%4.2f, %4.2f)", trav_grid->getSizeX(), trav_grid->getSizeY());
         return false;
     }
+    
+    // If the map size has not changed, partial updates are possible.
+    bool different_map_size = true;
+    if(mpLastTravGrid != NULL) {
+        different_map_size = mpTravGrid->getWidth() != mpLastTravGrid->getWidth() ||
+            mpTravGrid->getHeight() != mpLastTravGrid->getHeight();
+        LOG_INFO("Trav map sizes are different: %s", different_map_size ? "true" : "false");
+    }
+    
+    std::vector<CellUpdate> cell_updates;
+    // Tests if partialUpdates are supported by the planning library (empty vector should return true).
+    bool partial_update_implemented = mpPlanningLib->partialMapUpdate(cell_updates);
+    bool partial_update_successful = false;
+    // Execute the partial update.
+    if(!different_map_size && partial_update_implemented) {
+        collectCellUpdates(mpLastTravGrid, mpTravGrid, cell_updates);
+        partial_update_successful = mpPlanningLib->partialMapUpdate(cell_updates);
+        if(!partial_update_successful) {
+             LOG_WARN("A complete initialization will be executed, a partial update failed");
+        }
+    }
+    
     mpTravGrid = trav_grid;
-    // Creates a copy of the current grid data.
+    // Creates a copy of the new grid data.
     mpTravData = boost::shared_ptr<TravData>(new TravData(
-        mpTravGrid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY)));
+            trav_grid->getGridData(envire::TraversabilityGrid::TRAVERSABILITY)));
+    
+    // Stores last trav map for partial update testing.
+    if(mpLastTravGrid != NULL) {
+        delete mpLastTravGrid;
+        mpLastTravGrid = NULL;
+    }
+    mpLastTravGrid = new envire::TraversabilityGrid(*mpTravGrid);
+    //envire::TraversabilityGrid grid = *mpTravGrid;
+    
+    
     // Reinitialize the complete planning environment.
-    if(!mpPlanningLib->initialize(mpTravGrid, mpTravData)) {
+    // Will be used if the partial update has not been implemented or could not be executed.
+    if(!partial_update_successful && !mpPlanningLib->initialize(mpTravGrid, mpTravData)) {
         LOG_WARN("Initialization (navigation) failed"); 
         mError = MPL_ERR_INITIALIZE_MAP;
         return false;
     }
+    
     // Reset current start and goal state within the new environment if they are valid!
     // The new trav grid can contain another transformation, so 
     // the old start and goal pose have to be transformed into the grid again.
@@ -827,6 +862,54 @@ envire::TraversabilityGrid* MotionPlanningLibraries::extractTravGrid(envire::Env
         LOG_INFO("Traversability map '%s' wil be used", (*it)->getUniqueId().c_str());
         return *it;
     }
+}
+
+void MotionPlanningLibraries::collectCellUpdates( envire::TraversabilityGrid* old_map,
+        envire::TraversabilityGrid* new_map,
+        std::vector<CellUpdate>& cell_updates) {
+    
+    base::Time start_t = base::Time::now();
+    
+    assert(old_map->getCellSizeX() == new_map->getCellSizeX());
+    assert(old_map->getCellSizeY() == new_map->getCellSizeY());
+    
+    int cell_counter = 0;
+    int cell_counter_same = 0;
+    double driveability = 0.0;
+    double probability = 0.0;
+    
+    envire::Grid<uint8_t>::ArrayType& trav_old = old_map->getGridData(envire::TraversabilityGrid::TRAVERSABILITY);
+    envire::Grid<uint8_t>::ArrayType& prob_old = old_map->getGridData(envire::TraversabilityGrid::PROBABILITY);
+    envire::Grid<uint8_t>::ArrayType& trav_new = new_map->getGridData(envire::TraversabilityGrid::TRAVERSABILITY);
+    envire::Grid<uint8_t>::ArrayType& prob_new = new_map->getGridData(envire::TraversabilityGrid::PROBABILITY);
+    
+    uint8_t* trav_old_p = trav_old.origin();
+    uint8_t* prob_old_p = prob_old.origin();
+    uint8_t* trav_new_p = trav_new.origin();
+    uint8_t* prob_new_p = prob_new.origin();
+    
+    // TODO Probability relevant? Currently not used as double.
+    for(unsigned int y=0; y < new_map->getCellSizeY(); ++y) {
+        for(unsigned int x=0; x < new_map->getCellSizeX(); ++x) {
+            if(*trav_old_p != *trav_new_p || *prob_old_p != *prob_new_p) {
+                driveability = new_map->getTraversabilityClass(*trav_new_p).getDrivability();
+                // Does the same conversion which is done in TraversabilityGrid.
+                probability = ((double)*prob_new_p) /std::numeric_limits< uint8_t >::max();
+                cell_updates.push_back(CellUpdate(x, y, *trav_new_p, probability, driveability));
+                cell_counter++;
+            } else {
+                cell_counter_same++;
+            }
+            trav_old_p++;
+            prob_old_p++;
+            trav_new_p++;
+            prob_new_p++;
+        }
+    }
+    
+    LOG_INFO("%d different cells collected within %4.4f sec.", cell_counter, 
+            (base::Time::now() - start_t).toSeconds());
+    LOG_INFO("Number of unchanged cells %d", cell_counter_same);
 }
 
 } // namespace motion_planning_libraries

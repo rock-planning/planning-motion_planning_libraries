@@ -15,7 +15,22 @@ namespace motion_planning_libraries
 {
 
 typedef envire::TraversabilityGrid::ArrayType TravData;
+
+struct CellUpdate {
+    size_t x;
+    size_t y;
+    uint8_t klass;
+    double probability;
+    double driveability;
     
+    CellUpdate() : x(0), y(0), klass(0), probability(0.0), driveability(0.0) {
+    }
+    
+    CellUpdate(size_t x_, size_t y_, uint8_t klass_, double probability_, double driveability_) : 
+            x(x_), y(y_), klass(klass_), probability(probability_), driveability(driveability_) {
+    }
+};
+
 /**
  * Base class for a motion planning library.
  */
@@ -37,6 +52,17 @@ class AbstractMotionPlanningLibrary
     virtual bool initialize(envire::TraversabilityGrid* trav_grid,
             boost::shared_ptr<TravData> grid_data);
             
+    /**
+     * Contains a partial map update to avoid a full reinitialisation. 
+     * This method will be called instead of 'initialize' 
+     * if the size of the map has not changed.
+     * \return By default false is returned which leads to a complete 
+     * reinitialization. In addition true has to be returned if
+     * the passed vector is empty. This is used to check if the
+     * method has been overwritten.
+     */
+    virtual bool partialMapUpdate(std::vector<CellUpdate>& cell_updates);
+    
     /**
      * Implement for arm motion planning.
      */

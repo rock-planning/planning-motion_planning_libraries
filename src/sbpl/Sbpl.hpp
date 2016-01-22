@@ -65,6 +65,8 @@ class Sbpl : public AbstractMotionPlanningLibrary
      * (starting at a higher number).
      */
     bool foundFinalSolution();
+    
+    unsigned char driveability2sbpl_cost(double driveability);
 };
     
 } // end namespace motion_planning_libraries

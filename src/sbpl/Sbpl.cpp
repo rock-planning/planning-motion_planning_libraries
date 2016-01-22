@@ -76,7 +76,6 @@ void Sbpl::createSBPLMap(envire::TraversabilityGrid* trav_grid,
     unsigned char sbpl_cost = 0;
     unsigned char* sbpl_map_p = mpSBPLMapData;
     uint8_t* stop_p = trav_data->origin() + trav_data->num_elements();
-    
 
     // The calculated costs of unknown areas (mean value of all grids, see 
     // slam/envire/src/operators/SimpleTraversability)
@@ -104,7 +103,7 @@ void Sbpl::createSBPLMap(envire::TraversabilityGrid* trav_grid,
         } else {
             driveability = (trav_grid->getTraversabilityClass(class_value)).getDrivability();
         }
-        sbpl_cost = SBPL_MAX_COST - (int)(driveability * (double)SBPL_MAX_COST) + 1.0;
+        sbpl_cost = driveability2sbpl_cost(driveability);
         *sbpl_map_p = sbpl_cost;
     }
 }
@@ -137,6 +136,10 @@ std::vector<sbpl_2Dpt_t> Sbpl::createFootprint(double robot_width, double robot_
 bool Sbpl::foundFinalSolution() {
     LOG_INFO("Current epsilon is %4.2f", mEpsilon);
     return (mEpsilon == 1.0);
+}
+
+unsigned char Sbpl::driveability2sbpl_cost(double driveability) {
+    return SBPL_MAX_COST - (int)(driveability * (double)SBPL_MAX_COST) + 1.0;
 }
 
 } // namespace motion_planning_libraries

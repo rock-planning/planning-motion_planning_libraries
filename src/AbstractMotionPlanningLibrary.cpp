@@ -18,6 +18,11 @@ bool AbstractMotionPlanningLibrary::initialize(envire::TraversabilityGrid* trav_
     LOG_WARN("Abstract initialization is used");
     return false;
 }
+
+bool AbstractMotionPlanningLibrary::partialMapUpdate(std::vector<CellUpdate>& cell_updates) {
+    LOG_WARN("Abstract partialMapUpdate() is used");
+    return false;
+}
         
 bool AbstractMotionPlanningLibrary::initialize_arm() {
     LOG_WARN("Abstract arm initialization is used");

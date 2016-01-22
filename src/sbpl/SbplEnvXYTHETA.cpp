@@ -106,6 +106,7 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             LOG_INFO("SBPL does not support variable footprints, using max width,length (%4.2f, %4.2f)", 
                     robot_width, robot_length);
             std::vector<sbpl_2Dpt_t> fp_vec = createFootprint(robot_width, robot_length);
+            base::Time start_t = base::Time::now();
             env_xytheta->InitializeEnv(grid_width, grid_height, 
                 mpSBPLMapData, // initial map
                 0,0,0, //mStartGrid.position.x(), mStartGrid.position.y(), mStartGrid.getYaw(), 
@@ -117,6 +118,8 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
                 time_to_turn_45_degree, 
                 SBPL_MAX_COST, // cost threshold
                 mprim_file.c_str()); // motion primitives file
+            LOG_INFO("SBPL environment initialized within %4.2f sec", 
+                    (base::Time::now() - start_t).toSeconds());
         } catch (SBPL_Exception* e) {
             LOG_ERROR("EnvironmentNAVXYTHETAMLEVLAT could not be created using the motion primitive file %s (%s)", 
                     mprim_file.c_str(),
@@ -174,6 +177,26 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
         }
     }
 
+    return true;
+}
+
+bool SbplEnvXYTHETA::partialMapUpdate(std::vector<CellUpdate>& cell_updates) {
+    if(cell_updates.size() == 0) {
+        return true;
+    }
+    
+    boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT> env_xytheta =
+        boost::dynamic_pointer_cast<EnvironmentNAVXYTHETAMLEVLAT>(mpSBPLEnv);
+    
+    // Runs through all the cell updates and uses the stored driveability for the 
+    // SBPL cost calculation.
+    std::vector<CellUpdate>::iterator it = cell_updates.begin();
+    for(; it != cell_updates.end(); it++) {
+        if(!env_xytheta->UpdateCost(it->x, it->y, driveability2sbpl_cost(it->driveability))) {
+            LOG_WARN("SBPL cell (%d, %d) could not be updated", it->x, it->y);
+            return false;
+        }
+    }
     return true;
 }
 

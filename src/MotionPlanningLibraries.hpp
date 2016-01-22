@@ -143,6 +143,8 @@ class MotionPlanningLibraries
     
     envire::TraversabilityGrid* mpTravGrid;
     boost::shared_ptr<TravData> mpTravData;
+    // Receives a copy of each trav grid, which is used for partial update testing.
+    envire::TraversabilityGrid* mpLastTravGrid;
     struct State mStartState, mGoalState; // Pose in world coordinates.
     struct State mStartStateGrid, mGoalStateGrid;
     std::vector<State> mPlannedPathInWorld; // Pose in world coordinates.
@@ -307,6 +309,15 @@ class MotionPlanningLibraries
      */
     envire::TraversabilityGrid* extractTravGrid(envire::Environment* env, 
             std::string trav_map_id);
+    
+    /**
+     * Collects different cells regarding the klass and the probability.
+     * The size of both maps have to be the same.
+     * TODO Currently 
+     */
+    void collectCellUpdates( envire::TraversabilityGrid* old_map, 
+            envire::TraversabilityGrid* new_map,
+            std::vector<CellUpdate>& cell_updates);
 };
 
 } // end namespace motion_planning_libraries
