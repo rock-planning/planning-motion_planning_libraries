@@ -216,5 +216,5 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
 }
 
 //Macro that makes this plugin loadable in ruby, this is optional.
-VizkitQtPlugin(MotionPlanningLibrariesSbplMprimsVisualization)
+//VizkitQtPlugin(MotionPlanningLibrariesSbplMprimsVisualization)
 
