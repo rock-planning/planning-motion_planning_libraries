@@ -116,6 +116,12 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
         LOG_WARN("Traversability map could not be extracted");
         return false;
     } 
+    
+    LOG_INFO("Received Trav Map: Number of cells (%d, %d), cell size in meter (%4.2f, %4.2f), offset (%4.2f, %4.2f)", 
+            trav_grid->getCellSizeX(), trav_grid->getCellSizeY(), 
+            trav_grid->getScaleX(), trav_grid->getScaleY(), 
+            trav_grid->getOffsetX(), trav_grid->getOffsetY());
+    
     // Currently if you start the grap-slam-module and do not wait a few seconds
     // you get a map with sizex/sizey 0.1.
     if(trav_grid->getSizeX() < 1 || trav_grid->getSizeY() < 1) {
@@ -684,12 +690,13 @@ void MotionPlanningLibraries::printPathInWorld() {
     } 
     else if(mConfig.mEnvType == ENV_XYTHETA && mConfig.mPlanningLibType == LIB_SBPL) 
     {
-        printf("%s %s %s %s %s %s %s\n", "       #", "       X", "       Y",
-                "       Z", "   THETA", " PRIM ID", "  SPEEDS");
+        printf("%s %s %s %s %s %s %s %s\n", "       #", "       X", "       Y",
+                "       Z", "   THETA", " PRIM ID", " SPEEDS", " MOVEMENT TYPE");
         for(; it != waypoints.end() && it_state != mPlannedPathInWorld.end(); it++, counter++, it_state++) {
-            printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2d %4.2f\n", counter, 
+            printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2d %4.2f %s\n", counter, 
                     it->position[0], it->position[1], it->position[2], 
-                    it->heading, it_state->mSBPLPrimId, it_state->mSpeed
+                    it->heading, it_state->mSBPLPrimId, it_state->mSpeed,
+                    MovementTypesString[it_state->mMovType].c_str()
                   );
         }
     } 

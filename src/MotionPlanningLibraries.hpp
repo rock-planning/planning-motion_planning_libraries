@@ -275,6 +275,15 @@ class MotionPlanningLibraries
         return mError;
     }
     
+    bool getErrorString(enum MplErrors err, std::string& err_str) {
+        unsigned int err_num = (unsigned int)err;
+        if(err_num >= MPL_ERR_NUM_TYPES) {
+            return false;
+        }
+        err_str = MplErrorsString[err_num];
+        return true;
+    }
+    
     bool getSbplMotionPrimitives(struct SbplMotionPrimitives& prims);
     
     /**

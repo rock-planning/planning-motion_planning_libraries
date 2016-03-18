@@ -30,6 +30,10 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
     mSBPLScaleY = scale_y;
     
     assert (scale_x == scale_y);
+    
+    if(scale_x != 0.1) {
+        LOG_WARN("SBPL uses a cell size of 0.1m, other values will probably produce strange results.");
+    }
        
     // Create and fill SBPL environment.
     mpSBPLEnv = boost::shared_ptr<EnvironmentNAVXYTHETAMLEVLAT>(
@@ -176,6 +180,10 @@ bool SbplEnvXYTHETA::initialize(envire::TraversabilityGrid* trav_grid,
             return false;
         }
     }
+
+    // Print primitive informations.
+    //std::cout << "Primitives: " << std::endl << mPrims->toString() << std::endl;
+    LOG_INFO("Primitives:\n%s", mPrims->toString().c_str());
 
     return true;
 }
@@ -337,18 +345,25 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
             path.size(), action_list.size(), mPrims->mConfig.mNumPosesPerPrim);
     
     
-    // Runs through all states and assigns the prim id and its speed values
-    // to the first state of each primitive.
-    // If a mprim file is used mPrims may be NULL!
+    // Runs through all states and assigns prim id, speed values and movement type to 
+    // state of each primitive. If a mprim file is used mPrims may be NULL!
     for(;it_action < action_list.end(); it_action++) {
         prim_id = it_action->aind;
         double speed;
+        enum MovementType mov_type;
         
         if(mPrims != NULL) {
             if(mPrims->getSpeed(prim_id, speed)) {
-                LOG_DEBUG("Assigns to prim id %d the speed %4.2f", prim_id, speed);
+                LOG_INFO("Assigns to prim id %d the speed %4.2f", prim_id, speed);
             } else {
                 LOG_ERROR("No speed has been stored for prim id %d", prim_id);
+                return false;
+            }
+            
+            if(mPrims->getMovementType(prim_id, mov_type)) {
+                LOG_INFO("Assigns to prim id %d the movement type %s", prim_id, MovementTypesString[(int)mov_type].c_str());
+            } else {
+                LOG_ERROR("No movement type has been stored for prim id %d", prim_id);
                 return false;
             }
         }
@@ -360,6 +375,7 @@ bool SbplEnvXYTHETA::fillPath(std::vector<struct State>& path, bool& pos_defined
             }
             it_state->mSBPLPrimId = prim_id;
             it_state->mSpeed = speed;
+            it_state->mMovType = mov_type;
             it_state++;
         }
     }

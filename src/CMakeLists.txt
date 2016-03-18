@@ -1,7 +1,8 @@
 #set( CMAKE_BUILD_TYPE Debug )
 
 rock_library(motion_planning_libraries
-    SOURCES MotionPlanningLibraries.cpp 
+    SOURCES Config.cpp 
+        MotionPlanningLibraries.cpp 
         AbstractMotionPlanningLibrary.cpp
         sbpl/Sbpl.cpp 
         sbpl/SbplEnvXY.cpp

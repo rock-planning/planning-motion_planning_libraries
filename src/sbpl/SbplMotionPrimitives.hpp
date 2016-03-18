@@ -164,8 +164,12 @@ struct Primitive {
     
     std::string toString() {
         std::stringstream ss;
-        ss << "starting angle: " << mStartAngle << ", id: " << mId << ", movement type: " << 
-                (int)mMovType << ", endpose: " << mEndPose.transpose();
+        std::string mov_type_name = "Unknown";
+        if((int)mMovType < MOV_NUM_TYPES) {
+            mov_type_name = MovementTypesString[(int)mMovType];
+        }
+        ss << "Starting angle: " << mStartAngle << ", ID: " << mId << ", Movement Type: " << 
+                mov_type_name << ", Endpose: " << mEndPose.transpose();
         return ss.str();
     }
 };
@@ -187,6 +191,7 @@ struct SbplMotionPrimitives {
     std::vector<struct Primitive> mListPrimitives;
     double mRadPerDiscreteAngle;
     std::vector<double> mPrim_id2Speed;
+    std::vector<int> mPrim_id2MovementType;
      
     SbplMotionPrimitives();
      
@@ -249,6 +254,11 @@ struct SbplMotionPrimitives {
     bool getSpeed(unsigned int const prim_id, double& speed);
     
     /**
+     * Returns the movement type of the primitive (frward, backward, pointturn..).
+     */
+    bool getMovementType(unsigned int const prim_id, enum MovementType& mov_type);
+    
+    /**
      * Calculates the center of rotation for the new discretized end position.
      * Transforms the end pose into the start frame and
      * calculates the intersection of the orthogonal line of the end pose
@@ -259,6 +269,11 @@ struct SbplMotionPrimitives {
         base::Vector3d start_position, double start_theta_rad, 
         base::Vector3d end_position, double end_theta_rad,
         base::Vector3d& cof_grids);
+        
+    /**
+     * Prints all primitive informations including the assigned speed.
+     */
+    std::string toString();
 };
 
 } // end namespace motion_planning_libraries

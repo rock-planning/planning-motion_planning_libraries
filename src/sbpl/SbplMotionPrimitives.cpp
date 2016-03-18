@@ -5,12 +5,12 @@
 namespace motion_planning_libraries {
 
 SbplMotionPrimitives::SbplMotionPrimitives() : mConfig(), mListPrimitivesAngle0(),
-        mListPrimitives(), mRadPerDiscreteAngle(0), mPrim_id2Speed()
+        mListPrimitives(), mRadPerDiscreteAngle(0), mPrim_id2Speed(), mPrim_id2MovementType()
 {
 }
     
 SbplMotionPrimitives::SbplMotionPrimitives(struct MotionPrimitivesConfig config) : mConfig(config),
-        mListPrimitivesAngle0(), mListPrimitives(), mRadPerDiscreteAngle(0), mPrim_id2Speed()
+        mListPrimitivesAngle0(), mListPrimitives(), mRadPerDiscreteAngle(0), mPrim_id2Speed(), mPrim_id2MovementType()
 {
     mRadPerDiscreteAngle = (M_PI*2.0) / (double)mConfig.mNumAngles;
 }
@@ -21,15 +21,7 @@ SbplMotionPrimitives::~SbplMotionPrimitives() {
 /**
     * Fills mListPrimitives.
     */
-void SbplMotionPrimitives::createPrimitives() {  
-    /// \todo "Hack: Fix/check this!"
-    if(mConfig.mNumPrimPartition != 1 &&
-        mConfig.mNumPrimPartition != 2 &&
-        mConfig.mNumPrimPartition != 4 &&
-        mConfig.mNumPrimPartition != 8) {
-        LOG_WARN("Currently only 1, 2, 4 or 8 are valid for mNumPrimPartition!");
-    }
-    
+void SbplMotionPrimitives::createPrimitives() {      
     if(!mConfig.mMobility.isSet()) {
         LOG_WARN("No primitives will be created, all multipliers within the mobility struct are 0");
         return;
@@ -51,6 +43,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
     
     mListPrimitivesAngle0.clear();
     mPrim_id2Speed.clear();
+    mPrim_id2MovementType.clear();
         
     int primId = 0;
     Primitive prim;
@@ -66,6 +59,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 MOV_FORWARD);
         mListPrimitivesAngle0.push_back(prim);
         mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
+        mPrim_id2MovementType.push_back((int)MOV_FORWARD);
         primId++;
     }
     
@@ -78,10 +72,11 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 MOV_BACKWARD);
         mListPrimitivesAngle0.push_back(prim);
         mPrim_id2Speed.push_back(-mConfig.mMobility.mSpeed);
+        mPrim_id2MovementType.push_back((int)MOV_BACKWARD);
         primId++;         
     }
     
-    // Lateral
+    // Lateral Left
     if(mConfig.mMobility.mMultiplierLateral > 0) {
         // Lateral Left
         prim = Primitive(primId, 
@@ -91,6 +86,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 MOV_LATERAL);
         mListPrimitivesAngle0.push_back(prim);
         mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
+        mPrim_id2MovementType.push_back((int)MOV_LATERAL);
         primId++;
         
         // Lateral Right
@@ -101,6 +97,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 MOV_LATERAL);
         mListPrimitivesAngle0.push_back(prim);
         mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
+        mPrim_id2MovementType.push_back((int)MOV_LATERAL);
         primId++;
     }
     
@@ -113,6 +110,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 MOV_POINTTURN);
         mListPrimitivesAngle0.push_back(prim);
         mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
+        mPrim_id2MovementType.push_back((int)MOV_POINTTURN);
         primId++;
         
         prim = Primitive(primId,
@@ -122,6 +120,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 MOV_POINTTURN);
         mListPrimitivesAngle0.push_back(prim);
         mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
+        mPrim_id2MovementType.push_back((int)MOV_POINTTURN);
         primId++;
     }
           
@@ -139,6 +138,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
         prim.mCenterOfRotation = base::Vector3d(0.0, start_turning_radius, 0.0);
         mListPrimitivesAngle0.push_back(prim);
         mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
+        mPrim_id2MovementType.push_back((int)MOV_FORWARD_TURN);
         primId++;
         
         // Forward right hand bend
@@ -150,6 +150,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
         prim.mCenterOfRotation = base::Vector3d(0.0, -start_turning_radius, 0.0);
         mListPrimitivesAngle0.push_back(prim);
         mPrim_id2Speed.push_back(mConfig.mMobility.mSpeed);
+        mPrim_id2MovementType.push_back((int)MOV_FORWARD_TURN);
         primId++;
     }
     
@@ -163,6 +164,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
         prim.mCenterOfRotation = base::Vector3d(0.0, -start_turning_radius, 0.0);
         mListPrimitivesAngle0.push_back(prim);
         mPrim_id2Speed.push_back(-mConfig.mMobility.mSpeed);
+        mPrim_id2MovementType.push_back((int)MOV_BACKWARD_TURN);
         primId++;
         
         // Backward right hand bend
@@ -174,18 +176,23 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
         prim.mCenterOfRotation = base::Vector3d(0.0, start_turning_radius, 0.0);
         mListPrimitivesAngle0.push_back(prim);
         mPrim_id2Speed.push_back(-mConfig.mMobility.mSpeed);
+        mPrim_id2MovementType.push_back((int)MOV_BACKWARD_TURN);
         primId++;  
     }
     
     // From each base prim mNumPrimPartition prims will be created.
     // So each speed value will be repeated mNumPrimPartition times.
     std::vector<double> mPrim_id2Speed_tmp;
+    std::vector<int> mPrim_id2MovementType_tmp;
+    assert(mPrim_id2Speed.size() == mPrim_id2MovementType.size());
     for(unsigned int i=0; i<mPrim_id2Speed.size(); i++) {
         for(int j=0; j<mConfig.mNumPrimPartition; j++) {
             mPrim_id2Speed_tmp.push_back(mPrim_id2Speed[i]);
+            mPrim_id2MovementType_tmp.push_back(mPrim_id2MovementType[i]);
         }
     }
     mPrim_id2Speed = mPrim_id2Speed_tmp;
+    mPrim_id2MovementType = mPrim_id2MovementType_tmp;
     
     return mListPrimitivesAngle0;
 }
@@ -641,6 +648,16 @@ bool SbplMotionPrimitives::getSpeed(unsigned int const prim_id, double& speed) {
     return true;
 }
 
+bool SbplMotionPrimitives::getMovementType(unsigned int const prim_id, enum MovementType& mov_type) {
+    if(prim_id >= mPrim_id2MovementType.size()) {
+        LOG_WARN("Movement type for primitive id %d is not available\n", prim_id);
+        return false;
+    }
+
+    mov_type = (enum MovementType)mPrim_id2MovementType.at(prim_id);
+    return true;
+}
+
 /// \todo "Does not work yet!"
 bool SbplMotionPrimitives::calculateOrthogonalIntersection(
         base::Vector3d start_position, double start_theta_rad, 
@@ -682,6 +699,25 @@ bool SbplMotionPrimitives::calculateOrthogonalIntersection(
     cof_grids = start2end * cof_tmp;
     
     return true;
+}
+
+std::string SbplMotionPrimitives::toString() {
+    std::stringstream ss;
+    
+    std::vector<struct Primitive>::iterator it = mListPrimitives.begin();
+    for(; it != mListPrimitives.end(); it++) {
+        double speed = 0.0;
+        bool ret = getSpeed(it->mId, speed);
+        ss << it->toString() << ", Speed: ";
+        if(ret) {
+            ss << speed;
+        } else {
+            ss << "nan";
+        }
+        ss << std::endl;
+    } 
+    
+    return ss.str();
 }
                                                                     
 } // end namespace motion_planning_libraries

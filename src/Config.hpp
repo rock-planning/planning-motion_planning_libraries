@@ -30,8 +30,11 @@ enum MovementType {
     MOV_FORWARD_TURN,
     MOV_BACKWARD_TURN,
     MOV_POINTTURN,
-    MOV_LATERAL
+    MOV_LATERAL,
+    MOV_NUM_TYPES // Add types before this entry.
 };
+
+extern std::string MovementTypesString[];
 
 /// \todo "Add OMPL planners"
 enum Planners {
@@ -58,8 +61,11 @@ enum MplErrors {
     MPL_ERR_WRONG_STATE_TYPE,
     MPL_ERR_INITIALIZE_MAP,
     MPL_ERR_SET_START_GOAL,
-    MPL_ERR_REPLANNING_NOT_REQUIRED
+    MPL_ERR_REPLANNING_NOT_REQUIRED,
+    MPL_ERR_NUM_TYPES
 };
+
+extern std::string MplErrorsString[];
 
 /**
  * Describes the mobility of the system.
