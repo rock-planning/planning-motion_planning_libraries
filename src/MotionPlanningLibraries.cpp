@@ -691,9 +691,9 @@ void MotionPlanningLibraries::printPathInWorld() {
     else if(mConfig.mEnvType == ENV_XYTHETA && mConfig.mPlanningLibType == LIB_SBPL) 
     {
         printf("%s %s %s %s %s %s %s %s\n", "       #", "       X", "       Y",
-                "       Z", "   THETA", " PRIM ID", " SPEEDS", " MOVEMENT TYPE");
+                "       Z", "   THETA", " PRIM ID", "  SPEEDS", "MOVEMENT TYPE");
         for(; it != waypoints.end() && it_state != mPlannedPathInWorld.end(); it++, counter++, it_state++) {
-            printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2d %4.2f %s\n", counter, 
+            printf("%8d %8.2f %8.2f %8.2f %8.2f %8.2d %8.2f %s\n", counter, 
                     it->position[0], it->position[1], it->position[2], 
                     it->heading, it_state->mSBPLPrimId, it_state->mSpeed,
                     MovementTypesString[it_state->mMovType].c_str()

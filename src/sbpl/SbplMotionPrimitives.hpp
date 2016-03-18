@@ -48,6 +48,19 @@ struct Triple {
     }
 };
 
+struct PrimIDInfo {
+ public:
+    PrimIDInfo() : mSpeed(0.0), mMovType(MOV_UNDEFINED) {
+    }
+     
+    PrimIDInfo(double speed, enum MovementType mov_type) :
+            mSpeed(speed), mMovType(mov_type) {
+    }
+     
+    double mSpeed;
+    enum MovementType mMovType;
+};
+
 /**
  * Speed in m/sec or rad/sec.
  */
@@ -100,6 +113,7 @@ struct Primitive {
     unsigned int mCostMultiplier;
     std::vector<base::Vector3d> mIntermediatePoses; 
     enum MovementType mMovType; // Type of movement.
+    double mSpeed; // Speed in m/s of this movement. E.g. negative for backward movements.
     // Will be used to calculate the orientation of the intermediate poses.
     // This orientation is not truncated to 0 to 15.
     int mDiscreteEndOrientationNotTruncated;
@@ -108,7 +122,7 @@ struct Primitive {
     base::Vector3d mCenterOfRotation;
      
     Primitive() : mId(0), mStartAngle(0), mEndPose(), 
-            mCostMultiplier(0), mIntermediatePoses(), mMovType(MOV_UNDEFINED), 
+            mCostMultiplier(0), mIntermediatePoses(), mMovType(MOV_UNDEFINED), mSpeed(0.0),
             mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation()
     {
         mEndPose.setZero();
@@ -122,10 +136,10 @@ struct Primitive {
      * \param cost_multiplier Cost multiplier of this kind of motion.
      */
     Primitive(unsigned int id, unsigned int start_angle, base::Vector3d end_pose, 
-            unsigned int cost_multiplier, enum MovementType mov_type) : 
+            unsigned int cost_multiplier, enum MovementType mov_type, double speed) : 
             mId(id), mStartAngle(start_angle), mEndPose(end_pose), 
             mCostMultiplier(cost_multiplier), 
-            mIntermediatePoses(), mMovType(mov_type),
+            mIntermediatePoses(), mMovType(mov_type), mSpeed(speed),
             mDiscreteEndOrientationNotTruncated(0), mCenterOfRotation()
     {
         mCenterOfRotation.setZero();
@@ -183,6 +197,9 @@ struct Primitive {
  *  - Discrete end pose (x_grid, y_grid, theta) theta has to be +- 0 to mNumAngles
  *  - Cost multiplier
  *  - mNumPosesPerPrim: intermediate poses plus start and end with (x_m, y_m, theta_rad)
+ * Important: There must not be caps within the primitive IDs. So, if e.g. prim 2
+ * for angle 1 would be invalid, you cannot create a list 0 1 3 4. You cannot add
+ * filler either, but each prim needs to get the same id within each angle.
  */
 struct SbplMotionPrimitives {
  public:
@@ -190,8 +207,8 @@ struct SbplMotionPrimitives {
     std::vector<struct Primitive> mListPrimitivesAngle0; // Contains non discrete primitives for angle 0.
     std::vector<struct Primitive> mListPrimitives;
     double mRadPerDiscreteAngle;
-    std::vector<double> mPrim_id2Speed;
-    std::vector<int> mPrim_id2MovementType;
+    // Matches the prim id (same for each angle) to speed and the type of the movement.
+    std::vector<struct PrimIDInfo> mPrimIDInfos;
      
     SbplMotionPrimitives();
      
@@ -236,10 +253,18 @@ struct SbplMotionPrimitives {
         int const prim_id, int const multiplier, Primitive& primitive);
     */
     
+    /**
+    * Creates unit vectors for all movements respectively discrete minimal turning radius for curves. 
+    * In the next step these vectors are rotated (discrete angles) and extended until
+    * mNumPrimPartition valid prims have been collected. A prim is valid if it
+    * is close enough to a discrete state and if this discrete state is not already reached
+    * by another prim.
+    */
     bool createCurvePrimForAngle0(double const turning_radius_discrete, 
         double const angle_rad_discrete, 
         int const prim_id, 
         int const multiplier, 
+        double speed,
         Primitive& primitive);
     
     /**
