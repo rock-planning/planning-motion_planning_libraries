@@ -18,7 +18,7 @@ namespace motion_planning_libraries
 {
     
 // PUBLIC
-OmplEnvSHERPA::OmplEnvSHERPA(Config config) : Ompl(config) {
+OmplEnvSHERPA::OmplEnvSHERPA(Config config) : Ompl(config), mSpeed(0.0) {
 }
  
 bool OmplEnvSHERPA::initialize(envire::TraversabilityGrid* trav_grid,
@@ -113,7 +113,10 @@ bool OmplEnvSHERPA::setStartGoal(struct State start_state, struct State goal_sta
     goal_ompl->as<SherpaStateSpace::StateType>()->setFootprintClass(goal_fp_class);
             
     mpProblemDefinition->setStartAndGoalStates(start_ompl, goal_ompl);
-     
+    
+    // Store speed from start state and assign it to the complete trajectory.
+    mSpeed = start_state.mSpeed;
+ 
     return true;
 }
     
@@ -140,6 +143,9 @@ bool OmplEnvSHERPA::fillPath(std::vector<struct State>& path, bool& pos_defined_
         state.setFootprintClass(mConfig.mFootprintRadiusMinMax.first, 
                 mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses, 
                 state_ompl->getFootprintClass());
+        // Sets the speed using the speed defined in the start state.
+        // TODO Better use mSpeed in mMobility, has to be stored in the base class as well.
+        state.mSpeed = mSpeed;
         path.push_back(state);
         counter++;
     }
@@ -164,7 +170,7 @@ ompl::base::ValidStateSamplerPtr OmplEnvSHERPA::allocOBValidStateSampler(const o
     // but there is nothing to tweak in case of the ObstacleBasedValidStateSampler.
     ob::ValidStateSamplerPtr sampler_ptr = ob::ValidStateSamplerPtr(new ob::ObstacleBasedValidStateSampler(si));
     //ob::ValidStateSamplerPtr sampler_ptr = ob::ValidStateSamplerPtr(new ob::GaussianValidStateSampler(si));
-    std::cout << "Sampler: Number of attempts to find a valid sample: " << sampler_ptr->getNrAttempts() << std::endl;
+    LOG_INFO("Sampler: Number of attempts to find a valid sample: %d", sampler_ptr->getNrAttempts());
     return sampler_ptr;
 }
 

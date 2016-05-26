@@ -229,6 +229,7 @@ bool MotionPlanningLibraries::setStartState(struct State new_state) {
             }
             mStartState = new_state; 
             mStartStateGrid = State(new_grid, new_state.getFootprintRadius()); 
+            mStartStateGrid.mSpeed = new_state.mSpeed;
             break;
         }
         case STATE_ARM: {
@@ -289,6 +290,7 @@ bool MotionPlanningLibraries::setGoalState(struct State new_state, bool reset) {
             }
             mGoalState = new_state; 
             mGoalStateGrid = State(new_grid, new_state.getFootprintRadius()); 
+            mGoalStateGrid.mSpeed = new_state.mSpeed;
             break;
         }
         case STATE_ARM: {

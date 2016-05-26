@@ -13,6 +13,7 @@ class OmplEnvSHERPA : public Ompl
     ompl::base::OptimizationObjectivePtr mpPathLengthOptimization;
     ompl::base::OptimizationObjectivePtr mpMultiOptimization;
     ompl::base::OptimizationObjectivePtr mpTravGridObjective;
+    double mSpeed; // Extracted from the start state at the moment.
       
  public: 
     OmplEnvSHERPA(Config config = Config());
