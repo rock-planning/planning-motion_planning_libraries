@@ -42,7 +42,7 @@ class AbstractMotionPlanningLibrary
         
  public: 
     AbstractMotionPlanningLibrary(Config config = Config());
-    ~AbstractMotionPlanningLibrary();
+    virtual ~AbstractMotionPlanningLibrary();
                 
     /**
      * Implement for robot navigation: 

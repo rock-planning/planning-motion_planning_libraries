@@ -33,6 +33,7 @@ class Ompl : public AbstractMotionPlanningLibrary
       
  public: 
     Ompl(Config config = Config());
+    virtual ~Ompl() {}
 
     /**
      * Tries to find a valid path for \a time seconds.

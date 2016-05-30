@@ -16,6 +16,7 @@ class OmplEnvARM : public Ompl
       
  public: 
     OmplEnvARM(Config config = Config());
+    virtual ~OmplEnvARM() {}
 
     /**
      * (Re-)creates the complete ompl environment.
