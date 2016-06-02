@@ -39,7 +39,8 @@ std::string MplErrorsString[] = {
     "Wrong state type (start/goal correct?)", 
     "Map initialization failed", 
     "Start/goal could not be set", 
-    "Replanning not required"
+    "Replanning not required",
+    "End of trajectory does not reach the goal position"
 }; 
 
 } // end namespace motion_planning_libraries
