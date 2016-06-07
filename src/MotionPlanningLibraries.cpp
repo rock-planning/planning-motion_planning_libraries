@@ -885,6 +885,8 @@ void MotionPlanningLibraries::collectCellUpdates( envire::TraversabilityGrid* ol
     
     assert(old_map->getCellSizeX() == new_map->getCellSizeX());
     assert(old_map->getCellSizeY() == new_map->getCellSizeY());
+
+    base::Time start_t = base::Time::now();
     
     int cell_counter = 0;
     int cell_counter_same = 0;
