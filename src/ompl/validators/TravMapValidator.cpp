@@ -105,7 +105,7 @@ bool TravMapValidator::isValid(const ompl::base::State* state) const
             
             // Use method in State to calculate the radius.
             State state;
-            state.setFootprintClass(mConfig.mFootprintRadiusMinMax.first,
+            state.setFootprintRadius(mConfig.mFootprintRadiusMinMax.first,
                 mConfig.mFootprintRadiusMinMax.second,
                 mConfig.mNumFootprintClasses,
                 fp_class);

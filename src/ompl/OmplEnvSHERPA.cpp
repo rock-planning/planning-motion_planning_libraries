@@ -18,7 +18,7 @@ namespace motion_planning_libraries
 {
     
 // PUBLIC
-OmplEnvSHERPA::OmplEnvSHERPA(Config config) : Ompl(config), mSpeed(0.0) {
+OmplEnvSHERPA::OmplEnvSHERPA(Config config) : Ompl(config) {
 }
  
 bool OmplEnvSHERPA::initialize(envire::TraversabilityGrid* trav_grid,
@@ -92,11 +92,17 @@ bool OmplEnvSHERPA::setStartGoal(struct State start_state, struct State goal_sta
     //double start_yaw = start_state.getPose().getYaw();
     unsigned int start_fp_class = start_state.getFootprintClass(mConfig.mFootprintRadiusMinMax.first, 
             mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses);
+    LOG_INFO("Start footprint class %d, min radius %4.2f max radius %4.2f num classes %d\n", 
+            start_fp_class, mConfig.mFootprintRadiusMinMax.first,
+            mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses);
 
     double goal_x = goal_state.getPose().position[0];
     double goal_y = goal_state.getPose().position[1];
     //double goal_yaw = start_state.getPose().getYaw();
     unsigned int goal_fp_class = goal_state.getFootprintClass(mConfig.mFootprintRadiusMinMax.first, 
+            mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses);
+    LOG_INFO("Goal footprint class %d, min radius %4.2f max radius %4.2f num classes %d\n", 
+            goal_fp_class, mConfig.mFootprintRadiusMinMax.first,
             mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses);
     
     ob::ScopedState<> start_ompl(mpStateSpace);
@@ -113,9 +119,6 @@ bool OmplEnvSHERPA::setStartGoal(struct State start_state, struct State goal_sta
     goal_ompl->as<SherpaStateSpace::StateType>()->setFootprintClass(goal_fp_class);
             
     mpProblemDefinition->setStartAndGoalStates(start_ompl, goal_ompl);
-    
-    // Store speed from start state and assign it to the complete trajectory.
-    mSpeed = start_state.mSpeed;
  
     return true;
 }
@@ -140,12 +143,11 @@ bool OmplEnvSHERPA::fillPath(std::vector<struct State>& path, bool& pos_defined_
         
         State state(grid_pose);
         // Calculates from the footprint class the footprint radius.
-        state.setFootprintClass(mConfig.mFootprintRadiusMinMax.first, 
+        state.setFootprintRadius(mConfig.mFootprintRadiusMinMax.first, 
                 mConfig.mFootprintRadiusMinMax.second, mConfig.mNumFootprintClasses, 
                 state_ompl->getFootprintClass());
-        // Sets the speed using the speed defined in the start state.
-        // TODO Better use mSpeed in mMobility, has to be stored in the base class as well.
-        state.mSpeed = mSpeed;
+
+        state.mSpeed = mConfig.mMobility.mSpeed;
         path.push_back(state);
         counter++;
     }

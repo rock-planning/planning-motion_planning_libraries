@@ -108,6 +108,10 @@ struct State {
             unsigned int num_fp_classes) {
         assert (fp_radius_min <= fp_radius_max);
         assert (num_fp_classes > 0);
+        if(mFootprintRadius < fp_radius_min || mFootprintRadius > fp_radius_max) {
+            LOG_WARN("Footprint radius of the state exceeds passed borders");
+            throw std::runtime_error("Footprint radius of the state exceeds passed borders");
+        }
         return ((mFootprintRadius - fp_radius_min) / (fp_radius_max - fp_radius_min)) *  
                 (num_fp_classes - 1) + 0.5; 
     }
@@ -126,10 +130,11 @@ struct State {
         mFootprintRadius = radius;
     }
     
-    void setFootprintClass(double fp_radius_min, double fp_radius_max, 
+    void setFootprintRadius(double fp_radius_min, double fp_radius_max, 
             unsigned int num_fp_classes, unsigned int fp_class) {
         assert (fp_radius_min <= fp_radius_max);
         assert (num_fp_classes > 0);
+        assert(fp_class < num_fp_classes);
         mFootprintRadius = fp_radius_min + (fp_radius_max - fp_radius_min) * 
                 fp_class / (num_fp_classes - 1);
     }

@@ -228,8 +228,10 @@ bool MotionPlanningLibraries::setStartState(struct State new_state) {
                 return false;
             }
             mStartState = new_state; 
-            mStartStateGrid = State(new_grid, new_state.getFootprintRadius()); 
-            mStartStateGrid.mSpeed = new_state.mSpeed;
+            mStartStateGrid = new_state;
+            mStartStateGrid.mPose = new_grid;
+            //State(new_grid, new_state.getFootprintRadius()); 
+            //mStartStateGrid.mSpeed = new_state.mSpeed;
             break;
         }
         case STATE_ARM: {
@@ -238,15 +240,15 @@ bool MotionPlanningLibraries::setStartState(struct State new_state) {
         }
     }
     
-    // If required create dummy goal state (with valid position).
-    State goal_state;
+    // If required create dummy goal state (a start copy).
+    State goal_state_grid;
     if(goalStateAvailable()) {
-        goal_state = mGoalStateGrid;
+        goal_state_grid = mGoalStateGrid;
     } else {
-        goal_state.mPose.position = base::Vector3d(0,0,0);
+        goal_state_grid = mStartStateGrid;
     }
     
-    if(!mpPlanningLib->setStartGoal(mStartStateGrid, goal_state)) {
+    if(!mpPlanningLib->setStartGoal(mStartStateGrid, goal_state_grid)) {
             LOG_WARN("Start/goal state could not be set");
             mError = MPL_ERR_SET_START_GOAL;
             return false;
@@ -289,8 +291,10 @@ bool MotionPlanningLibraries::setGoalState(struct State new_state, bool reset) {
                 return false;
             }
             mGoalState = new_state; 
-            mGoalStateGrid = State(new_grid, new_state.getFootprintRadius()); 
-            mGoalStateGrid.mSpeed = new_state.mSpeed;
+            mGoalStateGrid = new_state;
+            mGoalStateGrid.mPose = new_grid;
+            //State(new_grid, new_state.getFootprintRadius()); 
+            //mGoalStateGrid.mSpeed = new_state.mSpeed;
             break;
         }
         case STATE_ARM: {
@@ -299,15 +303,15 @@ bool MotionPlanningLibraries::setGoalState(struct State new_state, bool reset) {
         }
     }
     
-    // If required create dummy start state (with valid position).
-    State start_state;
+    // If required create dummy start state (a goal copy).
+    State start_state_grid;
     if(startStateAvailable()) {
-        start_state = mStartStateGrid;
+        start_state_grid = mStartStateGrid;
     } else {
-        start_state.mPose.position = base::Vector3d(0,0,0);
+        start_state_grid = mGoalStateGrid;
     }
     
-    if(!mpPlanningLib->setStartGoal(start_state, mGoalStateGrid)) {
+    if(!mpPlanningLib->setStartGoal(start_state_grid, mGoalStateGrid)) {
             LOG_WARN("Start/goal state could not be set");
             mError = MPL_ERR_SET_START_GOAL;
             return false;
@@ -459,8 +463,7 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
     }
     
     // Calculate distance between goal pose and end of trajectory.
-    // Currently e.g. in SBPL-XYTHETA the trajectory may not reach the goal pose.
-    // \todo "Should not be a problem anymore"
+    // Currently with OMPL the trajectory may not reach the goal pose.
     if(mPlannedPathInWorld.size() > 0) {
         base::samples::RigidBodyState end_pose_trajectory = (mPlannedPathInWorld.end()-1)->mPose;
         double dist = (end_pose_trajectory.position - mGoalState.getPose().position).norm();
@@ -468,6 +471,9 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
         LOG_INFO("Distance end of trajectory to goal position in world: %4.2f", dist);
         if(dist > max_allowed_dist) {
             LOG_WARN("Goal position could only be reached imprecisely (>%4.2f m)", max_allowed_dist);
+            mError = MPL_ERR_GOAL_COULD_ONLY_BE_REACHED_IMPRECISELY;
+            mReplanRequired = true; // TODO Does this cause any troubles?
+            return false;
         }
     }
     
@@ -876,8 +882,6 @@ envire::TraversabilityGrid* MotionPlanningLibraries::extractTravGrid(envire::Env
 void MotionPlanningLibraries::collectCellUpdates( envire::TraversabilityGrid* old_map,
         envire::TraversabilityGrid* new_map,
         std::vector<CellUpdate>& cell_updates) {
-    
-    base::Time start_t = base::Time::now();
     
     assert(old_map->getCellSizeX() == new_map->getCellSizeX());
     assert(old_map->getCellSizeY() == new_map->getCellSizeY());
