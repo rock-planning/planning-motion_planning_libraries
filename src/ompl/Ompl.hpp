@@ -40,6 +40,9 @@ class Ompl : public AbstractMotionPlanningLibrary
      * If this method is called several times it will optimize the found solution.
      */
     virtual bool solve(double time);
+
+ protected:
+    std::vector<ompl::base::State*> getPathStates(const ompl::base::PathPtr&);
 };
 
 } // end namespace motion_planning_libraries

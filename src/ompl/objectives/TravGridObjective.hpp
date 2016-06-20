@@ -157,7 +157,7 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
                     //        " changes the footprint, increases cost from " << cost.v << " to " << cost.v + footprint_cost << std::endl;
                 }
    
-                cost.v += footprint_cost;
+                cost = ompl::base::Cost(cost.value() + footprint_cost);
 
                 break;
             }
