@@ -137,34 +137,57 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
         // (mean costs of s1 and s2 and the distance (x,y,theta/2.0) between the states,
         // uses the above stateCost() implementation).
         ompl::base::Cost cost = ompl::base::StateCostIntegralObjective::motionCost(s1, s2);
+        double cost_v = cost.value();
          
         switch(mConfig.mEnvType) {
                 
             // Adds cost for changing the footprint.
             case ENV_SHERPA: {
-                // Add high additional costs if the footprint of the system have been changed.
+                // Adds additional costs if the footprint of the system have been changed.
                 const SherpaStateSpace::StateType* st_s1 = s1->as<SherpaStateSpace::StateType>();
                 const SherpaStateSpace::StateType* st_s2 = s2->as<SherpaStateSpace::StateType>();
                 
-                double footprint_cost = (abs(st_s1->getFootprintClass() - st_s2->getFootprintClass()) / 
+                double fp_time_sec = (abs(st_s1->getFootprintClass() - st_s2->getFootprintClass()) / 
                         (double)mConfig.mNumFootprintClasses) * 
                         mConfig.mTimeToAdaptFootprint;
-                if(footprint_cost > 0) {
-                    footprint_cost += mConfig.mAdaptFootprintPenalty;
+                
+                // Adds time to change the footprint.
+                cost_v += fp_time_sec;
+                
+                // Adds a penalty if the fp has been changed.
+                if(fp_time_sec > 0) {
+                    cost_v += mConfig.mAdaptFootprintPenalty;
                     
                     //std::cout << "Moving from state (" << st_s1->getX() << "," << st_s1->getY() << ") fp class " << st_s1->getFootprintClass() << 
                     //        " to (" << st_s2->getX() << "," << st_s2->getY() << ") fp class " << st_s2->getFootprintClass() << 
                     //        " changes the footprint, increases cost from " << cost.v << " to " << cost.v + footprint_cost << std::endl;
                 }
-   
-                cost = ompl::base::Cost(cost.value() + footprint_cost);
-
+                
+                // Problem: Current setup keeps a big stand and does a max to min fp change
+                // close to the obstacle so the system does not got any time to
+                // change its fp.
+                double dist_m = (base::Vector2d(st_s1->getX(), st_s1->getY()) - 
+                        base::Vector2d(st_s2->getX(), st_s2->getY())).norm() * 
+                        mpTravGrid->getScaleX();
+                double mov_time_sec = dist_m / mConfig.mMobility.mSpeed;
+                
+                //printf("State dist %4.2f, move time %4.2f, fp time %4.2f\n",
+                //    dist_m, mov_time_sec, fp_time_sec
+                //);
+                
+                // If we need more time to adapt the fp than to traverse the path segment
+                // a big penalty will be added.
+                if(fp_time_sec > mov_time_sec) {
+                    cost_v += (fp_time_sec / mov_time_sec) * mConfig.mAdaptFootprintPenalty * 100;
+                }
                 break;
             }
             default: {
                 break;
             }
         }
+        
+        cost = ompl::base::Cost(cost_v);
         return cost;
     }
 };
