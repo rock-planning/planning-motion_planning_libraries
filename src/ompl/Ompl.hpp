@@ -42,7 +42,7 @@ class Ompl : public AbstractMotionPlanningLibrary
     virtual bool solve(double time);
 
  protected:
-    std::vector<ompl::base::State*> getPathStates(const ompl::base::PathPtr&);
+    std::vector<ompl::base::State*> getPathStates();
 };
 
 } // end namespace motion_planning_libraries

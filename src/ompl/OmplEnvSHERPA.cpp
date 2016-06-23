@@ -125,7 +125,7 @@ bool OmplEnvSHERPA::setStartGoal(struct State start_state, struct State goal_sta
     
 bool OmplEnvSHERPA::fillPath(std::vector<struct State>& path, bool& pos_defined_in_local_grid) {
     // Downcast from Path to PathGeometric is valid.
-    std::vector<ompl::base::State*> path_states = getPathStates(mpPathInGridOmpl);
+    std::vector<ompl::base::State*> path_states = getPathStates();
     std::vector<ompl::base::State*>::iterator it = path_states.begin();
 
     int counter = 0;

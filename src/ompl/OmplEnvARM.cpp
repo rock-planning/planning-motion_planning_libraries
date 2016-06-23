@@ -92,7 +92,7 @@ bool OmplEnvARM::solve(double time) {
 }
     
 bool OmplEnvARM::fillPath(std::vector<struct State>& path, bool& pos_defined_in_local_grid) {
-    std::vector<ompl::base::State*> path_states = getPathStates(mpPathInGridOmpl);
+    std::vector<ompl::base::State*> path_states = getPathStates();
     std::vector<ompl::base::State*>::iterator it = path_states.begin();
     int counter = 0;
     for(;it != path_states.end(); ++it) { 
