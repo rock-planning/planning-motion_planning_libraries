@@ -267,6 +267,20 @@ struct Config {
         double max_radius2 = sqrt(pow(max_length/2.0, 2) + pow(max_width/2.0, 2));
         return std::max(max_radius, max_radius2);
     }
+
+    // Calculates the min radius in meter using the specified footprint radius and rectangle.
+    double getMinRadius() {
+        double min_radius = std::min(mFootprintRadiusMinMax.first, mFootprintRadiusMinMax.second);
+        double min_length = std::min(mFootprintLengthMinMax.first, mFootprintLengthMinMax.second);
+        double min_width = std::min(mFootprintWidthMinMax.first, mFootprintWidthMinMax.second);
+        
+        // Calculates radius using width and length.
+        double min_radius2 = sqrt(pow(min_length/2.0, 2) + pow(min_width/2.0, 2));
+        if(min_radius2 == 0)
+            return min_radius;
+        else
+            return std::min(min_radius, min_radius2);
+    }
 };
 
 } // end namespace motion_planning_libraries
