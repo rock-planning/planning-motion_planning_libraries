@@ -6,7 +6,7 @@
 #include <string>
 #include <iomanip> 
 
-#include <base/Logging.hpp>
+#include <base-logging/Logging.hpp>
 
 namespace motion_planning_libraries
 {

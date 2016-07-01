@@ -4,7 +4,7 @@
 #include <base/samples/RigidBodyState.hpp>
 #include <base/Waypoint.hpp>
 #include <base/Trajectory.hpp>
-#include <base/Logging.hpp>
+#include <base-logging/Logging.hpp>
 
 #include <envire/maps/TraversabilityGrid.hpp>
 
