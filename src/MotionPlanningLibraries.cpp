@@ -576,6 +576,55 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld() {
     return trajectories;
 }
 
+std::vector<trajectory_follower::SubTrajectory> MotionPlanningLibraries::getSubTrajectoryInWorld() {
+
+    trajectory_follower::SubTrajectory sub_trajectory;
+    std::vector<trajectory_follower::SubTrajectory> sub_trajectories;
+    enum MovementType last_mov_type = MOV_UNDEFINED;
+    double last_speed = 0;
+    base::Pose2D pose;
+    std::vector<base::Pose2D> poses;
+    base::Angle angle;
+    std::vector<base::Angle> angles;
+    
+    std::vector<State>::iterator it = mPlannedPathInWorld.begin();  
+    for(;it != mPlannedPathInWorld.end(); it++) {
+        
+        pose.position[0] = it->mPose.position[0];
+        pose.position[1] = it->mPose.position[1];
+        pose.orientation = it->mPose.getYaw();
+        poses.push_back(pose);
+        angle.rad = it->mPose.getYaw();
+        angles.push_back(angle);
+        
+        // If the movement type changes a new sub spline will be created.
+        enum MovementType mov_type_min = (enum MovementType)(std::min((int)it->mMovType, (int)last_mov_type));
+        enum MovementType mov_type_max = (enum MovementType)(std::max((int)it->mMovType, (int)last_mov_type));
+        // Forward and Forward Turn (same with Backward) are combined to one Ackermann Spline.
+        if(  (last_mov_type != MOV_UNDEFINED &&
+              it->mMovType !=  last_mov_type &&
+              !(mov_type_min == MOV_FORWARD && mov_type_max == MOV_FORWARD_TURN) &&
+              !(mov_type_min == MOV_BACKWARD && mov_type_max == MOV_BACKWARD_TURN)) 
+              || // Create trajectory if the last point has been reached.
+              it+1 == mPlannedPathInWorld.end()) {
+            if(!createSubTraj(last_mov_type, last_speed, poses, angles, sub_trajectory)) {
+                LOG_ERROR("Sub trajectory could not be created, empty list will be returned");
+                return std::vector<trajectory_follower::SubTrajectory>();
+            }
+            sub_trajectories.push_back(sub_trajectory);
+            // Last pose has to be added to both splines.
+            poses.clear();
+            poses.push_back(pose);
+            angles.clear();
+            angles.push_back(angle);
+        }
+        
+        last_mov_type = it->mMovType;
+        last_speed = it->mSpeed;
+    }
+    return sub_trajectories;
+}
+
 std::vector<base::Trajectory> MotionPlanningLibraries::getEscapeTrajectoryInWorld() {
     
     if(mPlannedPathInWorld.size() == 0) {
@@ -925,6 +974,49 @@ void MotionPlanningLibraries::collectCellUpdates( envire::TraversabilityGrid* ol
     LOG_INFO("%d different cells collected within %4.4f sec.", cell_counter, 
             (base::Time::now() - start_t).toSeconds());
     LOG_INFO("Number of unchanged cells %d", cell_counter_same);
+}
+
+bool MotionPlanningLibraries::createSubTraj(enum MovementType mov_type, 
+        double speed,
+        std::vector<base::Pose2D> poses, 
+        std::vector<base::Angle> angles,
+        trajectory_follower::SubTrajectory& sub_traj) {
+    
+    if(poses.size() == 0) {
+        LOG_WARN("No poses available, sub trajectory cannot be created");
+        return false;
+    }
+        
+    switch(mov_type) {
+        case (MOV_FORWARD):
+        case (MOV_FORWARD_TURN):
+        case (MOV_BACKWARD):
+        case (MOV_BACKWARD_TURN): {
+            sub_traj.interpolate(poses);
+            sub_traj.driveMode = trajectory_follower::ModeAckermann;
+            break;
+        }
+        case (MOV_POINTTURN): {
+            sub_traj.interpolate(poses[0], angles);
+            sub_traj.driveMode = trajectory_follower::ModeTurnOnTheSpot;
+            break;
+        }
+        case (MOV_LATERAL): {
+            if(poses.size() < 2) {
+                LOG_WARN("Lateral sub trajectory requires start and end pose, but only %d poses available", poses.size());
+                return false;
+            }
+            sub_traj = trajectory_follower::Lateral(poses[0], poses[poses.size()-1].position, speed);
+            break;
+        }
+        default: {
+            LOG_WARN("Unknown movement type %d received, sub trajectory cannot be created",
+                (int)mov_type);
+            return false;
+        }
+    }
+    sub_traj.setSpeed(speed);
+    return true;
 }
 
 } // namespace motion_planning_libraries

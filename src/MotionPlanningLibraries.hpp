@@ -7,6 +7,8 @@
 
 #include <envire/maps/TraversabilityGrid.hpp>
 
+#include <trajectory_follower/SubTrajectory.hpp>
+
 #include "Config.hpp"
 #include "State.hpp"
 #include "AbstractMotionPlanningLibrary.hpp"
@@ -254,6 +256,12 @@ class MotionPlanningLibraries
     std::vector<base::Trajectory> getTrajectoryInWorld();
     
     /**
+     * Creates a sub-trajectory in which the position and the orientation
+     * are stored independently.
+     */
+    std::vector<trajectory_follower::SubTrajectory> getSubTrajectoryInWorld();
+    
+    /**
      * Inverts the last trajectory and searches from goal to start for the next valid pose.
      * This can be used if the robot stucks within an obstacle.
      * \return At the moment: Even if all positions on the escape trajectory are invalid 
@@ -327,6 +335,15 @@ class MotionPlanningLibraries
     void collectCellUpdates( envire::TraversabilityGrid* old_map, 
             envire::TraversabilityGrid* new_map,
             std::vector<CellUpdate>& cell_updates);
+    
+    /**
+     * Depending of the passed movement type the sub trajectory is created.
+     */
+    bool createSubTraj(enum MovementType mov_type, 
+        double speed,
+        std::vector<base::Pose2D> poses, 
+        std::vector<base::Angle> angles,
+        trajectory_follower::SubTrajectory& sub_traj);
 };
 
 } // end namespace motion_planning_libraries
