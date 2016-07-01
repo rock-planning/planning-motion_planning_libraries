@@ -24,7 +24,7 @@ std::vector<ompl::base::State*> Ompl::getPathStates()
 {
 #if OMPL_VERSION_VALUE < 1001000
     // Downcast from Path to PathGeometric is valid.
-    return boost::static_pointer_cast<og::PathGeometric>(mpPathInGridOmpl)->getStates();
+    return boost::static_pointer_cast<ompl::geometric::PathGeometric>(mpPathInGridOmpl)->getStates();
 #else
     std::shared_ptr<ompl::geometric::PathGeometric> pathGeometric = std::static_pointer_cast<ompl::geometric::PathGeometric>(mpPathInGridOmpl);
     if(!pathGeometric)
