@@ -137,8 +137,11 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
         // (mean costs of s1 and s2 and the distance (x,y,theta/2.0) between the states,
         // uses the above stateCost() implementation).
         ompl::base::Cost cost = ompl::base::StateCostIntegralObjective::motionCost(s1, s2);
+#if OMPL_VERSION_VALUE > 1000000
         double cost_v = cost.value();
-         
+#else
+        double cost_v = cost.v;
+#endif         
         switch(mConfig.mEnvType) {
                 
             // Adds cost for changing the footprint.

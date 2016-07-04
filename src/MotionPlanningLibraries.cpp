@@ -198,7 +198,6 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
 }
 
 bool MotionPlanningLibraries::setStartState(struct State new_state) {
-   
     if(mpPlanningLib == NULL) {
         LOG_WARN("Planning library has not been allocated yet");
         return false;
@@ -263,7 +262,6 @@ bool MotionPlanningLibraries::setStartState(struct State new_state) {
 }
 
 bool MotionPlanningLibraries::setGoalState(struct State new_state, bool reset) {
-    
     if(mpPlanningLib == NULL) {
         LOG_WARN("Planning library has not been allocated yet");
         return false;
