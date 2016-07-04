@@ -584,6 +584,8 @@ std::vector<trajectory_follower::SubTrajectory> MotionPlanningLibraries::getSubT
     std::vector<base::Pose2D> poses;
     base::Angle angle;
     std::vector<base::Angle> angles;
+    double last_orientation = nan("");
+    std::vector<double> orientation_diffs;
     
     std::vector<State>::iterator it = mPlannedPathInWorld.begin();  
     for(;it != mPlannedPathInWorld.end(); it++) {
@@ -594,6 +596,12 @@ std::vector<trajectory_follower::SubTrajectory> MotionPlanningLibraries::getSubT
         poses.push_back(pose);
         angle.rad = it->mPose.getYaw();
         angles.push_back(angle);
+        // Track orientation diffs.
+        if(isnan(last_orientation)) {
+            orientation_diffs.push_back(0.0);
+        } else {
+            orientation_diffs.push_back(angle.rad - last_orientation);
+        }
         
         // If the movement type changes a new sub spline will be created.
         enum MovementType mov_type_min = (enum MovementType)(std::min((int)it->mMovType, (int)last_mov_type));
@@ -605,7 +613,7 @@ std::vector<trajectory_follower::SubTrajectory> MotionPlanningLibraries::getSubT
               !(mov_type_min == MOV_BACKWARD && mov_type_max == MOV_BACKWARD_TURN)) 
               || // Create trajectory if the last point has been reached.
               it+1 == mPlannedPathInWorld.end()) {
-            if(!createSubTraj(last_mov_type, last_speed, poses, angles, sub_trajectory)) {
+            if(!createSubTraj(last_mov_type, last_speed, poses, angles, orientation_diffs, sub_trajectory)) {
                 LOG_ERROR("Sub trajectory could not be created, empty list will be returned");
                 return std::vector<trajectory_follower::SubTrajectory>();
             }
@@ -615,10 +623,13 @@ std::vector<trajectory_follower::SubTrajectory> MotionPlanningLibraries::getSubT
             poses.push_back(pose);
             angles.clear();
             angles.push_back(angle);
+            orientation_diffs.clear();
+            orientation_diffs.push_back(0);
         }
         
         last_mov_type = it->mMovType;
         last_speed = it->mSpeed;
+        last_orientation = angle.rad;
     }
     return sub_trajectories;
 }
@@ -978,6 +989,7 @@ bool MotionPlanningLibraries::createSubTraj(enum MovementType mov_type,
         double speed,
         std::vector<base::Pose2D> poses, 
         std::vector<base::Angle> angles,
+        std::vector<double> orientation_diffs,
         trajectory_follower::SubTrajectory& sub_traj) {
     
     if(poses.size() == 0) {
@@ -990,7 +1002,15 @@ bool MotionPlanningLibraries::createSubTraj(enum MovementType mov_type,
         case (MOV_FORWARD_TURN):
         case (MOV_BACKWARD):
         case (MOV_BACKWARD_TURN): {
-            sub_traj.interpolate(poses);
+            sub_traj.interpolate(poses, orientation_diffs);
+            /*
+            std::stringstream ss;
+            ss << "Create forward/backward traj " << std::endl;
+            for(int i=0; i < poses.size(); i++) {
+                ss << poses[i] << " orienttaion diff " << orientation_diffs[i] <<  std::endl;
+            }
+            printf("Traj %s\n", ss.str().c_str());
+            */
             sub_traj.driveMode = trajectory_follower::ModeAckermann;
             break;
         }

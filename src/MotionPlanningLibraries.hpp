@@ -343,6 +343,7 @@ class MotionPlanningLibraries
         double speed,
         std::vector<base::Pose2D> poses, 
         std::vector<base::Angle> angles,
+        std::vector<double> orientation_diffs,
         trajectory_follower::SubTrajectory& sub_traj);
 };
 
