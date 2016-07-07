@@ -464,7 +464,7 @@ bool MotionPlanningLibraries::plan(double max_time, double& cost) {
     // Currently with OMPL the trajectory may not reach the goal pose.
     if(mPlannedPathInWorld.size() > 0) {
         base::samples::RigidBodyState end_pose_trajectory = (mPlannedPathInWorld.end()-1)->mPose;
-        double dist = (end_pose_trajectory.position - mGoalState.getPose().position).norm();
+        double dist = (end_pose_trajectory.position - mGoalState.getPose().position).head(2).norm();
         double max_allowed_dist = 0.2;
         LOG_INFO("Distance end of trajectory to goal position in world: %4.2f", dist);
         if(dist > max_allowed_dist) {
