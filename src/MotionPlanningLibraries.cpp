@@ -29,12 +29,12 @@ MotionPlanningLibraries::MotionPlanningLibraries(Config config) :
             
     // Do some checks.
     // Footprint, need radius or rectangle
-    if( isnan(mConfig.mFootprintRadiusMinMax.first) && 
-        isnan(mConfig.mFootprintRadiusMinMax.second) &&
-        isnan(mConfig.mFootprintLengthMinMax.first) &&
-        isnan(mConfig.mFootprintLengthMinMax.second) && 
-        isnan(mConfig.mFootprintWidthMinMax.first) && 
-        isnan(mConfig.mFootprintWidthMinMax.second)) {
+    if( std::isnan(mConfig.mFootprintRadiusMinMax.first) &&
+        std::isnan(mConfig.mFootprintRadiusMinMax.second) &&
+        std::isnan(mConfig.mFootprintLengthMinMax.first) &&
+        std::isnan(mConfig.mFootprintLengthMinMax.second) &&
+        std::isnan(mConfig.mFootprintWidthMinMax.first) &&
+        std::isnan(mConfig.mFootprintWidthMinMax.second)) {
         LOG_ERROR("No footprint available, either a radius or width/length have to be defined");
         throw new std::runtime_error("No footprint has been defined");
     }
@@ -514,7 +514,7 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld() {
     std::vector<State>::iterator it = mPlannedPathInWorld.begin();  
     LOG_DEBUG("mPlannedPathInWorld size %d", mPlannedPathInWorld.size()); 
     for(;it != mPlannedPathInWorld.end(); it++) {
-        if(!isnan(it->mSpeed)) {
+        if(!std::isnan(it->mSpeed)) {
             use_this_speed = it->mSpeed;
         }
         // Add positions to path.
