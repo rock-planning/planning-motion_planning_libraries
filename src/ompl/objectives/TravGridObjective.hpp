@@ -181,7 +181,9 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
                 // If we need more time to adapt the fp than to traverse the path segment
                 // a big penalty will be added.
                 if(fp_time_sec > mov_time_sec) {
-                    cost_v += (fp_time_sec / mov_time_sec) * mConfig.mAdaptFootprintPenalty * 100;
+                    //cost_v += (fp_time_sec / mov_time_sec) * mConfig.mAdaptFootprintPenalty * 100;
+                    // Test: Add inf costs to avoid state transition.
+                    cost_v = std::numeric_limits<double>::infinity(); // same as infiniteCost()
                 }
                 break;
             }
