@@ -7,7 +7,7 @@
 #include <boost/concept_check.hpp>
 
 #include <base/samples/RigidBodyState.hpp>
-
+#include <stdexcept>
 #include "Config.hpp"
 
 namespace motion_planning_libraries
