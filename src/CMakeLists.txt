@@ -34,8 +34,10 @@ rock_library(motion_planning_libraries
         ompl/objectives/TravGridObjective.hpp
         ompl/spaces/SherpaStateSpace.hpp
     DEPS_PKGCONFIG envire
-    DEPS_PKGCONFIG ompl
-    DEPS_PKGCONFIG sbpl
+        ompl
+        sbpl
+        base-types
+        base-logging
 )
 
 rock_executable(motion_planning_libraries_bin Main.cpp
