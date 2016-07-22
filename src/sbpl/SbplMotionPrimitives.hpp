@@ -69,10 +69,11 @@ struct MotionPrimitivesConfig {
             mMobility(),
             mNumPrimPartition(4),
             mNumPosesPerPrim(2),
-            mNumAngles(0),
-            mMapWidth(0),
-            mMapHeight(0),
-            mGridSize(0.0) {   
+            mNumAngles(16),
+            mMapWidth(100),
+            mMapHeight(100),
+            mGridSize(0.1),
+            mPrimAccuracy(0.25) {   
     }
     
     MotionPrimitivesConfig(Config config, int trav_map_width, int trav_map_height, double grid_size) :

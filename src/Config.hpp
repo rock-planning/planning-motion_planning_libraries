@@ -31,6 +31,7 @@ enum MovementType {
     MOV_BACKWARD_TURN,
     MOV_POINTTURN,
     MOV_LATERAL,
+    MOV_LATERAL_CURVE,
     MOV_NUM_TYPES // Add types before this entry.
 };
 
@@ -93,6 +94,9 @@ struct Mobility {
     unsigned int mMultiplierForwardTurn;
     unsigned int mMultiplierBackwardTurn;
     unsigned int mMultiplierPointTurn;
+    // Inspect curves are lateral curves circling an object.
+    unsigned int mMultiplierLateralCurve;
+    
     
     Mobility() : 
            mSpeed(0.0),
@@ -103,7 +107,8 @@ struct Mobility {
            mMultiplierLateral(0),
            mMultiplierForwardTurn(0),
            mMultiplierBackwardTurn(0),
-           mMultiplierPointTurn(0) {
+           mMultiplierPointTurn(0),
+           mMultiplierLateralCurve(0) {
     }
     
     Mobility(double speed, double turning_speed, double min_turning_radius, 
@@ -112,7 +117,9 @@ struct Mobility {
              unsigned int mult_lateral=0, 
              unsigned int mult_forward_turn=0, 
              unsigned int mult_backward_turn=0, 
-             unsigned int mult_pointturn=0) :
+             unsigned int mult_pointturn=0,
+             unsigned int mult_lateral_curve=0
+            ) :
             mSpeed(speed), 
             mTurningSpeed(turning_speed),
             mMinTurningRadius(min_turning_radius),
@@ -121,13 +128,15 @@ struct Mobility {
             mMultiplierLateral(mult_lateral), 
             mMultiplierForwardTurn(mult_forward_turn), 
             mMultiplierBackwardTurn(mult_backward_turn),
-            mMultiplierPointTurn(mult_pointturn) {
+            mMultiplierPointTurn(mult_pointturn),
+            mMultiplierLateralCurve(mult_lateral_curve){
     }
     
     // Checks if any movement type has been set.
     bool isSet() {
         return (mMultiplierForward || mMultiplierBackward || mMultiplierLateral || 
-                mMultiplierForwardTurn || mMultiplierBackwardTurn || mMultiplierPointTurn);
+                mMultiplierForwardTurn || mMultiplierBackwardTurn || mMultiplierPointTurn ||
+                mMultiplierLateralCurve);
     }
     
     std::string toString() {
@@ -136,7 +145,8 @@ struct Mobility {
                 ", Multipliers (F B L FT BT PT): " << 
                 mMultiplierForward << " " << mMultiplierBackward << " " << 
                 mMultiplierLateral << " " << mMultiplierForwardTurn << " " << 
-                mMultiplierBackwardTurn << " " << mMultiplierPointTurn << std::endl; 
+                mMultiplierBackwardTurn << " " << mMultiplierPointTurn << " " <<
+                mMultiplierLateralCurve << std::endl; 
 
         return ss.str();
     }

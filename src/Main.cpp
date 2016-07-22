@@ -17,11 +17,12 @@ int main(int argc, char** argv)
     config.mMobility.mTurningSpeed = 0.1;
     config.mMobility.mMinTurningRadius = 1.0;
     
-    config.mMobility.mMultiplierForward = 1;
-    config.mMobility.mMultiplierBackward = 2;
-    config.mMobility.mMultiplierLateral = 3;
+    config.mMobility.mMultiplierForward = 0;
+    config.mMobility.mMultiplierBackward = 0;
+    config.mMobility.mMultiplierLateral = 0;
     config.mMobility.mMultiplierForwardTurn = 4;
-    config.mMobility.mMultiplierPointTurn = 5;
+    config.mMobility.mMultiplierPointTurn = 0;
+    config.mMobility.mMultiplierLateralCurve = 3;
     
     config.mNumPrimPartition = 2;
     config.mNumPosesPerPrim = 10;
@@ -31,6 +32,8 @@ int main(int argc, char** argv)
     config.mMapHeight = 100;
     config.mGridSize = 0.1;
     
+    config.mPrimAccuracy = 0.25;
+ 
     SbplMotionPrimitives mprims(config);
     mprims.createPrimitives();
     mprims.storeToFile("test.mprim");

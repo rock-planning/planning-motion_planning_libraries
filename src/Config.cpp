@@ -9,7 +9,8 @@ std::string MovementTypesString[] = {
     "Forward Turn", 
     "Backward Turn", 
     "Pointturn", 
-    "Lateral"
+    "Lateral",
+    "Lateral Turn"
 };  
 
 std::string MplErrorsString[] = {

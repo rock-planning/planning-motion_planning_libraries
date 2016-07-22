@@ -161,6 +161,31 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
         primId++;  
     }
     
+    // Lateral curves circles an object looking in the direction of the center of rotation.  
+    if(mConfig.mMobility.mMultiplierLateralCurve) {
+        // Lateral left, right curve
+        prim = Primitive(primId, 
+            0,
+            base::Vector3d(0.0, 0.0, -1.0),
+            mConfig.mMobility.mMultiplierLateralCurve,
+            MOV_LATERAL_CURVE,
+            mConfig.mMobility.mSpeed);
+        prim.mCenterOfRotation = base::Vector3d(start_turning_radius, 0.0, 0.0);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;
+        
+        // Lateral right, left curve
+        prim = Primitive(primId, 
+            0,
+            base::Vector3d(0.0, 0.0, 1.0),
+            mConfig.mMobility.mMultiplierLateralCurve,
+            MOV_LATERAL_CURVE,
+            mConfig.mMobility.mSpeed);
+        prim.mCenterOfRotation = base::Vector3d(start_turning_radius, 0.0, 0.0);
+        mListPrimitivesAngle0.push_back(prim);
+        primId++;
+    }
+    
     /*
     // From each base prim mNumPrimPartition prims will be created.
     // So each speed value will be repeated mNumPrimPartition times.
@@ -257,7 +282,8 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                     // First rotates the endpose from ceil(mConfig.mNumAngles / 4) to 1
                     // and after that the vector is scaled.
                     case MOV_FORWARD_TURN:
-                    case MOV_BACKWARD_TURN: {
+                    case MOV_BACKWARD_TURN:
+                    case MOV_LATERAL_CURVE: {
                         // theta_tmp defines the turning direction.
                         double angle_rad = current_discrete_angle * theta_tmp * mRadPerDiscreteAngle;
                         ss << "Turning angle in rad " << angle_rad << std::endl;
@@ -308,33 +334,45 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
                         Eigen::Vector3d::UnitZ()) * discrete_end_pose_rounded;
                         
                 // Checks.
+                // Checks if a primitive became too long. This check is necessary, because  
+                // if mPrimAccuracy is too small we would search forever.
+                if((discrete_end_pose - turned_end_position).norm() > max_dist_to_center_grids) {
+                    LOG_ERROR("Primitive becomes too long, only %d prims have been found for prim %s / angle %d, try tro adapt mPrimAccuracy\n", 
+                            prims_added, MovementTypesString[it->mMovType].c_str(), angle);
+                    printf("%s\n", ss.str().c_str());
+                    throw std::runtime_error("A primitive became too long, try to increase mPrimAccuracy");
+                }
+
                 // Close enugh to a discrete position?
                 if(value_end_position > mConfig.mPrimAccuracy) {
-                    ss << "Primitive not close enough to a discrete position" << std::endl;
+                    ss << "Primitive not close enough to a discrete position " << value_end_position << std::endl;
                     continue;
                 }
                 
                 // If it is a curve its discretized end position must not be 0 and 
                 // it has to lay on the same side of the x-axis as the center of rotation.
-                bool curve_valid = (it->mCenterOfRotation[1] > 0 && discrete_pose_rotate_back[1] > 0) ||
+                if(it->mMovType == MOV_FORWARD_TURN || it->mMovType == MOV_BACKWARD_TURN) {
+                    bool curve_valid = (it->mCenterOfRotation[1] > 0 && discrete_pose_rotate_back[1] > 0) ||
                         (it->mCenterOfRotation[1] < 0 && discrete_pose_rotate_back[1] < 0);
-                if((it->mMovType == MOV_FORWARD_TURN || it->mMovType == MOV_BACKWARD_TURN) && !curve_valid) {
-                    ss << "Curve is not valid, y of the turned back curve: " << discrete_pose_rotate_back[1] << std::endl;
-                    continue;
+                    if(!curve_valid) {
+                        ss << "Curve is not valid, y of the turned back curve: " << discrete_pose_rotate_back[1] << std::endl;
+                        continue;
+                    }
+                }
+
+                if(it->mMovType == MOV_LATERAL_CURVE) {
+                    if((theta_tmp > 0 && discrete_pose_rotate_back[1] >= 0) ||
+                            (theta_tmp < 0 && discrete_pose_rotate_back[1] <= 0)) {
+                        ss << "Lateral curve is not valid, turning direction " << theta_tmp << 
+                                ", y of the turned back curve: " << discrete_pose_rotate_back[1] << std::endl;
+                        continue; 
+                    }
                 }
                 
                 // Pointturns should cover 90 degree but not much more.
                 if(it->mMovType == MOV_POINTTURN && (d) > upper_discrete_angle) {
                     ss << "Pointturn primitives should not exceed mConfig.mNumAngles / 4 (rounded up)" << std::endl;
                     break;
-                }
-                
-                // Checks if a primitive became too long. This check is necessary, because  
-                // if mPrimAccuracy is too small we would search forever.
-                if((discrete_end_pose - turned_end_position).norm() > max_dist_to_center_grids) {
-                    LOG_ERROR("Primitive becomes too long, only %d prims have been found for angle %d, try tro adapt mPrimAccuracy\n", 
-                            prims_added, angle);
-                    throw std::runtime_error("A primitive became too long, try to increase mPrimAccuracy");
                 }
                 
                 // If it is a turn and if the end position has been changed due to discretization 
@@ -394,6 +432,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
         } else {
             if(prims_added_for_this_angle_last != prims_added_for_this_angle) {
                 LOG_ERROR("Different number of primitives %d/%d have been added for angle %d/%d, this should not happen");
+                printf("%s\n", ss.str().c_str());
                 throw std::runtime_error("Different number of primitives have been created for two angles");
             }
             prims_added_for_this_angle_last = prims_added_for_this_angle;
@@ -445,7 +484,9 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
         y_step = end_pose_local[1] / ((double)mConfig.mNumPosesPerPrim-1);
         theta_step = (discrete_rot_diff * mRadPerDiscreteAngle) / ((double)mConfig.mNumPosesPerPrim-1);
         
-        if(it->mMovType == MOV_FORWARD_TURN || it->mMovType == MOV_BACKWARD_TURN) {
+        if(it->mMovType == MOV_FORWARD_TURN || 
+                it->mMovType == MOV_BACKWARD_TURN || 
+                it->mMovType == MOV_LATERAL_CURVE) {
             // Transform center of rotatin to grid local.calculateOrthogonalIntersection
             center_of_rotation_local[0] = it->mCenterOfRotation[0] * mConfig.mGridSize;
             center_of_rotation_local[1] = it->mCenterOfRotation[1] * mConfig.mGridSize;
@@ -504,7 +545,8 @@ void SbplMotionPrimitives::createIntermediatePoses(std::vector<struct Primitive>
                     break;
                 }
                 case MOV_FORWARD_TURN:
-                case MOV_BACKWARD_TURN: {
+                case MOV_BACKWARD_TURN: 
+                case MOV_LATERAL_CURVE: {
                     // Calculate each intermediate pose within the center of rotation frame.
                     base::samples::RigidBodyState rbs_intermediate;
                     base::Quaterniond cur_rot;
