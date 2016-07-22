@@ -13,4 +13,5 @@
   <depend package="external/ompl" />
   <depend package="external/sbpl" />
   <depend package="gui/vizkit3d" optional="1" />
+  <depend package="base/logging" />
 </package>
