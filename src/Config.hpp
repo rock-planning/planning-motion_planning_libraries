@@ -86,7 +86,7 @@ struct Mobility {
     // Without this not valid curves may be created.
     double mMinTurningRadius; 
     // Multipliers: Allows to define multipliers for each movement (used by SBPL).
-    // If a multiplier is set to 0, this movement type will be deaAbstractMotionPlanningLibraryctivated.
+    // If a multiplier is set to 0, this movement type will be deactivated.
     unsigned int mMultiplierForward;
     unsigned int mMultiplierBackward;
     unsigned int mMultiplierLateral;

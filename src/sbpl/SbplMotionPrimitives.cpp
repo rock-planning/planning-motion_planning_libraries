@@ -95,7 +95,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 base::Vector3d(0.0, 0.0, 1.0),
                 mConfig.mMobility.mMultiplierPointTurn,
                 MOV_POINTTURN,
-                mConfig.mMobility.mSpeed);
+                mConfig.mMobility.mTurningSpeed);
         mListPrimitivesAngle0.push_back(prim);
         primId++;
         
@@ -104,7 +104,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrimsForAngle0() {
                 base::Vector3d(0.0, 0.0, -1.0),
                 mConfig.mMobility.mMultiplierPointTurn,
                 MOV_POINTTURN,
-                mConfig.mMobility.mSpeed);
+                mConfig.mMobility.mTurningSpeed);
         mListPrimitivesAngle0.push_back(prim);
         primId++;
     }
