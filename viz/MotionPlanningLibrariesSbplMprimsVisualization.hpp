@@ -17,6 +17,7 @@ namespace vizkit3d
     
     Q_PROPERTY(int angleNum READ getAngleNum WRITE setAngleNum)
     Q_PROPERTY(bool showAllAngles READ allAnglesShown WRITE setShowAllAngles)
+    Q_PROPERTY(bool colorizeByType READ getColorizeTypes WRITE setColorizeTypes)
     Q_PROPERTY(double radiusEndpoints READ getRadiusEndpoints WRITE setRadiusEndpoints)
     
     public:
@@ -35,11 +36,14 @@ namespace vizkit3d
         void setShowAllAngles(bool enabled);
         double getRadiusEndpoints() const;
         void setRadiusEndpoints(double radius);
+        bool getColorizeTypes() const;
+        void setColorizeTypes(const bool value);
 
     protected:
         int mAngleNum;
         bool mAllAnglesShown;
         double mRadiusEndpoints;
+        bool mColorizeTypes; //if true, give every primitive type a different color
         
         virtual osg::ref_ptr<osg::Node> createMainNode();
         virtual void updateMainNode(osg::Node* node);
