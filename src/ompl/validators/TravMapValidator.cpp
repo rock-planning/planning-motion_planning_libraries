@@ -2,7 +2,7 @@
 
 #include <ompl/base/SpaceInformation.h>
 
-#include <base/Logging.hpp>
+#include <base-logging/Logging.hpp>
 
 #include <motion_planning_libraries/ompl/spaces/SherpaStateSpace.hpp>
 #include <motion_planning_libraries/State.hpp>

@@ -5,7 +5,7 @@
 #include <ompl/base/objectives/StateCostIntegralObjective.h>
 
 #include <envire/maps/TraversabilityGrid.hpp>
-#include <base/Logging.hpp>
+#include <base-logging/Logging.hpp>
 
 #include <motion_planning_libraries/Config.hpp>
 #include <motion_planning_libraries/ompl/spaces/SherpaStateSpace.hpp>
