@@ -1,5 +1,5 @@
 #include "SbplMotionPrimitives.hpp"
-
+#include <base-logging/Logging.hpp>
 #include <set>
 
 namespace motion_planning_libraries {

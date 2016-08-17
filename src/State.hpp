@@ -8,6 +8,7 @@
 
 #include <base/samples/RigidBodyState.hpp>
 #include <stdexcept>
+#include <base-logging/Logging.hpp>
 #include "Config.hpp"
 
 namespace motion_planning_libraries

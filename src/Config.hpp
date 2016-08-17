@@ -2,11 +2,10 @@
 #define _MOTION_PLANNING_LIBRARIES_CONFIG_HPP_
 
 #include <math.h>
-
+#include <sstream>
 #include <string>
 #include <iomanip> 
-
-#include <base-logging/Logging.hpp>
+#include <vector>
 
 namespace motion_planning_libraries
 {
@@ -182,32 +181,7 @@ struct Replanning {
  * \todo "Split into PlanningConfig and RobotConfig?"
  */
 struct Config {
-    Config() : mPlanningLibType(LIB_SBPL), 
-            mEnvType(ENV_XY),
-            mPlanner(UNDEFINED_PLANNER),
-            mSearchUntilFirstSolution(false), // use to 'just provide ptimal trajectories'?
-            mReplanning(),
-            mMobility(),
-            mFootprintRadiusMinMax(0,0),  
-            mFootprintLengthMinMax(0,0),
-            mFootprintWidthMinMax(0,0),
-            mNumFootprintClasses(10),
-            mTimeToAdaptFootprint(40.0),
-            mAdaptFootprintPenalty(20.0),
-            mMaxAllowedSampleDist(-1),
-            mSBPLEnvFile(),
-            mSBPLMotionPrimitivesFile(), 
-            mSBPLForwardSearch(true),
-            mNumIntermediatePoints(0),
-            mNumPrimPartition(2),
-            mPrimAccuracy(0.25),
-            mEscapeTrajRadiusFactor(1.0),
-            mJointBorders() {
-       if(mNumPrimPartition < 1) {
-           LOG_WARN("Number of sub-primitives (mNumPrimPartition) has to be at least 1 ");
-           mNumPrimPartition = 1;
-       }
-    }
+    Config();
     
     // GENERAL
     enum PlanningLibraryType mPlanningLibType;
