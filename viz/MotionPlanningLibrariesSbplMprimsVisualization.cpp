@@ -17,7 +17,7 @@ struct MotionPlanningLibrariesSbplMprimsVisualization::Data {
 
 // PUBLIC
 MotionPlanningLibrariesSbplMprimsVisualization::MotionPlanningLibrariesSbplMprimsVisualization()
-    : mAngleNum(0), mAllAnglesShown(false), mRadiusEndpoints(0.05),  p(new Data)
+    : mAngleNum(0), mAllAnglesShown(false), mRadiusEndpoints(0.01), mColorizeTypes(false), p(new Data)
 {
 }
 
@@ -34,6 +34,7 @@ int MotionPlanningLibrariesSbplMprimsVisualization::getAngleNum() const {
 void MotionPlanningLibrariesSbplMprimsVisualization::setAngleNum(int num) {
     mAngleNum = num;
     emit propertyChanged("angle_num_changed");
+    setDirty();
 }
 
 bool MotionPlanningLibrariesSbplMprimsVisualization::allAnglesShown() const {
@@ -43,6 +44,7 @@ bool MotionPlanningLibrariesSbplMprimsVisualization::allAnglesShown() const {
 void MotionPlanningLibrariesSbplMprimsVisualization::setShowAllAngles(bool enabled) {
     mAllAnglesShown = enabled;
     emit propertyChanged("show_all_angles");
+    setDirty();
 }
 
 double  MotionPlanningLibrariesSbplMprimsVisualization::getRadiusEndpoints() const {
@@ -52,6 +54,7 @@ double  MotionPlanningLibrariesSbplMprimsVisualization::getRadiusEndpoints() con
 void  MotionPlanningLibrariesSbplMprimsVisualization::setRadiusEndpoints(double radius) {
     mRadiusEndpoints = radius;
     emit propertyChanged("endpoint_radius_changed");
+    setDirty();
 }
 
 // PROTECTED
@@ -99,7 +102,19 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
             continue;
         }
         
-        // Changes the prim color for each new angle.
+        if(mColorizeTypes)
+        {
+            const double step = 1.0/motion_planning_libraries::MOV_NUM_TYPES;
+            const double h = step * it->mMovType;
+            vizkit3d::hslToRgb(h, 1.0, 0.5, r, g, b);
+            color = osg::Vec4(r, g, b, 1.0f);    
+            colors = new osg::Vec4Array;
+            colors->clear();
+            colors->push_back(color);
+        }
+        
+        
+        // Changes the prim color for each new angle. (overrides mColorizeTypes)
         if((int)it->mStartAngle != last_angle) {
             vizkit3d::hslToRgb(hue, 1.0, 0.5, r, g, b);
             color = osg::Vec4(r, g, b, 1.0f);    
@@ -214,6 +229,20 @@ void MotionPlanningLibrariesSbplMprimsVisualization::addPrimitives(osg::Group* g
         group->addChild(geode_intermediate_points);
     }
 }
+
+bool MotionPlanningLibrariesSbplMprimsVisualization::getColorizeTypes() const
+{
+    return mColorizeTypes;
+}
+
+void MotionPlanningLibrariesSbplMprimsVisualization::setColorizeTypes(const bool value)
+{
+    mColorizeTypes = value;
+    emit propertyChanged("colorizeByType");
+    setDirty();
+}
+
+
 
 //Macro that makes this plugin loadable in ruby, this is optional.
 //VizkitQtPlugin(MotionPlanningLibrariesSbplMprimsVisualization)
