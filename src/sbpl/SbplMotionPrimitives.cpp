@@ -213,7 +213,7 @@ std::vector<struct Primitive> SbplMotionPrimitives::createMPrims(std::vector<str
     base::Vector3d turned_center_of_rotation;
     base::Vector3d turned_end_position;
     double theta_tmp = 0.0;
-    double max_dist_to_center_grids = 100;
+    double max_dist_to_center_grids = 10.0 / mConfig.mGridSize;
     double increase_value_grids = 0.1;
     
     assert(mConfig.mNumAngles != 0);
