@@ -1,3 +1,5 @@
 rock_testsuite(motion_planning_libraries-test suite.cpp
    test_MotionPlanning.cpp
-   DEPS motion_planning_libraries)
+   test_SbplSplineMotionPrimitives.cpp
+   DEPS_PKGCONFIG motion_planning_libraries
+   DEPS_PKGCONFIG ompl)
