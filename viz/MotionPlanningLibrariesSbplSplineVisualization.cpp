@@ -99,9 +99,37 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
     fp_geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0, poses.size()));
     geode_intermediate_points->addDrawable(fp_geometry);
 
-      colors->push_back(color);
-      // Add intermediate points to the passed group.
-      group->addChild(geode_intermediate_points);
+    colors->push_back(color);
+    // Add intermediate points to the passed group.
+    group->addChild(geode_intermediate_points);
+      
+    // Create triangle.
+    osg::ref_ptr<osg::Geometry> triangle_geometry = new osg::Geometry();
+    osg::ref_ptr<osg::Vec3Array> triangle_vertices = new osg::Vec3Array();
+    triangle_vertices->push_back(osg::Vec3(0.0, mRadiusEndpoints, 0));
+    triangle_vertices->push_back(osg::Vec3(4*mRadiusEndpoints, 0.0, 0));
+    triangle_vertices->push_back(osg::Vec3(0.0, -mRadiusEndpoints, 0));
+    triangle_geometry->setVertexArray(triangle_vertices);
+    osg::ref_ptr<osg::DrawElementsUInt> triangle_face = 
+            new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, 0);
+    triangle_face->push_back(0);
+    triangle_face->push_back(1);
+    triangle_face->push_back(2);
+    triangle_geometry->addPrimitiveSet(triangle_face);
+    triangle_geometry->setColorArray(colors);
+    triangle_geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+    osg::ref_ptr<osg::Geode> geode = new osg::Geode();
+    geode->addDrawable(triangle_geometry);
+    
+    // Move the sphere and the triangle to the endpose (converted from grid to world)
+    // using a transform.
+    osg::ref_ptr<osg::PositionAttitudeTransform> transform = new osg::PositionAttitudeTransform();
+    osg::Vec3 position = osg::Vec3d(prim.spline.getEndPoint().x(), prim.spline.getEndPoint().y(), 0);
+    position[2] += 0.001; // Moves the waypoints a little bit above the z=0 plane.
+    transform->setPosition(position);
+    transform->setAttitude(osg::Quat(prim.endAngleRad, osg::Vec3f(0,0,1)));
+    transform->addChild(geode);
+    group->addChild(transform);
   }
     
     
@@ -157,22 +185,7 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
             sd->setColor(color);
             geode->addDrawable(sd.get());
             
-            // Create triangle.
-            osg::ref_ptr<osg::Geometry> triangle_geometry = new osg::Geometry();
-            osg::ref_ptr<osg::Vec3Array> triangle_vertices = new osg::Vec3Array();
-            triangle_vertices->push_back(osg::Vec3(0.0, 2*mRadiusEndpoints, 0));
-            triangle_vertices->push_back(osg::Vec3(4*2*mRadiusEndpoints, 0.0, 0));
-            triangle_vertices->push_back(osg::Vec3(0.0, -2*mRadiusEndpoints, 0));
-            triangle_geometry->setVertexArray(triangle_vertices);
-            osg::ref_ptr<osg::DrawElementsUInt> triangle_face = 
-                    new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, 0);
-            triangle_face->push_back(0);
-            triangle_face->push_back(1);
-            triangle_face->push_back(2);
-            triangle_geometry->addPrimitiveSet(triangle_face);
-            triangle_geometry->setColorArray(colors);
-            triangle_geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
-            geode->addDrawable(triangle_geometry);
+
             
             // Move the sphere and the triangle to the endpose (converted from grid to world)
             // using a transform.

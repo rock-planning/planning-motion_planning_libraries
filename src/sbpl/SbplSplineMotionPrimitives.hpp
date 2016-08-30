@@ -27,7 +27,9 @@ struct SplinePrimitive
 {
   unsigned id; //FIXME why does a spline need an id?
   unsigned startAngle; //discretized start angle
+  double startAngleRad; //start angle in rad
   unsigned endAngle; //discretized end angle
+  double endAngleRad; //end angle in rad
   Eigen::Vector2i endPosition;//discret end position, i.e. the cell that this spline ends in
   //TODO wie macht man das mit der startposition der spline?
   base::geometry::Spline2 spline; //spline of the movement (not discretized), starts in the center of the first cell, ends in the center of the last cell
