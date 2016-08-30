@@ -1,4 +1,5 @@
 #set( CMAKE_BUILD_TYPE Debug )
+set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 rock_library(motion_planning_libraries
     SOURCES Config.cpp 
         MotionPlanningLibraries.cpp 
