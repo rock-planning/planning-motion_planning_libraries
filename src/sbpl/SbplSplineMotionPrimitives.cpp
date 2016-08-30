@@ -58,12 +58,31 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
 {
   //NOTE since the destinationCells form a circle, we do not need to rotate them.
   int id = 0; //the "same" primitives should have the same id for each start angle
-  for(const Eigen::Vector2i dest : destinationCells)
+  const double radStartAngle = startAngle * radPerDiscreteAngle;
+  
+  for(const Eigen::Vector2i& dest : destinationCells)
   {
-    SplinePrimitive prim = getPrimitive(startAngle, startAngle, dest, id);
-    primitivesByAngle[startAngle].push_back(prim);
-    ++id;
-  }
+    const Eigen::Vector2d destRot = Eigen::Rotation2D<double>(-radStartAngle) * dest.cast<double>();
+    //forward movement
+    if(destRot.x() > config.cellCenterOffset.x())
+    {
+      SplinePrimitive prim = getPrimitive(startAngle, startAngle, dest, id);
+      primitivesByAngle[startAngle].push_back(prim);
+      ++id;
+    }
+    //lateral movement
+    else if(destRot.x() == config.cellCenterOffset.x())
+    {
+      //TODO lateral movements
+    }
+    //backward movement
+    else if(destRot.x() < config.cellCenterOffset.x())
+    {
+      //TODO backward movement
+    }
+  }  
+  
+  
 }
 
 SplinePrimitive SbplSplineMotionPrimitives::getPrimitive(const int startAngle,
