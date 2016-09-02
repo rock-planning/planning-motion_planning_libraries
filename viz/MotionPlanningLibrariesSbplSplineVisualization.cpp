@@ -34,7 +34,9 @@ int MotionPlanningLibrariesSbplSplineVisualization::getAngleNum() const {
 
 void MotionPlanningLibrariesSbplSplineVisualization::setAngleNum(int num) {
     mAngleNum = num;
-    emit propertyChanged("angle_num_changed");
+    mEndAngle = num;
+    emit propertyChanged("angleNum");
+    emit propertyChanged("endAngle");
     setDirty();
 }
 
@@ -62,29 +64,22 @@ void MotionPlanningLibrariesSbplSplineVisualization::setShowAllAngles(bool enabl
 }
 
 
-// PROTECTED
 osg::ref_ptr<osg::Node> MotionPlanningLibrariesSbplSplineVisualization::createMainNode()
 {
-    // Geode is a common node used for vizkit3d plugins. It allows to display
-    // "arbitrary" geometries
-    //return new osg::Geode();
     return new osg::Group();
 }
 
 void MotionPlanningLibrariesSbplSplineVisualization::updateMainNode ( osg::Node* node )
 {
-    //osg::Geode* geode = static_cast<osg::Geode*>(node);
     osg::Group* group = node->asGroup();
     group->removeChildren(0, node->asGroup()->getNumChildren());
     
-    // Update the main node using the data in        double sphere_radius = mRadiusEndpoints; p->data
     addPrimitives(group, p->data);
 }
 
 void MotionPlanningLibrariesSbplSplineVisualization::updateDataIntern(SbplSplineMotionPrimitives const& data)
 {
     p->data = data;
-    //std::cout << "got new sample data vector" << std::endl;
 }
 
 void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* group, 
@@ -95,7 +90,6 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
   {
     if(prim.endAngle != mEndAngle)
       continue;
-    // Draw intermediate lines representing the mprim within the world.
     osg::ref_ptr<osg::Geode> geode_intermediate_points = new osg::Geode();
     std::vector<base::Vector2d> poses = prim.spline.sample(0.01);
 
@@ -146,112 +140,6 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
     transform->addChild(geode);
     group->addChild(transform);
   }
-    
-    
-  /*
-  
-    std::vector<Primitive> prim_list = primitives.mListPrimitives;
-    std::vector<Primitive>::iterator it = prim_list.begin();
-    
-    double hue_step = 1.0 / (double)primitives.mConfig.mNumAngles;
-    double hue = 0.0;
-    float r=0, g=0, b=0;
-    osg::Vec4 color(r, g, b, 1.0f); 
-    osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
-    int last_angle = -1;
-    
-    for(; it != prim_list.end(); it++) {
-        
-        // If mAlleAnglesShow is not set, just draw all prims of mAngleNum.
-        if(!mAllAnglesShown && it->mStartAngle != (unsigned int)mAngleNum) {
-            continue;
-        }
-        
-        if(mColorizeTypes)
-        {
-            const double step = 1.0/MOV_NUM_TYPES;
-            const double h = step * it->mMovType;
-            vizkit3d::hslToRgb(h, 1.0, 0.5, r, g, b);
-            color = osg::Vec4(r, g, b, 1.0f);    
-            colors = new osg::Vec4Array;
-            colors->clear();
-            colors->push_back(color);
-        }
-        
-        
-        // Changes the prim color for each new angle. (overrides mColorizeTypes)
-        if((int)it->mStartAngle != last_angle) {
-            vizkit3d::hslToRgb(hue, 1.0, 0.5, r, g, b);
-            color = osg::Vec4(r, g, b, 1.0f);    
-            colors = new osg::Vec4Array;
-            colors->clear();
-            colors->push_back( color );
-            hue += hue_step;
-            
-            last_angle = it->mStartAngle;
-        }
-    
-        osg::ref_ptr<osg::Geode> geode = new osg::Geode();
-        
-        if(mRadiusEndpoints > 0) {
-            // Create sphere.
-            osg::ref_ptr<osg::Sphere> sp = new osg::Sphere(osg::Vec3d(0,0,0), mRadiusEndpoints);
-            osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(sp.get());
-            sd->setColor(color);
-            geode->addDrawable(sd.get());
-            
-
-            
-            // Move the sphere and the triangle to the endpose (converted from grid to world)
-            // using a transform.
-            base::Vector3d mEndPose = it->mEndPose;
-            //std::cout << "Endpose " << mEndPose[0] << " " << mEndPose[1] << " scale factor " << primitives.mScaleFactor << std::endl;
-            double x = mEndPose[0] * primitives.mConfig.mGridSize;
-            double y = mEndPose[1] * primitives.mConfig.mGridSize;
-            double z = 0; // mEndPose[2] * primitives.mScaleFactor; // z is discrete orientation
-            double theta = mEndPose[2] * ((2*M_PI)/primitives.mConfig.mNumAngles);
-
-            //std::cout << "Draw sphere and triangle at XYZTHETA: " << x << " "  << y << " " << z << " " << theta << " " << std::endl; 
-            
-            osg::ref_ptr<osg::PositionAttitudeTransform> transform = 
-                    new osg::PositionAttitudeTransform();
-            osg::Vec3 position = osg::Vec3d(x, y, z);
-            position[2] += 0.01; // Moves the waypoints a little bit above the z=0 plane.
-            transform->setPosition(position);
-            // osg::Quat(0,0,1,heading) != osg::Quat(heading, Vec(0,0,1)).. why?
-            transform->setAttitude(osg::Quat(theta, osg::Vec3f(0,0,1)));
-            transform->addChild(geode);
-        
-            // Add transformer containing the spehere and the triangle to the passed group.
-            group->addChild(transform);
-
-            if(it->mMovType == MOV_FORWARD_TURN || 
-                    it->mMovType == MOV_BACKWARD_TURN) {
-                // Adds a circle for the center of rotation.
-                osg::ref_ptr<osg::Geode> geode_cof = new osg::Geode();
-                
-                double x_cof = it->mCenterOfRotation[0] * primitives.mConfig.mGridSize;
-                double y_cof = it->mCenterOfRotation[1] * primitives.mConfig.mGridSize;
-                osg::ref_ptr<osg::Sphere> sp_cof = new osg::Sphere(osg::Vec3d(x_cof, y_cof, 0), mRadiusEndpoints);
-                osg::ref_ptr<osg::ShapeDrawable> sd_cof = new osg::ShapeDrawable(sp_cof.get());
-                sd_cof->setColor(color);
-                geode_cof->addDrawable(sd_cof.get());
-                
-                // Adds a line from the cof to the end point.
-                osg::ref_ptr<osg::Geometry> cof_geometry = new osg::Geometry();
-                osg::ref_ptr<osg::Vec3Array> cof_vertices = new osg::Vec3Array();
-                cof_vertices->push_back(osg::Vec3(x_cof, y_cof, 0));
-                cof_vertices->push_back(osg::Vec3(x, y, 0));
-                cof_geometry->setVertexArray(cof_vertices);
-                cof_geometry->setColorArray(colors);
-                cof_geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
-                cof_geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,2));
-                geode_cof->addDrawable(cof_geometry);
-                
-                group->addChild(geode_cof);
-            }
-        }
-    }*/
 }
 
 
