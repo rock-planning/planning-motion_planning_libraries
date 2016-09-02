@@ -11,6 +11,8 @@ SbplSplineMotionPrimitives::SbplSplineMotionPrimitives() {}
 SbplSplineMotionPrimitives::SbplSplineMotionPrimitives(const SplinePrimitivesConfig& config) :
   config(config)
 {
+  validateConfig(config);
+  
   radPerDiscreteAngle = (M_PI*2.0) / config.numAngles;
   primitivesByAngle.resize(config.numAngles);
   generatePrimitives(config);
@@ -197,7 +199,29 @@ const SplinePrimitivesConfig& SbplSplineMotionPrimitives::getConfig() const
   return config;
 }
 
-
+void SbplSplineMotionPrimitives::validateConfig(const SplinePrimitivesConfig& config) const
+{
+  if(config.gridSize <= 0)
+    throw std::runtime_error("gridSize has to be > 0");
+  
+  if(config.numAngles <= 0)
+    throw std::runtime_error("numAngles has to be > 0");
+  
+  if(config.numEndAngles <= 0)
+    throw std::runtime_error("numEndAngles has to be > 0");
+  
+  if(config.destinationCircleRadius <= 0)
+    throw std::runtime_error("destinationCircleRadius has to be > 0");
+  
+  if(config.numAngles % 2 != 0)
+    throw std::runtime_error("numAngles has to be even");
+  
+  if(config.numEndAngles % 2 == 0)
+    throw std::runtime_error("numAngles has to be odd");
+  
+  if(config.numEndAngles > config.numAngles / 2)
+    throw std::runtime_error("numEndAngles has to be <= numAngles / 2");
+}
 
 
 

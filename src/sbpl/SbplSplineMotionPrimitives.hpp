@@ -1,6 +1,5 @@
 #pragma once
 #include <base/Eigen.hpp>
-#include <motion_planning_libraries/Config.hpp>
 #include <base/Spline.hpp>
 #include <vector>
 
@@ -31,9 +30,7 @@ struct SplinePrimitive
   unsigned endAngle; //discretized end angle
   double endAngleRad; //end angle in rad
   Eigen::Vector2i endPosition;//discret end position, i.e. the cell that this spline ends in
-  //TODO wie macht man das mit der startposition der spline?
   base::geometry::Spline2 spline; //spline of the movement (not discretized), starts in the center of the first cell, ends in the center of the last cell
-  MovementType movType; //FIXME not sure if I need this,
 };
 
 
@@ -48,19 +45,32 @@ private:
   
 public:
   SbplSplineMotionPrimitives();
+  /** @throw std::runtime_error if config is not vaild */
   SbplSplineMotionPrimitives(const SplinePrimitivesConfig& config);
   
+  /** @param angle has to be < config.numAngles and > 0 */
   const std::vector<SplinePrimitive>& getPrimitiveForAngle(const int angle) const;
   const SplinePrimitivesConfig& getConfig() const;
 private:
   void generatePrimitives(const SplinePrimitivesConfig& config);
   
-  /** @p startAngle defines the starting orientation of the robot. Is discrete */
+  /** @param startAngle defines the starting orientation of the robot. Is discrete.
+   *  @param destinationCells indices of cells that the primitives should go to */
   void generatePrimitivesForAngle(const int startAngle, std::vector<Eigen::Vector2i> destinationCells);
+  
+  /**Generates a circular field of destination cells based on config.destinationCircleRadius */
   std::vector<Eigen::Vector2i> generateDestinationCells(const SplinePrimitivesConfig& config) const;  
+  
+  /** Creates a primitiv starting at (0,0) with a discrete @p startAngle, ending 
+   *  at @p destination with discrete @p endAngle and id @p primId.*/
   SplinePrimitive getPrimitive(const int startAngle, const int endAngle,
                                const Eigen::Vector2i destination, const int primId) const;
-  std::vector<int> generateEndAngles(const int startAngle, const SplinePrimitivesConfig& config) const;                                
+                               
+  /** Generates all end angles for a given start angle based on config.numEndAngles */                               
+  std::vector<int> generateEndAngles(const int startAngle, const SplinePrimitivesConfig& config) const;          
+  
+  /** @throw std::runtime_error if config is not vaild */
+  void validateConfig(const SplinePrimitivesConfig& config) const;
 };
 
 
