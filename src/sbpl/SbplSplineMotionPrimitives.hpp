@@ -10,8 +10,8 @@ namespace motion_planning_libraries
 struct SplinePrimitivesConfig 
 {
   double gridSize = 0.1; //width and height of a grid cell
-  int numAngles = 16; //number of discrete start angles angles. A full set of primitives will be generated for each start angle
-  int numEndAngles = 3; //number of possible end orientations per cell (has to be odd)
+  int numAngles = 16; //number of discrete start angles angles. A full set of primitives will be generated for each start angle (has to be even)
+  int numEndAngles = 3; //number of possible end orientations per cell (numEndAngles <= numAngles/2) (has to be odd)
 
   /*Primitives will be generated leading to all cells withing this radius (in cells) */
   int destinationCircleRadius = 20;
@@ -45,7 +45,6 @@ private:
   std::vector<std::vector<SplinePrimitive>> primitivesByAngle; //primitives by startAngle by id
   SplinePrimitivesConfig config;
   double radPerDiscreteAngle;
-
   
 public:
   SbplSplineMotionPrimitives();
@@ -61,6 +60,7 @@ private:
   std::vector<Eigen::Vector2i> generateDestinationCells(const SplinePrimitivesConfig& config) const;  
   SplinePrimitive getPrimitive(const int startAngle, const int endAngle,
                                const Eigen::Vector2i destination, const int primId) const;
+  std::vector<int> generateEndAngles(const int startAngle, const SplinePrimitivesConfig& config) const;                                
 };
 
 

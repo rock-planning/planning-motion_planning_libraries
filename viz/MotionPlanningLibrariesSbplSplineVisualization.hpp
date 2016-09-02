@@ -16,6 +16,7 @@ namespace vizkit3d
     Q_OBJECT
     
     Q_PROPERTY(int angleNum READ getAngleNum WRITE setAngleNum)
+    Q_PROPERTY(int endAngle READ getEndAngle WRITE setEndAngle)
     
     public:
         MotionPlanningLibrariesSbplSplineVisualization();
@@ -29,14 +30,15 @@ namespace vizkit3d
     public slots:
         int getAngleNum() const;
         void setAngleNum(int num);
+        int getEndAngle() const;
+        void setEndAngle(int num);
         bool allAnglesShown() const;
         void setShowAllAngles(bool enabled);
 
     protected:
         int mAngleNum;
+        int mEndAngle;
         bool mAllAnglesShown;
-        double mRadiusEndpoints;
-        bool mColorizeTypes; //if true, give every primitive type a different color
         
         virtual osg::ref_ptr<osg::Node> createMainNode();
         virtual void updateMainNode(osg::Node* node);

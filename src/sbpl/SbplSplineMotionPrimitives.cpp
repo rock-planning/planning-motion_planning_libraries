@@ -1,5 +1,6 @@
 #include "SbplSplineMotionPrimitives.hpp"
 #include <iostream> //FIXME remove after debug
+#include <set>
 
 using namespace base::geometry;
 namespace motion_planning_libraries 
@@ -29,7 +30,6 @@ std::vector<Eigen::Vector2i> SbplSplineMotionPrimitives::generateDestinationCell
       //0,0 is the start cell
       if(x == 0 && y == 0)
         continue;
-      
       const double centerX = config.cellCenterOffset.x() + x;
       const double centerY = config.cellCenterOffset.y() + y;
       const double distanceSquared = centerX * centerX + centerY * centerY;
@@ -59,59 +59,68 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
   //NOTE since the destinationCells form a circle, we do not need to rotate them.
   int id = 0; //the "same" primitives should have the same id for each start angle
   const double radStartAngle = startAngle * radPerDiscreteAngle;
-  const double epsilon = config.cellCenterOffset.x() / 2;
+  const double epsilon = 0.1;
+  const int numForwardAngles = config.numAngles / 2;
+  assert(config.numEndAngles <= numForwardAngles);
+  
+    
   for(const Eigen::Vector2i& dest : destinationCells)
   {
-    const Eigen::Vector2d destRot = Eigen::Rotation2D<double>(-radStartAngle) * (dest.cast<double>() + config.cellCenterOffset);
-    //forward movement
-    if(destRot.x() > config.cellCenterOffset.x() + epsilon)
+    const std::vector<int> endAngles = generateEndAngles(startAngle, config);
+    for(int endAngle : endAngles)
     {
-      SplinePrimitive prim = getPrimitive(startAngle, startAngle, dest, id);
-      primitivesByAngle[startAngle].push_back(prim);
-      ++id;
-    }
-    
-    //lateral movement
-    else if(destRot.x() <= config.cellCenterOffset.x() + epsilon &&
-            destRot.x() >= config.cellCenterOffset.x() - epsilon)
-    {
-      //the robot is driving sidewards. spline is calculated as if the robot is rotated 90° 
-      // and moving forward. angles are fixed afterwards
-      const int leftStartAngle = (startAngle + config.numAngles / 4) % config.numAngles;
-      const int rightStartAngle = (startAngle - config.numAngles / 4) % config.numAngles;
+      //rotate destination for easier checks
+      const Eigen::Vector2d destRot = Eigen::Rotation2D<double>(-radStartAngle) * (dest.cast<double>() + config.cellCenterOffset);
+      //forward movement
+      if(destRot.x() > config.cellCenterOffset.x() + epsilon)
+      {
+        SplinePrimitive prim = getPrimitive(startAngle, endAngle, dest, id);
+        primitivesByAngle[startAngle].push_back(prim);
+        ++id;
+      }
       
-      SplinePrimitive leftPrim = getPrimitive(leftStartAngle, leftStartAngle, dest, id);
-      leftPrim.startAngle = startAngle;
-      leftPrim.endAngle = startAngle;
-      leftPrim.endAngleRad = radStartAngle;
-      leftPrim.startAngleRad = radStartAngle;
-      primitivesByAngle[startAngle].push_back(leftPrim);
-      ++id;
+      //lateral movement
+      else if(destRot.x() <= config.cellCenterOffset.x() + epsilon &&
+              destRot.x() >= config.cellCenterOffset.x() - epsilon)
+      {
+        //the robot is driving sidewards. spline is calculated as if the robot is rotated 90° 
+        // and moving forward. angles are fixed afterwards
+        const int leftStartAngle = (startAngle + config.numAngles / 4) % config.numAngles;
+        const int rightStartAngle = (startAngle - config.numAngles / 4) % config.numAngles;
+        
+//         SplinePrimitive leftPrim = getPrimitive(leftStartAngle, leftStartAngle, dest, id);
+//         leftPrim.startAngle = startAngle;
+//         leftPrim.endAngle = startAngle;
+//         leftPrim.endAngleRad = radStartAngle;
+//         leftPrim.startAngleRad = radStartAngle;
+//         primitivesByAngle[startAngle].push_back(leftPrim);
+        ++id;
+        
+//         SplinePrimitive rightPrim = getPrimitive(rightStartAngle, rightStartAngle, dest, id);
+//         rightPrim.startAngle = startAngle;
+//         rightPrim.endAngle = startAngle;
+//         rightPrim.endAngleRad = radStartAngle;
+//         rightPrim.startAngleRad = radStartAngle;
+//         primitivesByAngle[startAngle].push_back(rightPrim);
+        ++id;
+      }
       
-      SplinePrimitive rightPrim = getPrimitive(rightStartAngle, rightStartAngle, dest, id);
-      rightPrim.startAngle = startAngle;
-      rightPrim.endAngle = startAngle;
-      rightPrim.endAngleRad = radStartAngle;
-      rightPrim.startAngleRad = radStartAngle;
-      primitivesByAngle[startAngle].push_back(rightPrim);
-      ++id;
-    }
-    
-    //backward movement
-    else if(destRot.x() < config.cellCenterOffset.x() - epsilon)
-    {
-      //the robot is driving backwards. we calculate the spline as if the robot is
-      //rotated by 180° and change the start and end rotation afterwards.
-      const int oppositStartAngle = (startAngle + config.numAngles / 2) % config.numAngles;
-      SplinePrimitive prim = getPrimitive(oppositStartAngle, oppositStartAngle, dest, id); //FIXME use startangle
-      prim.startAngle = startAngle;
-      prim.endAngle = startAngle; //FIXME use endangle
-      prim.startAngleRad = startAngle * radPerDiscreteAngle;
-      prim.endAngleRad = startAngle * radPerDiscreteAngle; //FIXME use endAnle
-      primitivesByAngle[startAngle].push_back(prim);
-      ++id;
-    }
-  }  
+      //backward movement
+      else if(destRot.x() < config.cellCenterOffset.x() - epsilon)
+      {
+        //the robot is driving backwards. we calculate the spline as if the robot is
+        //rotated by 180° and change the start and end rotation afterwards.
+        const int oppositStartAngle = (startAngle + config.numAngles / 2) % config.numAngles;
+//         SplinePrimitive prim = getPrimitive(oppositStartAngle, oppositStartAngle, dest, id); //FIXME use startangle
+//         prim.startAngle = startAngle;
+//         prim.endAngle = startAngle; //FIXME use endangle
+//         prim.startAngleRad = startAngle * radPerDiscreteAngle;
+//         prim.endAngleRad = startAngle * radPerDiscreteAngle; //FIXME use endAnle
+//         primitivesByAngle[startAngle].push_back(prim);
+        ++id;
+      }
+    }  
+  }
  
 }
 
@@ -150,6 +159,30 @@ SplinePrimitive SbplSplineMotionPrimitives::getPrimitive(const int startAngle,
 
   return prim;
 }
+
+std::vector<int> SbplSplineMotionPrimitives::generateEndAngles(const int startAngle, const SplinePrimitivesConfig& config) const
+{
+  //+ config.numAngles is done to avoid negative number modulo (which is implementation defined in c++03)
+  std::vector<int> result;
+  result.push_back(startAngle);
+  const int numAnglesPerSide = (config.numEndAngles - 1) / 2;
+  const int step = config.numAngles / 4 / numAnglesPerSide;
+  const int firstEndAngle = startAngle - config.numAngles / 4;
+  const int lastEndAngle = startAngle + config.numAngles / 4;
+  
+  for(int angle = firstEndAngle; angle < startAngle; angle += step)
+  {
+    const int realAngle = (angle + config.numAngles) % config.numAngles;
+    result.push_back(realAngle);
+  }
+  for(int angle = lastEndAngle; angle > startAngle; angle -= step)
+  {
+    const int realAngle = (angle + config.numAngles) % config.numAngles;
+    result.push_back(realAngle);
+  }
+  return result;
+}
+
 
 const std::vector<SplinePrimitive>& SbplSplineMotionPrimitives::getPrimitiveForAngle(const int angle) const
 {

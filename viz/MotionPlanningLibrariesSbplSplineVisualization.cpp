@@ -18,7 +18,7 @@ struct MotionPlanningLibrariesSbplSplineVisualization::Data {
 
 // PUBLIC
 MotionPlanningLibrariesSbplSplineVisualization::MotionPlanningLibrariesSbplSplineVisualization()
-    : mAngleNum(0), mAllAnglesShown(false), mRadiusEndpoints(0.01), mColorizeTypes(false), p(new Data)
+    : mAngleNum(0), mEndAngle(0), p(new Data)
 {
 }
 
@@ -37,6 +37,19 @@ void MotionPlanningLibrariesSbplSplineVisualization::setAngleNum(int num) {
     emit propertyChanged("angle_num_changed");
     setDirty();
 }
+
+int MotionPlanningLibrariesSbplSplineVisualization::getEndAngle() const
+{
+    return mEndAngle;
+}
+
+void MotionPlanningLibrariesSbplSplineVisualization::setEndAngle(int num)
+{
+    mEndAngle = num;
+    emit propertyChanged("endAngle");
+    setDirty();
+}
+
 
 bool MotionPlanningLibrariesSbplSplineVisualization::allAnglesShown() const {
     return mAllAnglesShown;
@@ -80,6 +93,8 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
   const std::vector<SplinePrimitive>& prims = primitives.getPrimitiveForAngle(mAngleNum);
   for(const SplinePrimitive& prim : prims)
   {
+    if(prim.endAngle != mEndAngle)
+      continue;
     // Draw intermediate lines representing the mprim within the world.
     osg::ref_ptr<osg::Geode> geode_intermediate_points = new osg::Geode();
     std::vector<base::Vector2d> poses = prim.spline.sample(0.01);
@@ -106,9 +121,9 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
     // Create triangle.
     osg::ref_ptr<osg::Geometry> triangle_geometry = new osg::Geometry();
     osg::ref_ptr<osg::Vec3Array> triangle_vertices = new osg::Vec3Array();
-    triangle_vertices->push_back(osg::Vec3(0.0, mRadiusEndpoints, 0));
-    triangle_vertices->push_back(osg::Vec3(4*mRadiusEndpoints, 0.0, 0));
-    triangle_vertices->push_back(osg::Vec3(0.0, -mRadiusEndpoints, 0));
+    triangle_vertices->push_back(osg::Vec3(0.0, 0.01, 0));
+    triangle_vertices->push_back(osg::Vec3(0.04, 0.0, 0));
+    triangle_vertices->push_back(osg::Vec3(0.0, -0.01, 0));
     triangle_geometry->setVertexArray(triangle_vertices);
     osg::ref_ptr<osg::DrawElementsUInt> triangle_face = 
             new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, 0);
