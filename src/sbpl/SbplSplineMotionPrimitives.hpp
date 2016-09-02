@@ -24,6 +24,14 @@ struct SplinePrimitivesConfig
 /**Describes a single motion primitive. */
 struct SplinePrimitive
 {
+  
+  enum Type 
+  {
+    SPLINE_MOVE_FORWARD,
+    SPLINE_MOVE_BACKWARD,
+    SPLINE_MOVE_LATERAL
+  }motionType;
+  
   unsigned id; //FIXME why does a spline need an id?
   unsigned startAngle; //discretized start angle
   double startAngleRad; //start angle in rad
@@ -64,7 +72,8 @@ private:
   /** Creates a primitiv starting at (0,0) with a discrete @p startAngle, ending 
    *  at @p destination with discrete @p endAngle and id @p primId.*/
   SplinePrimitive getPrimitive(const int startAngle, const int endAngle,
-                               const Eigen::Vector2i destination, const int primId) const;
+                               const Eigen::Vector2i destination, const int primId,
+                               const SplinePrimitive::Type& type) const;
                                
   /** Generates all end angles for a given start angle based on config.numEndAngles */                               
   std::vector<int> generateEndAngles(const int startAngle, const SplinePrimitivesConfig& config) const;          

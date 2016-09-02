@@ -78,7 +78,8 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
       //forward movement
       if(destRot.x() > config.cellCenterOffset.x() + epsilon)
       {
-        SplinePrimitive prim = getPrimitive(startAngle, endAngle, dest, id);
+        SplinePrimitive prim = getPrimitive(startAngle, endAngle, dest,
+                                            id, SplinePrimitive::SPLINE_MOVE_FORWARD);
         primitivesByAngle[startAngle].push_back(prim);
         ++id;
       }
@@ -89,7 +90,8 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
         //rotated by 180° and change the start and end rotation afterwards.
         const int oppositStartAngle = (startAngle + config.numAngles / 2) % config.numAngles;
         const int oppositEndAngle = (endAngle + config.numAngles / 2) % config.numAngles;
-        SplinePrimitive prim = getPrimitive(oppositStartAngle, oppositEndAngle, dest, id);
+        SplinePrimitive prim = getPrimitive(oppositStartAngle, oppositEndAngle,
+                                            dest, id, SplinePrimitive::SPLINE_MOVE_BACKWARD);
         prim.startAngle = startAngle;
         prim.endAngle = endAngle; //FIXME use endangle
         prim.startAngleRad = startAngle * radPerDiscreteAngle;
@@ -107,7 +109,8 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
         const int leftStartAngle = (startAngle + config.numAngles / 4) % config.numAngles;
         const int rightStartAngle = (startAngle - config.numAngles / 4) % config.numAngles;
         
-        SplinePrimitive leftPrim = getPrimitive(leftStartAngle, leftStartAngle, dest, id);
+        SplinePrimitive leftPrim = getPrimitive(leftStartAngle, leftStartAngle,
+                                                dest, id, SplinePrimitive::SPLINE_MOVE_LATERAL);
         leftPrim.startAngle = startAngle;
         leftPrim.endAngle = startAngle;
         leftPrim.endAngleRad = radStartAngle;
@@ -115,7 +118,8 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
         primitivesByAngle[startAngle].push_back(leftPrim);
         ++id;
         
-        SplinePrimitive rightPrim = getPrimitive(rightStartAngle, rightStartAngle, dest, id);
+        SplinePrimitive rightPrim = getPrimitive(rightStartAngle, rightStartAngle,
+                                                 dest, id, SplinePrimitive::SPLINE_MOVE_LATERAL);
         rightPrim.startAngle = startAngle;
         rightPrim.endAngle = startAngle;
         rightPrim.endAngleRad = radStartAngle;
@@ -130,7 +134,8 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
 SplinePrimitive SbplSplineMotionPrimitives::getPrimitive(const int startAngle,
                                                          const int endAngle,
                                                          const Eigen::Vector2i destination,
-                                                         const int primId) const
+                                                         const int primId,
+                                                         const SplinePrimitive::Type& type) const
 {
   SplinePrimitive prim;
   
