@@ -164,6 +164,7 @@ SplinePrimitive SbplSplineMotionPrimitives::getPrimitive(const int startAngle,
   prim.endAngle = endAngle;
   prim.endPosition = destination;
   prim.id = primId;
+  prim.motionType = type;
 
   return prim;
 }

@@ -24,7 +24,6 @@ struct SplinePrimitivesConfig
 /**Describes a single motion primitive. */
 struct SplinePrimitive
 {
-  
   enum Type 
   {
     SPLINE_MOVE_FORWARD,

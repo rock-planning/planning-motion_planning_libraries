@@ -120,7 +120,7 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
     triangle_vertices->push_back(osg::Vec3(0.0, -0.01, 0));
     triangle_geometry->setVertexArray(triangle_vertices);
     osg::ref_ptr<osg::DrawElementsUInt> triangle_face = 
-            new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, 0);
+        new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, 0);
     triangle_face->push_back(0);
     triangle_face->push_back(1);
     triangle_face->push_back(2);
