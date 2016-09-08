@@ -224,13 +224,9 @@ std::vector<int> SbplSplineMotionPrimitives::generateEndAngles(const int startAn
     std::vector<int> result;
     result.push_back(startAngle);
     const int numAnglesPerSide = (config.numEndAngles - 1) / 2;
-    if(numAnglesPerSide <= 0)
+    if(numAnglesPerSide > 0)
     {
-        result.push_back(startAngle);
-    }
-    else
-    {
-        const int step = config.numAngles / 4 / numAnglesPerSide;
+        const int step = std::ceil(config.numAngles / 4.0 / numAnglesPerSide);
         const int firstEndAngle = startAngle - config.numAngles / 4;
         const int lastEndAngle = startAngle + config.numAngles / 4;
         

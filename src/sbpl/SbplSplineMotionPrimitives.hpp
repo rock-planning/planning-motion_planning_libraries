@@ -11,7 +11,11 @@ struct SplinePrimitivesConfig
 {
     double gridSize = 0.1; //width and height of a grid cell
     int numAngles = 16; //number of discrete start angles angles. A full set of primitives will be generated for each start angle (has to be even)
-    int numEndAngles = 7; //number of possible end orientations per cell (numEndAngles <= numAngles/2) (has to be odd)
+    /** maximum number of possible end orientations per cell.
+     * Has to be <= numAngles/2.
+     * Has to be odd.
+     * @note This is an upper boundary. Depending on the value of numAngles, it might not be reached*/
+    int numEndAngles = 7; 
 
     /*Maximum radius in which primitives will be generated (in cells) */
     int destinationCircleRadius = 20;
