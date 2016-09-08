@@ -23,7 +23,6 @@ std::vector<Eigen::Vector2i> SbplSplineMotionPrimitives::generateDestinationCell
     //for cellSkipFactor < 1 the algorithm generates the same coordinates several times
     //therefore we put them in a set :-) This is simpler than writing a more complex algorithm
     std::set<std::pair<int, int>> coordinates; //use pair instead of Vector2i because operator< is implemented for pair
-    int oldR = -1;
     for(int n = 0, r = 1; r < config.destinationCircleRadius; ++n, r = config.cellSkipFactor * n * n)
     {
         //see https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
@@ -94,12 +93,9 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
     int id = 0; //the "same" primitives should have the same id for each start angle according to sbpl
     const double radStartAngle = startAngle * radPerDiscreteAngle;
     const double epsilon = 0.1; //makes the distinction between forward/backward/lateral easier
-    const int numForwardAngles = config.numAngles / 2;
-    assert(config.numEndAngles <= numForwardAngles);
-    
         
     for(const Eigen::Vector2i& dest : destinationCells)
-    {
+    { 
         //rotate destination for easier checks. If it is rotated we just need to check
         //whether destRot.x is above 0 (cellCenterOffset) to know if this is a forward or backward motion
         const Eigen::Vector2d destRot = Eigen::Rotation2D<double>(-radStartAngle) * (dest.cast<double>() + config.cellCenterOffset);
