@@ -276,7 +276,7 @@ void SbplSplineMotionPrimitives::validateConfig(const SplinePrimitivesConfig& co
         throw std::runtime_error("numAngles has to be even");
     
     if(config.numEndAngles % 2 == 0)
-        throw std::runtime_error("numAngles has to be odd");
+        throw std::runtime_error("numEndAngles has to be odd");
     
     if(config.numEndAngles > config.numAngles / 2)
         throw std::runtime_error("numEndAngles has to be <= numAngles / 2");

@@ -11,6 +11,7 @@ struct SplinePrimitivesConfig
 {
     double gridSize = 0.1; //width and height of a grid cell
     int numAngles = 16; //number of discrete start angles angles. A full set of primitives will be generated for each start angle (has to be even)
+    
     /** maximum number of possible end orientations per cell.
      * Has to be <= numAngles/2.
      * Has to be odd.
