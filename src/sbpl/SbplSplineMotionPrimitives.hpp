@@ -28,6 +28,11 @@ struct SplinePrimitivesConfig
     double splineGeometricResolution = 0.1;
     //order if the internal splines
     double splineOrder = 4;
+    
+    bool generateForwardMotions = true;
+    bool generateBackwardMotions = true;
+    bool generateLateralMotions = true;
+    bool generatePointTurnMotions = true;
 };
 
 
@@ -38,7 +43,8 @@ struct SplinePrimitive
     {
         SPLINE_MOVE_FORWARD,
         SPLINE_MOVE_BACKWARD,
-        SPLINE_MOVE_LATERAL
+        SPLINE_MOVE_LATERAL,
+        SPLINE_POINT_TURN
     }motionType;
     
     unsigned id; //FIXME why does a spline need an id?
@@ -47,7 +53,9 @@ struct SplinePrimitive
     unsigned endAngle; //discretized end angle [0 .. numAngles[
     double endAngleRad; //end angle in rad
     Eigen::Vector2i endPosition;//discret end position, i.e. the cell that this spline ends in
-    base::geometry::Spline2 spline; //spline of the movement (not discretized), starts in the center of the first cell, ends in the center of the last cell
+    //spline of the movement (not discretized), starts in the center of the first cell, ends in the center of the last cell
+    //NOTE for point turns the spline is invalid
+    base::geometry::Spline2 spline; 
 };
 
 

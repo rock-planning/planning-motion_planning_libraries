@@ -84,10 +84,16 @@ void SbplSplineMotionPrimitives::generatePrimitives(const SplinePrimitivesConfig
 void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle,
                                                             std::vector<Eigen::Vector2i> destinationCells)
 {
+    /* Main idea:
+     * For each destination cell: generate primitives from (0,0) to that cell.
+     * The amount of primitives is defined by the config.
+     * Additionally generate point turn primitives from (0,0) to (0,0)  
+     */
+    
     //NOTE since the destinationCells form a circle, we do not need to rotate them.
-    int id = 0; //the "same" primitives should have the same id for each start angle according to sbpl (WTF why?)
+    int id = 0; //the "same" primitives should have the same id for each start angle according to sbpl
     const double radStartAngle = startAngle * radPerDiscreteAngle;
-    const double epsilon = 0.1; //used to make the distinction between forward/backward/lateral easier
+    const double epsilon = 0.1; //makes the distinction between forward/backward/lateral easier
     const int numForwardAngles = config.numAngles / 2;
     assert(config.numEndAngles <= numForwardAngles);
     
@@ -103,7 +109,8 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
         for(int endAngle : endAngles)
         {
             //forward movement
-            if(destRot.x() > config.cellCenterOffset.x() + epsilon)
+            if(config.generateForwardMotions &&
+               destRot.x() > config.cellCenterOffset.x() + epsilon)
             {
                 SplinePrimitive prim = getPrimitive(startAngle, endAngle, dest,
                                                     id, SplinePrimitive::SPLINE_MOVE_FORWARD);
@@ -111,7 +118,8 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
                 ++id;
             }
             //backward movement
-            else if(destRot.x() < config.cellCenterOffset.x() - epsilon)
+            else if(config.generateBackwardMotions &&
+                    destRot.x() < config.cellCenterOffset.x() - epsilon)
             {
                 //the robot is driving backwards. we calculate the spline as if the robot is
                 //rotated by 180° and change the start and end rotation afterwards.
@@ -128,8 +136,9 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
             }
         }
         //lateral movement
-        if(destRot.x() <= config.cellCenterOffset.x() + epsilon &&
-        destRot.x() >= config.cellCenterOffset.x() - epsilon)
+        if(config.generateLateralMotions &&
+           destRot.x() <= config.cellCenterOffset.x() + epsilon &&
+           destRot.x() >= config.cellCenterOffset.x() - epsilon)
         {
             //the robot is driving sidewards. spline is calculated as if the robot is rotated 90° 
             // and moving forward. angles are fixed afterwards
@@ -155,6 +164,28 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
             ++id;
         }
     }
+    
+    if(config.generatePointTurnMotions)
+    {
+        //point turns are a special case
+        for(int angle = 0; angle < config.numAngles; ++ angle)
+        {
+            if(angle == startAngle)
+                continue;
+            
+            SplinePrimitive prim;
+            prim.startAngle = startAngle;
+            prim.endAngle = angle;
+            prim.startAngleRad = radStartAngle;
+            prim.endAngleRad = angle * radPerDiscreteAngle;
+            prim.id = id;
+            prim.motionType = SplinePrimitive::SPLINE_POINT_TURN;
+            prim.endPosition << 0, 0;
+            primitivesByAngle[startAngle].push_back(prim);
+            ++id;
+        }
+    }
+    
 }
 
 SplinePrimitive SbplSplineMotionPrimitives::getPrimitive(const int startAngle,
