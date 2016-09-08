@@ -224,20 +224,27 @@ std::vector<int> SbplSplineMotionPrimitives::generateEndAngles(const int startAn
     std::vector<int> result;
     result.push_back(startAngle);
     const int numAnglesPerSide = (config.numEndAngles - 1) / 2;
-    const int step = config.numAngles / 4 / numAnglesPerSide;
-    const int firstEndAngle = startAngle - config.numAngles / 4;
-    const int lastEndAngle = startAngle + config.numAngles / 4;
-    
-    for(int angle = firstEndAngle; angle < startAngle; angle += step)
+    if(numAnglesPerSide <= 0)
     {
-        //+ config.numAngles is done to avoid negative number modulo (which is implementation defined in c++03)
-        const int realAngle = (angle + config.numAngles) % config.numAngles;
-        result.push_back(realAngle);
+        result.push_back(startAngle);
     }
-    for(int angle = lastEndAngle; angle > startAngle; angle -= step)
+    else
     {
-        const int realAngle = (angle + config.numAngles) % config.numAngles;
-        result.push_back(realAngle);
+        const int step = config.numAngles / 4 / numAnglesPerSide;
+        const int firstEndAngle = startAngle - config.numAngles / 4;
+        const int lastEndAngle = startAngle + config.numAngles / 4;
+        
+        for(int angle = firstEndAngle; angle < startAngle; angle += step)
+        {
+            //+ config.numAngles is done to avoid negative number modulo (which is implementation defined in c++03)
+            const int realAngle = (angle + config.numAngles) % config.numAngles;
+            result.push_back(realAngle);
+        }
+        for(int angle = lastEndAngle; angle > startAngle; angle -= step)
+        {
+            const int realAngle = (angle + config.numAngles) % config.numAngles;
+            result.push_back(realAngle);
+        }
     }
     return result;
 }
@@ -277,6 +284,12 @@ void SbplSplineMotionPrimitives::validateConfig(const SplinePrimitivesConfig& co
     
     if(config.numEndAngles > config.numAngles / 2)
         throw std::runtime_error("numEndAngles has to be <= numAngles / 2");
+    
+    if(config.splineGeometricResolution <= 0)
+        throw std::runtime_error("splineGeometricResolution has to be > 0");
+    
+    if(config.splineOrder < 3)
+        throw std::runtime_error("splineOrder has to be >= 3");
 }
 
 }//end namespace motion_planning_libraries
