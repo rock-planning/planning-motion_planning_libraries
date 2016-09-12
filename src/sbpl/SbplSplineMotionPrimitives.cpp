@@ -220,7 +220,7 @@ SplinePrimitive SbplSplineMotionPrimitives::getPrimitive(const int startAngle,
 std::vector<int> SbplSplineMotionPrimitives::generateEndAngles(const int startAngle, const SplinePrimitivesConfig& config) const
 {
     //otherwise the calculation below gets more complicated
-    assert(config.numAngles % 2 != 0);
+    assert(config.numAngles % 2 == 0);
     
     std::vector<int> result;
     result.push_back(startAngle);

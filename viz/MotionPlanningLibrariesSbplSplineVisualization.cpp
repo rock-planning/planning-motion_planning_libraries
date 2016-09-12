@@ -33,6 +33,17 @@ int MotionPlanningLibrariesSbplSplineVisualization::getAngleNum() const {
 }
 
 void MotionPlanningLibrariesSbplSplineVisualization::setAngleNum(int num) {
+    
+    if(num < 0)
+    {
+        while(num < 0)
+        {
+            //shifting by multiples of numAngles does not change the angle because of the modulo
+            num += p->data.getConfig().numAngles; 
+        }
+        num = num % p->data.getConfig().numAngles;
+    }
+    
     mAngleNum = num;
     mEndAngle = num;
     emit propertyChanged("angleNum");
@@ -47,6 +58,15 @@ int MotionPlanningLibrariesSbplSplineVisualization::getEndAngle() const
 
 void MotionPlanningLibrariesSbplSplineVisualization::setEndAngle(int num)
 {
+    if(num < 0)
+    {
+        while(num < 0)
+        {
+            //shifting by multiples of numAngles does not change the angle because of the modulo
+            num += p->data.getConfig().numAngles; 
+        }
+        num = num % p->data.getConfig().numAngles;
+    }
     mEndAngle = num;
     emit propertyChanged("endAngle");
     setDirty();
