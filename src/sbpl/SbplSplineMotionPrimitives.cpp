@@ -219,24 +219,37 @@ SplinePrimitive SbplSplineMotionPrimitives::getPrimitive(const int startAngle,
 
 std::vector<int> SbplSplineMotionPrimitives::generateEndAngles(const int startAngle, const SplinePrimitivesConfig& config) const
 {
+    //otherwise the calculation below gets more complicated
+    assert(config.numAngles % 2 != 0);
+    
     std::vector<int> result;
     result.push_back(startAngle);
-    const int numAnglesPerSide = (config.numEndAngles - 1) / 2;
-    if(numAnglesPerSide > 0)
+    //the left/right distinction is necessary in case of an even number of end angles
+    int numAnglesLeftSide = (config.numEndAngles - 1) / 2;
+    int numAnglesRightSide = (config.numEndAngles - 1) / 2;
+    
+    if(config.numEndAngles % 2 == 0)
     {
-        const int step = std::ceil(config.numAngles / 4.0 / numAnglesPerSide);
+        ++numAnglesRightSide;
+    }
+    
+    const double epsilon = 0.000001;
+    if(numAnglesLeftSide > 0)
+    {
+        const double leftStep = config.numAngles / 4.0 / numAnglesLeftSide;
+        const double rightStep = config.numAngles / 4.0 / numAnglesRightSide;
         const int firstEndAngle = startAngle - config.numAngles / 4;
-        const int lastEndAngle = startAngle + config.numAngles / 4;
+        const int lastEndAngle = startAngle + config.numAngles / 4; //lastEndAngle is exclusive
         
-        for(int angle = firstEndAngle; angle < startAngle; angle += step)
+        for(double angle = firstEndAngle; angle + epsilon < startAngle; angle += leftStep)
         {
             //+ config.numAngles is done to avoid negative number modulo (which is implementation defined in c++03)
-            const int realAngle = (angle + config.numAngles) % config.numAngles;
+            const int realAngle = ((int)(angle + config.numAngles)) % config.numAngles;
             result.push_back(realAngle);
         }
-        for(int angle = lastEndAngle; angle > startAngle; angle -= step)
+        for(double angle = lastEndAngle; angle - epsilon > startAngle; angle -= rightStep)
         {
-            const int realAngle = (angle + config.numAngles) % config.numAngles;
+            const int realAngle = ((int)(angle + config.numAngles)) % config.numAngles;
             result.push_back(realAngle);
         }
     }
@@ -272,10 +285,7 @@ void SbplSplineMotionPrimitives::validateConfig(const SplinePrimitivesConfig& co
     
     if(config.numAngles % 2 != 0)
         throw std::runtime_error("numAngles has to be even");
-    
-    if(config.numEndAngles % 2 == 0)
-        throw std::runtime_error("numEndAngles has to be odd");
-    
+        
     if(config.numEndAngles > config.numAngles / 2)
         throw std::runtime_error("numEndAngles has to be <= numAngles / 2");
     
