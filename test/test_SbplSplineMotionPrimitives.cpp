@@ -15,27 +15,6 @@ using namespace std;
   BOOST_CHECK(find(vec.begin(), vec.end(), item) != vec.end())
   
 
-BOOST_AUTO_TEST_CASE(test_generateDestinationCells)
-{
-           
-//   SplinePrimitivesConfig config;
-//   config.destinationCircleRadius = 1;
-//   config.cellSkipFactor = 0.1;
-//   
-//   
-//   SbplSplineMotionPrimitives prims(config);
-//   
-//   vector<Eigen::Vector2i> destinations = prims.generateDestinationCells(config);
-//   ofstream myfile;
-//   myfile.open ("/home/arne/spline2.dat");
-//   for(Eigen::Vector2i& i : destinations)
-//     myfile << i.transpose() << endl;
-//   myfile.close();
-// //   VECTOR_CONTAINS(destinations, Eigen::Vector2i(0, 0));
-  
-  
-}
-
 BOOST_AUTO_TEST_CASE(numEndAngles_1)
 {
     SplinePrimitivesConfig config;
