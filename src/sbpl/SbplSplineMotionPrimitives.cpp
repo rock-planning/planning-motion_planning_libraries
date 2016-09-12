@@ -76,8 +76,6 @@ void SbplSplineMotionPrimitives::generatePrimitives(const SplinePrimitivesConfig
     {
         count += getPrimitiveForAngle(angle).size();
     }
-    std::cout << "Motion primitive count per start direction: " << getPrimitiveForAngle(0).size() << std::endl;
-    std::cout << "Motion primitive count: " << count << std::endl;
 }
 
 void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle,
