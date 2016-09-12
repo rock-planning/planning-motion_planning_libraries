@@ -9,9 +9,10 @@
 
 
 using namespace motion_planning_libraries;
+using namespace std;
 
 #define VECTOR_CONTAINS(vec, item) \
-  BOOST_CHECK(std::find(vec.begin(), vec.end(), item) != vec.end())
+  BOOST_CHECK(find(vec.begin(), vec.end(), item) != vec.end())
   
 
 BOOST_AUTO_TEST_CASE(test_generateDestinationCells)
@@ -24,11 +25,11 @@ BOOST_AUTO_TEST_CASE(test_generateDestinationCells)
 //   
 //   SbplSplineMotionPrimitives prims(config);
 //   
-//   std::vector<Eigen::Vector2i> destinations = prims.generateDestinationCells(config);
-//   std::ofstream myfile;
+//   vector<Eigen::Vector2i> destinations = prims.generateDestinationCells(config);
+//   ofstream myfile;
 //   myfile.open ("/home/arne/spline2.dat");
 //   for(Eigen::Vector2i& i : destinations)
-//     myfile << i.transpose() << std::endl;
+//     myfile << i.transpose() << endl;
 //   myfile.close();
 // //   VECTOR_CONTAINS(destinations, Eigen::Vector2i(0, 0));
   
@@ -65,10 +66,10 @@ BOOST_AUTO_TEST_CASE(generate_end_angles)
     SbplSplineMotionPrimitives prims(config);    
     for(int i = 0; i < config.numAngles; ++i)
     {
-        std::vector<int> endAngles = prims.generateEndAngles(i, config);
+        vector<int> endAngles = prims.generateEndAngles(i, config);
         BOOST_CHECK(endAngles.size() <= config.numEndAngles);
         
-        std::set<int> angleSet;
+        set<int> angleSet;
         for(int angle : endAngles)
         {
             angleSet.insert(angle);
@@ -76,6 +77,24 @@ BOOST_AUTO_TEST_CASE(generate_end_angles)
         BOOST_CHECK(angleSet.size() == endAngles.size());
     }
 }
+
+BOOST_AUTO_TEST_CASE(no_cells_outside_radius)
+{
+    SplinePrimitivesConfig config;
+    SbplSplineMotionPrimitives primGen(config);
+    for(int i = 0; i < config.numAngles; ++i)
+    {
+        const vector<SplinePrimitive>& prims = primGen.getPrimitiveForAngle(i);
+        for(const SplinePrimitive& prim : prims)
+        {
+            const double dist = prim.endPosition.norm();
+            BOOST_CHECK(dist <= config.destinationCircleRadius);
+        }
+    }
+}
+
+
+
 
 
 
