@@ -17,6 +17,7 @@ namespace vizkit3d
     
     Q_PROPERTY(int angleNum READ getAngleNum WRITE setAngleNum)
     Q_PROPERTY(int endAngle READ getEndAngle WRITE setEndAngle)
+    Q_PROPERTY(double maxCurvature READ getMaxCurvature WRITE setMaxCurvature)
     
     public:
         MotionPlanningLibrariesSbplSplineVisualization();
@@ -34,11 +35,14 @@ namespace vizkit3d
         void setEndAngle(int num);
         bool allAnglesShown() const;
         void setShowAllAngles(bool enabled);
+        double getMaxCurvature() const;
+        void setMaxCurvature(const double value);
 
     protected:
         int mAngleNum;
         int mEndAngle;
         bool mAllAnglesShown;
+        double maxCurvature = 10000;
         
         virtual osg::ref_ptr<osg::Node> createMainNode();
         virtual void updateMainNode(osg::Node* node);

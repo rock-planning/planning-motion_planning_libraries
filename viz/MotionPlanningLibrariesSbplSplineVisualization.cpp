@@ -63,6 +63,19 @@ void MotionPlanningLibrariesSbplSplineVisualization::setShowAllAngles(bool enabl
     setDirty();
 }
 
+double MotionPlanningLibrariesSbplSplineVisualization::getMaxCurvature() const
+{
+    return maxCurvature;
+}
+
+void MotionPlanningLibrariesSbplSplineVisualization::setMaxCurvature(const double value)
+{
+    maxCurvature = value;
+    setDirty();
+    emit propertyChanged("maxCurvature");
+}
+
+
 
 osg::ref_ptr<osg::Node> MotionPlanningLibrariesSbplSplineVisualization::createMainNode()
 {
@@ -90,6 +103,13 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
   {
     if(prim.endAngle != mEndAngle)
       continue;
+    
+    if(const_cast<SplinePrimitive&>(prim).spline.getCurvatureMax() > maxCurvature)
+    {
+        std::cout << const_cast<SplinePrimitive&>(prim).spline.getCurvatureMax() << " > " << maxCurvature << std::endl;
+        continue;
+    }
+    
     osg::ref_ptr<osg::Geode> geode_intermediate_points = new osg::Geode();
     std::vector<base::Vector2d> poses = prim.spline.sample(0.01);
 
