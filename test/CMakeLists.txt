@@ -3,5 +3,5 @@ set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 rock_testsuite(motion_planning_libraries-test suite.cpp
    test_MotionPlanning.cpp
    test_SbplSplineMotionPrimitives.cpp
-   DEPS_PKGCONFIG motion_planning_libraries
+   DEPS motion_planning_libraries
    DEPS_PKGCONFIG ompl)
