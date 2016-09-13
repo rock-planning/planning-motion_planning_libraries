@@ -1,5 +1,5 @@
 #include <base/Eigen.hpp>
-
+#pragma once
 namespace motion_planning_libraries 
 {
 struct SplinePrimitivesConfig 
