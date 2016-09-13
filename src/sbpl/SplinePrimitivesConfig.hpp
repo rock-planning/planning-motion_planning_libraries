@@ -1,3 +1,5 @@
+#include <base/Eigen.hpp>
+
 namespace motion_planning_libraries 
 {
 struct SplinePrimitivesConfig 
