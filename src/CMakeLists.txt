@@ -27,6 +27,7 @@ rock_library(motion_planning_libraries
         sbpl/SbplEnvXYTHETA.hpp
         sbpl/SbplMotionPrimitives.hpp
         sbpl/SbplSplineMotionPrimitives.hpp
+        sbpl/SplinePrimitivesConfig.hpp
         ompl/Ompl.hpp 
         ompl/OmplEnvXY.hpp
         ompl/OmplEnvXYTHETA.hpp
