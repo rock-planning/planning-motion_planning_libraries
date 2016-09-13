@@ -1,5 +1,5 @@
 #set( CMAKE_BUILD_TYPE Debug )
-
+set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 rock_library(motion_planning_libraries
     SOURCES Config.cpp 
         MotionPlanningLibraries.cpp 
@@ -8,6 +8,7 @@ rock_library(motion_planning_libraries
         sbpl/SbplEnvXY.cpp
         sbpl/SbplEnvXYTHETA.cpp
         sbpl/SbplMotionPrimitives.cpp
+        sbpl/SbplSplineMotionPrimitives.cpp
         ompl/Ompl.cpp 
         ompl/OmplEnvXY.cpp
         ompl/OmplEnvXYTHETA.cpp
@@ -25,6 +26,8 @@ rock_library(motion_planning_libraries
         sbpl/SbplEnvXY.hpp
         sbpl/SbplEnvXYTHETA.hpp
         sbpl/SbplMotionPrimitives.hpp
+        sbpl/SbplSplineMotionPrimitives.hpp
+        sbpl/SplinePrimitivesConfig.hpp
         ompl/Ompl.hpp 
         ompl/OmplEnvXY.hpp
         ompl/OmplEnvXYTHETA.hpp
