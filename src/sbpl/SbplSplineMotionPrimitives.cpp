@@ -150,6 +150,8 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
             
             SplinePrimitive rightPrim = getPrimitive(rightStartAngle, rightStartAngle,
                                                     dest, id, SplinePrimitive::SPLINE_MOVE_LATERAL);
+            
+            
             rightPrim.startAngle = startAngle;
             rightPrim.endAngle = startAngle;
             rightPrim.endAngleRad = radStartAngle;
@@ -294,5 +296,7 @@ void SbplSplineMotionPrimitives::validateConfig(const SplinePrimitivesConfig& co
     if(config.splineOrder < 3)
         throw std::runtime_error("splineOrder has to be >= 3");
 }
+
+
 
 }//end namespace motion_planning_libraries
