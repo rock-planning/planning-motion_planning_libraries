@@ -244,13 +244,13 @@ std::vector<int> SbplSplineMotionPrimitives::generateEndAngles(const int startAn
         {
             //casting angle to int before adding config-numAngles is important to get symmetric results
             //+ config.numAngles is done to avoid negative number modulo (which is implementation defined in c++03)
-            const int realAngle = (((int)angle) + config.numAngles) % config.numAngles;
+            const int realAngle = int(std::ceil(angle) + config.numAngles) % config.numAngles;
             result.push_back(realAngle);
         }
         count = 0;
         for(double angle = startAngle + rightStep; count < numAnglesRightSide; ++count, angle += rightStep)
         {
-            const int realAngle = (((int)angle) + config.numAngles) % config.numAngles;
+            const int realAngle = int(std::ceil(angle) + config.numAngles) % config.numAngles;
             result.push_back(realAngle);
         }
     }
