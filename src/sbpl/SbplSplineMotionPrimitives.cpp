@@ -129,6 +129,7 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
                 ++id;
             }
         }
+        
         //lateral movement
         if(config.generateLateralMotions &&
            destRot.x() <= config.cellCenterOffset.x() + epsilon &&
@@ -136,25 +137,23 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
         {
             //the robot is driving sidewards. spline is calculated as if the robot is rotated 90° 
             // and moving forward. angles are fixed afterwards
-            const int leftStartAngle = (startAngle + config.numAngles / 4) % config.numAngles;
-            const int rightStartAngle = (startAngle - config.numAngles / 4) % config.numAngles;
+            int rotatedStartAngle = 0;
+            if(destRot.y() < config.cellCenterOffset.y())
+            {//right rotate
+                rotatedStartAngle = (startAngle - config.numAngles / 4) % config.numAngles;
+            }
+            else
+            {
+                rotatedStartAngle = (startAngle + config.numAngles / 4) % config.numAngles;
+            }
             
-            SplinePrimitive leftPrim = getPrimitive(leftStartAngle, leftStartAngle,
-                                                    dest, id, SplinePrimitive::SPLINE_MOVE_LATERAL);
-            leftPrim.startAngle = startAngle;
-            leftPrim.endAngle = startAngle;
-            leftPrim.endAngleRad = radStartAngle;
-            leftPrim.startAngleRad = radStartAngle;
-            primitivesByAngle[startAngle].push_back(leftPrim);
-            ++id;
-            
-            SplinePrimitive rightPrim = getPrimitive(rightStartAngle, rightStartAngle,
-                                                    dest, id, SplinePrimitive::SPLINE_MOVE_LATERAL);
-            rightPrim.startAngle = startAngle;
-            rightPrim.endAngle = startAngle;
-            rightPrim.endAngleRad = radStartAngle;
-            rightPrim.startAngleRad = radStartAngle;
-            primitivesByAngle[startAngle].push_back(rightPrim);
+            SplinePrimitive prim = getPrimitive(rotatedStartAngle, rotatedStartAngle,
+                                                dest, id, SplinePrimitive::SPLINE_MOVE_LATERAL);
+            prim.startAngle = startAngle;
+            prim.endAngle = startAngle;
+            prim.endAngleRad = radStartAngle;
+            prim.startAngleRad = radStartAngle;
+            primitivesByAngle[startAngle].push_back(prim);
             ++id;
         }
     }
@@ -242,13 +241,13 @@ std::vector<int> SbplSplineMotionPrimitives::generateEndAngles(const int startAn
         {
             //casting angle to int before adding config-numAngles is important to get symmetric results
             //+ config.numAngles is done to avoid negative number modulo (which is implementation defined in c++03)
-            const int realAngle = (((int)angle) + config.numAngles) % config.numAngles;
+            const int realAngle = int(std::ceil(angle) + config.numAngles) % config.numAngles;
             result.push_back(realAngle);
         }
         count = 0;
         for(double angle = startAngle + rightStep; count < numAnglesRightSide; ++count, angle += rightStep)
         {
-            const int realAngle = (((int)angle) + config.numAngles) % config.numAngles;
+            const int realAngle = int(std::ceil(angle) + config.numAngles) % config.numAngles;
             result.push_back(realAngle);
         }
     }
@@ -294,5 +293,7 @@ void SbplSplineMotionPrimitives::validateConfig(const SplinePrimitivesConfig& co
     if(config.splineOrder < 3)
         throw std::runtime_error("splineOrder has to be >= 3");
 }
+
+
 
 }//end namespace motion_planning_libraries
