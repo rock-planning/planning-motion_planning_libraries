@@ -126,7 +126,6 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
     
     if(const_cast<SplinePrimitive&>(prim).spline.getCurvatureMax() > maxCurvature)
     {
-        std::cout << const_cast<SplinePrimitive&>(prim).spline.getCurvatureMax() << " > " << maxCurvature << std::endl;
         continue;
     }
     
