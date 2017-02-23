@@ -23,7 +23,8 @@ std::vector<Eigen::Vector2i> SbplSplineMotionPrimitives::generateDestinationCell
     //for cellSkipFactor < 1 the algorithm generates the same coordinates several times
     //therefore we put them in a set :-) This is simpler than writing a more complex algorithm
     std::set<std::pair<int, int>> coordinates; //use pair instead of Vector2i because operator< is implemented for pair
-    for(int n = 0, r = 1; r < config.destinationCircleRadius; ++n, r = config.cellSkipFactor * n * n)
+    double r = 0;
+    for(int n = 0; r < config.destinationCircleRadius; ++n, r += config.cellSkipFactor)
     {
         //see https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
         if(r <= 0) //happens for cellSkipFactor < 1
@@ -32,6 +33,8 @@ std::vector<Eigen::Vector2i> SbplSplineMotionPrimitives::generateDestinationCell
         int y = 0;
         int err = 0;
 
+        std::cout << "R: " << r << std::endl;
+        
         while (x >= y)
         {
             coordinates.emplace(x,y);
