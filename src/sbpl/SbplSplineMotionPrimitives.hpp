@@ -38,7 +38,7 @@ struct SplinePrimitive
 class SbplSplineMotionPrimitives
 {
 private:
-    std::vector<std::vector<SplinePrimitive>> primitivesByAngle; //primitives by startAngle by id
+    std::vector< std::vector<SplinePrimitive> > primitivesByAngle; //primitives by startAngle by id
     SplinePrimitivesConfig config;
     double radPerDiscreteAngle;
   
