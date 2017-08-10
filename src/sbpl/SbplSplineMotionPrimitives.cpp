@@ -98,8 +98,8 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
     for(const Eigen::Vector2i& dest : destinationCells)
     { 
         //rotate destination for easier checks. If it is rotated we just need to check
-        //whether destRot.x is above 0 (cellCenterOffset) to know if this is a forward or backward motion
-        const Eigen::Vector2d destRot = Eigen::Rotation2D<double>(-radStartAngle) * (dest.cast<double>() + config.cellCenterOffset);
+        //whether destRot.x is above 0 (epsilon)  to know if this is a forward or backward motion
+        const Eigen::Vector2d destRot = Eigen::Rotation2D<double>(-radStartAngle) * dest.cast<double>();
 
         //forward and backward movements
         const std::vector<int> endAngles = generateEndAngles(startAngle, config);
@@ -107,7 +107,7 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
         {
             //forward movement
             if(config.generateForwardMotions &&
-               destRot.x() > config.cellCenterOffset.x() + epsilon)
+               destRot.x() > epsilon)
             {
                 SplinePrimitive prim = getPrimitive(startAngle, endAngle, dest,
                                                     id, SplinePrimitive::SPLINE_MOVE_FORWARD);
@@ -116,7 +116,7 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
             }
             //backward movement
             else if(config.generateBackwardMotions &&
-                    destRot.x() < config.cellCenterOffset.x() - epsilon)
+                    destRot.x() < - epsilon)
             {
                 //the robot is driving backwards. we calculate the spline as if the robot is
                 //rotated by 180° and change the start and end rotation afterwards.
@@ -125,7 +125,7 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
                 SplinePrimitive prim = getPrimitive(oppositStartAngle, oppositEndAngle,
                                                     dest, id, SplinePrimitive::SPLINE_MOVE_BACKWARD);
                 prim.startAngle = startAngle;
-                prim.endAngle = endAngle; //FIXME use endangle
+                prim.endAngle = endAngle; 
                 prim.startAngleRad = startAngle * radPerDiscreteAngle;
                 prim.endAngleRad = endAngle * radPerDiscreteAngle;
                 primitivesByAngle[startAngle].push_back(prim);
@@ -135,13 +135,13 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
         
         //lateral movement
         if(config.generateLateralMotions &&
-           destRot.x() <= config.cellCenterOffset.x() + epsilon &&
-           destRot.x() >= config.cellCenterOffset.x() - epsilon)
+           destRot.x() <=  epsilon &&
+           destRot.x() >=  -epsilon)
         {
             //the robot is driving sidewards. spline is calculated as if the robot is rotated 90° 
             // and moving forward. angles are fixed afterwards
             int rotatedStartAngle = 0;
-            if(destRot.y() < config.cellCenterOffset.y())
+            if(destRot.y() < 0)
             {//right rotate
                 rotatedStartAngle = (startAngle - config.numAngles / 4) % config.numAngles;
             }
@@ -193,11 +193,11 @@ SplinePrimitive SbplSplineMotionPrimitives::getPrimitive(const int startAngle,
     SplinePrimitive prim;
     
     const double radStartAngle = startAngle * radPerDiscreteAngle;
-    const base::Vector2d start(config.cellCenterOffset * config.gridSize);
+    const base::Vector2d start(0, 0); 
     const base::Vector2d startDirection = start + Eigen::Rotation2D<double>(radStartAngle) * Eigen::Vector2d::UnitX();
     
     const double radEndAngle = endAngle * radPerDiscreteAngle;
-    const base::Vector2d end((destination.cast<double>() + config.cellCenterOffset) * config.gridSize);
+    const base::Vector2d end(destination.cast<double>() * config.gridSize);
     const base::Vector2d endDirection = end + Eigen::Rotation2D<double>(radEndAngle) * Eigen::Vector2d::UnitX();
     
     std::vector<base::Vector2d> points{start, startDirection, end, endDirection};
