@@ -140,6 +140,10 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
       fp_vertices->push_back(osg::Vec3(intermediatePose[0], intermediatePose[1], 0));
     }
     osg::Vec4 color(1.0, 0.0, 0.0, 1.0f); 
+    if(prim.motionType == SplinePrimitive::SPLINE_MOVE_BACKWARD)
+    {
+        color = osg::Vec4(0, 0, 1, 1);
+    }
     osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
     fp_geometry->setVertexArray(fp_vertices);
     fp_geometry->setColorArray(colors);
