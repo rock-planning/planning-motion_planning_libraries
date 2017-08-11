@@ -206,7 +206,8 @@ SplinePrimitive SbplSplineMotionPrimitives::getPrimitive(const int startAngle,
                                                     SplineBase::ORDINARY_POINT,
                                                     SplineBase::TANGENT_POINT_FOR_PRIOR};
                                                     
-    prim.spline = Spline2(config.splineGeometricResolution, config.splineOrder);
+    double splineGeometricResolution = std::min(0.01, config.gridSize / 16.0);
+    prim.spline = Spline2(splineGeometricResolution, config.splineOrder);
     prim.spline.interpolate(points, std::vector<double>(), types);
     prim.startAngle = startAngle;
     prim.endAngleRad = radEndAngle;
@@ -289,9 +290,6 @@ void SbplSplineMotionPrimitives::validateConfig(const SplinePrimitivesConfig& co
         
     if(config.numEndAngles > config.numAngles / 2)
         throw std::runtime_error("numEndAngles has to be <= numAngles / 2");
-    
-    if(config.splineGeometricResolution <= 0)
-        throw std::runtime_error("splineGeometricResolution has to be > 0");
     
     if(config.splineOrder < 3)
         throw std::runtime_error("splineOrder has to be >= 3");

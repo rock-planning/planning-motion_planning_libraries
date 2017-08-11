@@ -18,9 +18,6 @@ struct SplinePrimitivesConfig
     
     /**Influences how sparse the cells are distributed inside the destination circle. bigger number means more sparse*/
     double cellSkipFactor;
-        
-    //resolution of the internal splines
-    double splineGeometricResolution;
     //order if the internal splines
     double splineOrder;
     
@@ -30,7 +27,7 @@ struct SplinePrimitivesConfig
     bool generatePointTurnMotions;
     
     SplinePrimitivesConfig() : gridSize(0.1), numAngles(16), numEndAngles(7),
-                               destinationCircleRadius(20), cellSkipFactor(0.3), splineGeometricResolution(0.1),
+                               destinationCircleRadius(20), cellSkipFactor(0.3),
                                splineOrder(4), generateForwardMotions(true),
                                generateBackwardMotions(true), generateLateralMotions(true),
                                generatePointTurnMotions(true){}
