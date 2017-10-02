@@ -66,11 +66,11 @@ std::vector<Eigen::Vector2i> SbplSplineMotionPrimitives::generateDestinationCell
 
 void SbplSplineMotionPrimitives::generatePrimitives(const SplinePrimitivesConfig& config)
 {
-    std::vector<Eigen::Vector2i> destinaionCells = generateDestinationCells(config);
+    std::vector<Eigen::Vector2i> destinationCells = generateDestinationCells(config);
   
     for(int startAngle = 0; startAngle < config.numAngles; ++startAngle)
     {
-        generatePrimitivesForAngle(startAngle, destinaionCells);
+        generatePrimitivesForAngle(startAngle, destinationCells);
     }
     
     //debug code below
@@ -94,6 +94,7 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
     int id = 0; //the "same" primitives should have the same id for each start angle according to sbpl
     const double radStartAngle = startAngle * radPerDiscreteAngle;
     const double epsilon = 0.1; //makes the distinction between forward/backward/lateral easier
+    const std::vector<int> endAngles = generateEndAngles(startAngle, config);
         
     for(const Eigen::Vector2i& dest : destinationCells)
     { 
@@ -102,7 +103,6 @@ void SbplSplineMotionPrimitives::generatePrimitivesForAngle(const int startAngle
         const Eigen::Vector2d destRot = Eigen::Rotation2D<double>(-radStartAngle) * dest.cast<double>();
 
         //forward and backward movements
-        const std::vector<int> endAngles = generateEndAngles(startAngle, config);
         for(int endAngle : endAngles)
         {
             //forward movement

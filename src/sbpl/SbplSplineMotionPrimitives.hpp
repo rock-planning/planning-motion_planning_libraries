@@ -26,7 +26,7 @@ struct SplinePrimitive
     double startAngleRad; //start angle in rad
     unsigned endAngle; //discretized end angle [0 .. numAngles[
     double endAngleRad; //end angle in rad
-    Eigen::Vector2i endPosition;//discret end position, i.e. the cell that this spline ends in
+    Eigen::Vector2i endPosition;//discrete end position, i.e. the cell that this spline ends in
     //spline of the movement (not discretized), starts in the center of the first cell, ends in the center of the last cell
     //NOTE for point turns the spline is invalid 
     base::geometry::Spline2 spline; 
