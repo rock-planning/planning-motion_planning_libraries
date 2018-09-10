@@ -34,14 +34,10 @@ int MotionPlanningLibrariesSbplSplineVisualization::getAngleNum() const {
 
 void MotionPlanningLibrariesSbplSplineVisualization::setAngleNum(int num) {
     
+    num %= p->data.getConfig().numAngles;
     if(num < 0)
     {
-        while(num < 0)
-        {
-            //shifting by multiples of numAngles does not change the angle because of the modulo
-            num += p->data.getConfig().numAngles; 
-        }
-        num = num % p->data.getConfig().numAngles;
+        num += p->data.getConfig().numAngles;
     }
     
     mAngleNum = num;
@@ -58,14 +54,10 @@ int MotionPlanningLibrariesSbplSplineVisualization::getEndAngle() const
 
 void MotionPlanningLibrariesSbplSplineVisualization::setEndAngle(int num)
 {
+    num %= p->data.getConfig().numAngles;
     if(num < 0)
     {
-        while(num < 0)
-        {
-            //shifting by multiples of numAngles does not change the angle because of the modulo
-            num += p->data.getConfig().numAngles; 
-        }
-        num = num % p->data.getConfig().numAngles;
+        num += p->data.getConfig().numAngles;
     }
     mEndAngle = num;
     emit propertyChanged("endAngle");
@@ -126,7 +118,6 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
     
     if(const_cast<SplinePrimitive&>(prim).spline.getCurvatureMax() > maxCurvature)
     {
-        std::cout << const_cast<SplinePrimitive&>(prim).spline.getCurvatureMax() << " > " << maxCurvature << std::endl;
         continue;
     }
     
@@ -141,6 +132,10 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
       fp_vertices->push_back(osg::Vec3(intermediatePose[0], intermediatePose[1], 0));
     }
     osg::Vec4 color(1.0, 0.0, 0.0, 1.0f); 
+    if(prim.motionType == SplinePrimitive::SPLINE_MOVE_BACKWARD)
+    {
+        color = osg::Vec4(0, 0, 1, 1);
+    }
     osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
     fp_geometry->setVertexArray(fp_vertices);
     fp_geometry->setColorArray(colors);
