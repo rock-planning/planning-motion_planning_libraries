@@ -11,35 +11,43 @@
 int main(int argc, char** argv)
 {
     using namespace motion_planning_libraries;
-    
-    struct MotionPrimitivesConfig config;
-    config.mMobility.mSpeed = 1.0;
-    config.mMobility.mTurningSpeed = 0.1;
-    config.mMobility.mMinTurningRadius = 1.0;
-    
-    config.mMobility.mMultiplierForward = 0;
-    config.mMobility.mMultiplierBackward = 0;
-    config.mMobility.mMultiplierLateral = 0;
-    config.mMobility.mMultiplierForwardTurn = 4;
-    config.mMobility.mMultiplierPointTurn = 0;
-    config.mMobility.mMultiplierLateralCurve = 3;
-    
-    config.mNumPrimPartition = 2;
-    config.mNumPosesPerPrim = 10;
-    config.mNumAngles = 16;
-    
-    config.mMapWidth = 100;
-    config.mMapHeight = 100;
-    config.mGridSize = 0.1;
-    
-    config.mPrimAccuracy = 0.25;
- 
-    SbplMotionPrimitives mprims(config);
-    mprims.createPrimitives();
-    mprims.storeToFile("test.mprim");
-    
-    return 0;
-    
+
+    Config conf;
+    conf.mPlanningLibType = motion_planning_libraries::PlanningLibraryType::LIB_SBPL;
+    conf.mEnvType = motion_planning_libraries::ENV_XYTHETA;
+    conf.mPlanner = motion_planning_libraries::ANYTIME_DSTAR;
+    conf.mSearchUntilFirstSolution = false;
+    conf.mMaxAllowedSampleDist = 1.0;
+    conf.mEscapeTrajRadiusFactor = 1.4;
+    conf.mMobility.mSpeed = 0.8;
+    conf.mMobility.mTurningSpeed = 0.5;
+    conf.mMobility.mMultiplierForward = 1;
+    conf.mMobility.mMultiplierBackward = 2;
+    conf.mMobility.mMultiplierBackwardTurn = 4;
+    conf.mMobility.mMultiplierLateral = 0;
+    conf.mMobility.mMultiplierForwardTurn = 3;
+    conf.mMobility.mMultiplierPointTurn = 3;
+    conf.mMobility.mMinTurningRadius = 1.0;
+    conf.mReplanning.mReplanDuringEachUpdate = false;
+    conf.mReplanning.mReplanOnNewStartPose = false;
+    conf.mReplanning.mReplanOnNewGoalPose = true;
+    conf.mReplanning.mReplanOnNewMap = false;
+    conf.mReplanning.mReplanMinDistStartGoal = 1.0;
+    conf.mFootprintLengthMinMax.first = 1.27;
+    conf.mFootprintLengthMinMax.second = 1.27;
+    conf.mFootprintWidthMinMax.first = 0.87;
+    conf.mFootprintWidthMinMax.second = 0.87;
+    conf.mNumFootprintClasses = 10;
+    conf.mTimeToAdaptFootprint = 40;
+    conf.mAdaptFootprintPenalty = 20;
+    conf.mSBPLEnvFile = "";
+    conf.mSBPLMotionPrimitivesFile = "";
+    conf.mSBPLForwardSearch = true;
+    conf.mNumIntermediatePoints = 4;
+    conf.mNumPrimPartition = 4;
+    conf.mPrimAccuracy = 0.15;
+    conf.mJointBorders.clear();
+
     // Create the trav map.
     envire::Environment* env = new  envire::Environment();
     envire::TraversabilityGrid* trav = new envire::TraversabilityGrid(100, 100, 0.1, 0.1);
@@ -57,14 +65,7 @@ int main(int argc, char** argv)
     base::samples::RigidBodyState rbs_start;
     rbs_start.setPose(base::Pose(base::Position(1,1,0), base::Orientation::Identity()));
     base::samples::RigidBodyState rbs_goal;
-    rbs_goal.setPose(base::Pose(base::Position(9,9,0), base::Orientation::Identity()));
-    
-    // Create conf file.
-    Config conf;
-    std::string path_primitives(getenv ("AUTOPROJ_CURRENT_ROOT"));
-    path_primitives += "/external/sbpl/matlab/mprim/pr2_10cm.mprim";
-    conf.mSBPLMotionPrimitivesFile = path_primitives;
-    conf.mSearchUntilFirstSolution = true;
+    rbs_goal.setPose(base::Pose(base::Position(1.8,1,0), base::Orientation::Identity()));
     
     // Draw a rectangle in the center 
     GridCalculations calc;
@@ -85,11 +86,6 @@ int main(int argc, char** argv)
     calc.setFootprintPoseInGrid(60, 60, 0);
     std::cout << "Footprint 3 " << (calc.isValid() ? "valid" : "not valid") << std::endl;
     
-    // SBPL
-    std::cout << std::endl << "SBPL XYTHETA PLANNING" << std::endl;
-    conf.mPlanningLibType = LIB_SBPL;
-    conf.mEnvType = ENV_XYTHETA;
-    
     MotionPlanningLibraries sbpl(conf);
     sbpl.setTravGrid(env, "/trav_map");
     sbpl.setStartState(State(rbs_start));
@@ -103,7 +99,8 @@ int main(int argc, char** argv)
         std::cout << "SBPL problem could not be solved" << std::endl;
     }
 
-    sbpl.getTrajectoryInWorld();
+    std::vector<base::Trajectory> vec_traj =
+            sbpl.getTrajectoryInWorld();
      
     return 0;
 }
