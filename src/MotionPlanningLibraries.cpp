@@ -527,29 +527,33 @@ std::vector<base::Trajectory> MotionPlanningLibraries::getTrajectoryInWorld() {
         } 
         last_position = position;
         
-        // For each new speed a new trajectory will be created (if already more than one point have been added)
-        // If the last point have been reached a trajectory will be created with all the remaining points
-        // (or all points if only one speed has been used).
-        if((use_this_speed != last_speed && path.size() > 1) || it+1 == mPlannedPathInWorld.end()) {
-            base::Trajectory trajectory;
-            trajectory.speed = last_speed;  
-            LOG_DEBUG("Adds trajectory with speed %4.2f, path contains %d coordinates", 
-                    last_speed, path.size());
-            try {
-                trajectory.spline.interpolate(path, parameters, coord_types);
-            } catch (std::runtime_error& e) {
-                LOG_ERROR("Spline exception: %s", e.what());
-                return std::vector<base::Trajectory>();
-            }
-            trajectories.push_back(trajectory);
-            path.clear();
-            coord_types.clear();
-            
-            // Re-add current point to be the starting point of the next trajectory.
-            path.push_back(position);
-            coord_types.push_back(base::geometry::SplineBase::ORDINARY_POINT);
+        // Last point does not contain any speed (endpoint), so the path should at
+        // least contain two points, so the trajectory should be valid.
+        if(path.size() > 1){
+            // For each new speed a new trajectory will be created (if already more than one point have been added)
+            // If the last point have been reached a trajectory will be created with all the remaining points
+            // (or all points if only one speed has been used).
+            if((use_this_speed != last_speed) || it+1 == mPlannedPathInWorld.end()) {
+                base::Trajectory trajectory;
+                trajectory.speed = last_speed;
+                LOG_DEBUG("Adds trajectory with speed %4.2f, path contains %d coordinates",
+                        last_speed, path.size());
+                try {
+                    trajectory.spline.interpolate(path, parameters, coord_types);
+                } catch (std::runtime_error& e) {
+                    LOG_ERROR("Spline exception: %s", e.what());
+                    return std::vector<base::Trajectory>();
+                }
+                trajectories.push_back(trajectory);
+                path.clear();
+                coord_types.clear();
 
-            last_position = position;
+                // Re-add current point to be the starting point of the next trajectory.
+                path.push_back(position);
+                coord_types.push_back(base::geometry::SplineBase::ORDINARY_POINT);
+
+                last_position = position;
+            }
         }
         last_speed = use_this_speed;
     }   
