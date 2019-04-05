@@ -150,7 +150,7 @@ class TravGridObjective :  public ompl::base::StateCostIntegralObjective {
                 const SherpaStateSpace::StateType* st_s1 = s1->as<SherpaStateSpace::StateType>();
                 const SherpaStateSpace::StateType* st_s2 = s2->as<SherpaStateSpace::StateType>();
                 
-                double fp_time_sec = (abs(st_s1->getFootprintClass() - st_s2->getFootprintClass()) / 
+                double fp_time_sec = (abs(int(st_s1->getFootprintClass() - st_s2->getFootprintClass())) / 
                         (double)mConfig.mNumFootprintClasses) * 
                         mConfig.mTimeToAdaptFootprint;
                 
