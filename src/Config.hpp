@@ -181,6 +181,11 @@ struct Replanning {
  * variable anmes are first and second instead of min and max to be backward compatible with old config.yml files
  */
 struct MinMaxValue{
+    MinMaxValue():
+        first(0),
+        second(0){
+    }
+
     MinMaxValue(const double &first, const double &second):
         first(first),
         second(second){
