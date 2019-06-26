@@ -176,6 +176,26 @@ struct Replanning {
 };
 
 /**
+ * @brief struct to avoid usage of a std::pair 
+ * std::pair is incompatible with typelib on gcc7 because pair has private member now)
+ * variable anmes are first and second instead of min and max to be backward compatible with old config.yml files
+ */
+struct MinMaxValue{
+    MinMaxValue():
+        first(0),
+        second(0){
+    }
+
+    MinMaxValue(const double &first, const double &second):
+        first(first),
+        second(second){
+    }
+    double first;
+    double second;
+};
+
+
+/**
  *  Contains the configuration for all planning libraries.
  *  Just ignore the non relevant parameters.
  * \todo "Split into PlanningConfig and RobotConfig?"
@@ -198,9 +218,9 @@ struct Config {
     // FOOTPRINT
     // Either a radius or a rectangle has to be defined. If the system cannot adapt it's
     // footprint use the same value for first and second.
-    std::pair<double,double> mFootprintRadiusMinMax; // Minimal / maximal footprint radius.
-    std::pair<double,double> mFootprintLengthMinMax; // Size along the x-axis. 
-    std::pair<double,double> mFootprintWidthMinMax; // Size along the y-axis.
+    MinMaxValue mFootprintRadiusMinMax; // Minimal / maximal footprint radius.
+    MinMaxValue mFootprintLengthMinMax; // Size along the x-axis. 
+    MinMaxValue mFootprintWidthMinMax; // Size along the y-axis.
     // Defines number of different footprint radii from min to max, used to discretize the search space.
     unsigned int mNumFootprintClasses;
     // Time in seconds to change the footprint from min to max.
@@ -232,12 +252,12 @@ struct Config {
     
     // ARM MOTION PLANNING
     // defines the number and borders of the joints.  <low,high> in rad
-    std::vector< std::pair<double,double> > mJointBorders; 
+    std::vector< MinMaxValue > mJointBorders; 
     
     void setJoints(int num, double lower_border=-M_PI, double upper_border=M_PI) {
         mJointBorders.empty();
         for(int i=0; i<num; ++i) {
-            mJointBorders.push_back(std::pair<double,double>(lower_border, upper_border));
+            mJointBorders.push_back(MinMaxValue(lower_border, upper_border));
         }
     }
     

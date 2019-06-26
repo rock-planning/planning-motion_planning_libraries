@@ -28,7 +28,7 @@ bool OmplEnvARM::initialize_arm() {
     mpStateSpace = ob::StateSpacePtr(new ob::RealVectorStateSpace(mConfig.mJointBorders.size()));
     ob::RealVectorBounds bounds(mConfig.mJointBorders.size());
     
-    std::vector< std::pair<double,double> >::iterator it = mConfig.mJointBorders.begin();
+    std::vector< MinMaxValue >::iterator it = mConfig.mJointBorders.begin();
     for(int i=0; it != mConfig.mJointBorders.end(); it++, i++) {
         bounds.setLow(i, it->first);   
         bounds.setHigh(i, it->second); 
