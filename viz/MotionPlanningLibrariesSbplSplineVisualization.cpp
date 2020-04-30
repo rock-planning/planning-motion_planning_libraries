@@ -121,7 +121,7 @@ void MotionPlanningLibrariesSbplSplineVisualization::addPrimitives(osg::Group* g
   const std::vector<SplinePrimitive>& prims = primitives.getPrimitiveForAngle(mAngleNum);
   for(const SplinePrimitive& prim : prims)
   {
-    if(prim.endAngle != mEndAngle)
+    if(static_cast<int>(prim.endAngle) != mEndAngle)
       continue;
     
     if(const_cast<SplinePrimitive&>(prim).spline.getCurvatureMax() > maxCurvature)
