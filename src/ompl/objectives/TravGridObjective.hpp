@@ -9,6 +9,7 @@
 
 #include <motion_planning_libraries/Config.hpp>
 #include <motion_planning_libraries/ompl/spaces/SherpaStateSpace.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace motion_planning_libraries
 {

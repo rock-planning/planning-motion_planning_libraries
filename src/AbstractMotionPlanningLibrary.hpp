@@ -5,6 +5,7 @@
 #include <base/Waypoint.hpp>
 #include <base/Trajectory.hpp>
 #include <base-logging/Logging.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include <envire/maps/TraversabilityGrid.hpp>
 
