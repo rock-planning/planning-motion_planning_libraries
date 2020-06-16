@@ -12,9 +12,12 @@
 namespace motion_planning_libraries
 {
 
+Eigen::Affine3d MotionPlanningLibraries::mWorld2Local = Eigen::Affine3d::Identity();
+
 // PUBLIC
 MotionPlanningLibraries::MotionPlanningLibraries(Config config) : 
         mConfig(config),
+        mpEnv(nullptr),
         mpTravGrid(NULL), 
         mpTravData(),
         mpLastTravGrid(NULL),
@@ -195,6 +198,39 @@ bool MotionPlanningLibraries::setTravGrid(envire::Environment* env, std::string 
         }
     }
     return true;
+}
+
+bool MotionPlanningLibraries::setTravGrid(const maps::grid::TraversabilityGrid& trav)
+{
+    boost::intrusive_ptr<envire::TraversabilityGrid> envireTrav = convertToEnvire(trav);
+    std::string uuid = "/trav_map";
+    envireTrav->setUniqueId(uuid);
+
+    if (!mpEnv)
+        mpEnv = boost::shared_ptr<envire::Environment>(new envire::Environment);
+
+    // Detach item if there is already a map in the environment.
+    // Not storing the returned intrusive_ptr causes the item to self delete.
+    boost::intrusive_ptr<envire::TraversabilityGrid> trav_ptr = mpEnv->getItem<envire::TraversabilityGrid>(uuid);
+    if (trav_ptr)
+        mpEnv->detachItem(trav_ptr.get());
+
+    // Check for a frame node to reuse.
+    std::list<envire::FrameNode*> frameNodes = mpEnv->getRootNode()->getChildren();
+    envire::FrameNode* travFrameNode;
+    if (frameNodes.empty())
+        travFrameNode = new envire::FrameNode();
+    else
+        travFrameNode = frameNodes.front();
+
+    mpEnv->attachItem(envireTrav.get());
+    mpEnv->getRootNode()->addChild(travFrameNode);
+    envireTrav->setFrameNode(travFrameNode);
+
+    // Set transform in case it was updated or hasn't been set yet.
+    travFrameNode->setTransform(mWorld2Local);
+
+    return setTravGrid(mpEnv.get(), uuid);
 }
 
 bool MotionPlanningLibraries::setStartState(struct State new_state) {
@@ -746,6 +782,16 @@ bool MotionPlanningLibraries::getSbplMotionPrimitives(struct SbplMotionPrimitive
     }
 }
 
+void MotionPlanningLibraries::setWorld2Local(Eigen::Affine3d world2local)
+{
+    mWorld2Local = world2local;
+}
+
+Eigen::Affine3d MotionPlanningLibraries::getWorld2Local()
+{
+    return mWorld2Local;
+}
+
 bool MotionPlanningLibraries::world2grid(envire::TraversabilityGrid const* trav,
         base::samples::RigidBodyState const& world_pose, 
         base::samples::RigidBodyState& grid_pose,
@@ -927,6 +973,42 @@ void MotionPlanningLibraries::collectCellUpdates( envire::TraversabilityGrid* ol
     LOG_INFO("%d different cells collected within %4.4f sec.", cell_counter, 
             (base::Time::now() - start_t).toSeconds());
     LOG_INFO("Number of unchanged cells %d", cell_counter_same);
+}
+
+boost::intrusive_ptr<envire::TraversabilityGrid> MotionPlanningLibraries::convertToEnvire(const maps::grid::TraversabilityGrid& traversabilityGrid) const
+{
+    maps::grid::Vector2ui numCells = traversabilityGrid.getNumCells();
+    maps::grid::Vector2d resolution = traversabilityGrid.getResolution();
+    maps::grid::Vector3d localFrame = traversabilityGrid.translation();
+
+    boost::intrusive_ptr<envire::TraversabilityGrid> envTravGrid(new envire::TraversabilityGrid(numCells.x(), numCells.y(),
+                                                                                                resolution.x(), resolution.y(),
+                                                                                                localFrame.x(), localFrame.y()));
+
+    std::vector<maps::grid::TraversabilityClass> travClasses = traversabilityGrid.getTraversabilityClasses();
+    envire::TraversabilityClass travClass;
+
+    for (size_t travClassId = 0; travClassId < travClasses.size(); ++travClassId)
+    {
+        travClass = envire::TraversabilityClass(travClasses.at(travClassId).getDrivability());
+        envTravGrid->setTraversabilityClass(travClassId, travClass);
+    }
+
+    uint8_t travClassId;
+    double probability;
+
+    uint8_t* trav_ptr = envTravGrid->getGridData(envTravGrid->TRAVERSABILITY).origin();
+    uint8_t* prob_ptr = envTravGrid->getGridData(envTravGrid->PROBABILITY).origin();
+    maps::grid::TraversabilityGrid::const_iterator it = traversabilityGrid.begin();
+    for (; it < traversabilityGrid.end(); ++it, ++trav_ptr, ++prob_ptr)
+    {
+        travClassId = it->getTraversabilityClassId();
+        probability = it->getProbability();
+        *trav_ptr = travClassId;
+        *prob_ptr = probability;
+    }
+
+    return envTravGrid;
 }
 
 } // namespace motion_planning_libraries

@@ -71,6 +71,65 @@ BOOST_AUTO_TEST_CASE(sbpl_mprims)
     mprims.createPrimitives();
     mprims.storeToFile("test.mprim");
 }
+
+BOOST_AUTO_TEST_CASE(test_convertToEnvire)
+{
+    maps::grid::TraversabilityCell defaultCell = maps::grid::TraversabilityCell();
+    maps::grid::Vector2ui numCells(1000, 1500);
+    maps::grid::Vector2d resolution(0.1, 0.2);
+    maps::grid::TraversabilityGrid travGrid = maps::grid::TraversabilityGrid(numCells, resolution, defaultCell);
+    travGrid.translate(Eigen::Vector3d(1, 1, 0));
+
+    for (size_t i = 0; i < 10; ++i)
+    {
+        uint8_t retID;
+        travGrid.registerNewTraversabilityClass(retID, maps::grid::TraversabilityClass(0.1 * i));
+        BOOST_CHECK_EQUAL(retID, i);
+    }
+
+    travGrid.setTraversabilityAndProbability(0, 0.0, 0, 0);
+    travGrid.setTraversabilityAndProbability(1, 0.1, 0, 14);
+    travGrid.setTraversabilityAndProbability(2, 0.2, 9, 0);
+    travGrid.setTraversabilityAndProbability(3, 0.3, 9, 14);
+    travGrid.setTraversabilityAndProbability(4, 0.4, 4, 4);
+    travGrid.setTraversabilityAndProbability(5, 0.5, 7, 3);
+
+    motion_planning_libraries::MotionPlanningLibraries mpl = motion_planning_libraries::MotionPlanningLibraries();
+    boost::intrusive_ptr<envire::TraversabilityGrid> envireTravGrid = mpl.convertToEnvire(travGrid);
+
+    // Check number of cells.
+    BOOST_CHECK_EQUAL(envireTravGrid->getCellSizeX(), travGrid.getNumCells().x());
+    BOOST_CHECK_EQUAL(envireTravGrid->getCellSizeY(), travGrid.getNumCells().y());
+
+    // Check cell sizes.
+    BOOST_CHECK_EQUAL(envireTravGrid->getScaleX(), travGrid.getResolution().x());
+    BOOST_CHECK_EQUAL(envireTravGrid->getScaleY(), travGrid.getResolution().y());
+
+    // Check size (redundant but why not).
+    BOOST_CHECK_EQUAL(envireTravGrid->getSizeX(), travGrid.getSize().x());
+    BOOST_CHECK_EQUAL(envireTravGrid->getSizeY(), travGrid.getSize().y());
+
+    // Check offset.
+    BOOST_CHECK_EQUAL(envireTravGrid->getOffsetX(), travGrid.translation().x());
+    BOOST_CHECK_EQUAL(envireTravGrid->getOffsetY(), travGrid.translation().y());
+
+    // Check classes.
+    BOOST_CHECK_EQUAL(envireTravGrid->getTraversabilityClasses().size(), travGrid.getTraversabilityClasses().size());
+    for (size_t i = 0; i < envireTravGrid->getTraversabilityClasses().size(); ++i)
+    {
+        BOOST_CHECK_EQUAL(envireTravGrid->getTraversabilityClass(i).getDrivability(), travGrid.getTraversabilityClass(i).getDrivability());
+    }
+
+    // Check traversability and probability.
+    for (size_t x = 0; x < envireTravGrid->getCellSizeX(); ++x)
+    {
+        for (size_t y = 0; y < envireTravGrid->getCellSizeY(); ++y)
+        {
+            BOOST_CHECK_EQUAL(envireTravGrid->getTraversability(x, y).getDrivability(), travGrid.getTraversability(x, y).getDrivability());
+            BOOST_CHECK_CLOSE(envireTravGrid->getProbability(x, y), travGrid.getProbability(x, y), 0.001);
+        }
+    }
+}
     
 #if 0
 

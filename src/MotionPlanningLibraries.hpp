@@ -6,6 +6,7 @@
 #include <base/Trajectory.hpp>
 
 #include <envire/maps/TraversabilityGrid.hpp>
+#include <maps/grid/TraversabilityGrid.hpp>
 
 #include "Config.hpp"
 #include "State.hpp"
@@ -141,6 +142,7 @@ class MotionPlanningLibraries
     
     boost::shared_ptr<AbstractMotionPlanningLibrary> mpPlanningLib;
     
+    boost::shared_ptr<envire::Environment> mpEnv;
     envire::TraversabilityGrid* mpTravGrid;
     boost::shared_ptr<TravData> mpTravData;
     // Receives a copy of each trav grid, which is used for partial update testing.
@@ -152,6 +154,7 @@ class MotionPlanningLibraries
     bool mNewGoalReceived;
     double mLostX; // Used to trac discretization error.
     double mLostY;
+    static Eigen::Affine3d mWorld2Local;
     
  public: 
     enum MplErrors mError; 
@@ -167,6 +170,13 @@ class MotionPlanningLibraries
      * \todo "If possible cell updates should be used."
      */
     bool setTravGrid(envire::Environment* env, std::string trav_map_id);
+
+    /**
+     *  @overload allows to directly pass a maps::grid:TraversabilityGrid.
+     *  @param trav : Traversability grid to be set.
+     *  @returns true if the traversability grid was successfully set.
+     */
+    bool setTravGrid(const maps::grid::TraversabilityGrid& trav);
     
     inline bool travGridAvailable() {
         return mpTravGrid != NULL;
@@ -285,6 +295,19 @@ class MotionPlanningLibraries
     }
     
     bool getSbplMotionPrimitives(struct SbplMotionPrimitives& prims);
+
+    /**
+     * Set the transformation between world and local coordinates.
+     * @param world2local : transformation between the world frame and the local frame.
+     *                      Will be set to identity by default.
+     */
+    static void setWorld2Local(Eigen::Affine3d world2local);
+
+    /**
+     * Get the transformation between world and local coordinates.
+     * @returns : the transformation between the world frame and the local frame.
+     */
+    static Eigen::Affine3d getWorld2Local();
     
     /**
      * Converts the world pose to grid coordinates including the transformed orientation.
@@ -310,7 +333,15 @@ class MotionPlanningLibraries
     bool gridlocal2world(envire::TraversabilityGrid const* trav,
         base::samples::RigidBodyState const& grid_local_pose,
         base::samples::RigidBodyState& world_pose);
-    
+
+    /**
+     * Converts a maps::grid::TraversabilityGrid to an envire::TraversabilityGrid as an
+     * intrusive_ptr so it can be passed to the motion planner.
+     * @param traversabilityGrid : traversabilityGrid to be converted.
+     * @returns an intrusive_ptr to the converted traversavility grid.
+     */
+    boost::intrusive_ptr<envire::TraversabilityGrid> convertToEnvire(const maps::grid::TraversabilityGrid& traversabilityGrid) const;
+
  private:
     /**
      * Extracts the traversability map \a trav_map_id from the passed environment.
