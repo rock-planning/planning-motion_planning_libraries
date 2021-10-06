@@ -41,7 +41,7 @@ void SherpaStateSpace::registerProjections(void)
             cellSizes_[1] = (bounds_.high[1] - bounds_.low[1]) / ompl::magic::PROJECTION_DIMENSION_SPLITS;
         }
 
-        virtual void project(const ompl::base::State *state, ompl::base::EuclideanProjection &projection) const
+        virtual void project(const ompl::base::State *state, Eigen::Ref<Eigen::VectorXd> projection) const
         {
             memcpy(&projection(0), state->as<ompl::base::SE2StateSpace::StateType>()->
                     as<ompl::base::RealVectorStateSpace::StateType>(0)->values, 2 * sizeof(double));
