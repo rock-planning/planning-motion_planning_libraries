@@ -7,6 +7,7 @@ include(RockQt)
 rock_qt_vizkit_plugin(
     TARGETPREFIX motion_planning_libraries-viz
     QT4_SUFFIX ""
+    MISSINGQTDEPS_NOBUILD
     SOURCES
         PluginLoader.cpp
         MotionPlanningLibrariesStateVisualization.cpp
