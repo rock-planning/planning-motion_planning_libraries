@@ -1,6 +1,6 @@
 
-rock_find_qt4(OPTIONAL Core)
-rock_find_qt5(OPTIONAL Core)
+rock_find_qt4(OPTIONAL)
+rock_find_qt5(OPTIONAL)
 
 include(RockQt)
 

@@ -3,6 +3,14 @@
 #include "MotionPlanningLibrariesSbplMprimsVisualization.hpp"
 #include "MotionPlanningLibrariesStateVisualization.hpp"
 
+namespace vizkit3d {
+
+#if QT_VERSION < 0x050000
+Q_EXPORT_PLUGIN2(QtPluginVizkit, QtPluginVizkit)
+#endif
+
+} // end namespace vizkit3d
+
 using namespace vizkit3d;
 
 QtPluginVizkit::QtPluginVizkit() {
