@@ -3,6 +3,8 @@
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/control/planners/rrt/RRT.h>
 
+#include <boost/numeric/odeint/stepper/generation/generation_runge_kutta_cash_karp54.hpp>
+
 #include <motion_planning_libraries/ompl/validators/TravMapValidator.hpp>
 #include <motion_planning_libraries/ompl/objectives/TravGridObjective.hpp>
 

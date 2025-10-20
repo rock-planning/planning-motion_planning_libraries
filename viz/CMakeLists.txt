@@ -1,15 +1,27 @@
-set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
-rock_vizkit_plugin(motion_planning_libraries-viz
-    PluginLoader.cpp
-    MOC 
-        MotionPlanningLibrariesStateVisualization.cpp 
+rock_find_qt4(OPTIONAL)
+rock_find_qt5(OPTIONAL)
+
+include(RockQt)
+
+rock_qt_vizkit_plugin(
+    TARGETPREFIX motion_planning_libraries-viz
+    QT4_SUFFIX ""
+    MISSINGQTDEPS_NOBUILD
+    SOURCES
+        PluginLoader.cpp
+        MotionPlanningLibrariesStateVisualization.cpp
         MotionPlanningLibrariesSbplMprimsVisualization.cpp
         MotionPlanningLibrariesSbplSplineVisualization.cpp
-    HEADERS 
-        MotionPlanningLibrariesStateVisualization.hpp 
+    MOC
+        PluginLoader.hpp
+        MotionPlanningLibrariesStateVisualization.hpp
+        MotionPlanningLibrariesSbplMprimsVisualization.hpp
+        MotionPlanningLibrariesSbplSplineVisualization.hpp
+    HEADERS
+        MotionPlanningLibrariesStateVisualization.hpp
         MotionPlanningLibrariesSbplMprimsVisualization.hpp
         MotionPlanningLibrariesSbplSplineVisualization.hpp
     DEPS motion_planning_libraries
 )
-    
+
